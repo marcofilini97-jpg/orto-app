@@ -58,6 +58,10 @@ main { padding: 16px; }
 }
 
 .aiuola {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
   min-height: 72px;
   font: inherit;
   font-size: 1.3rem;
@@ -67,3 +71,28 @@ main { padding: 16px; }
   border: 2px solid var(--verde);
   border-radius: 8px;
 }
+
+h2 { margin: 8px 0 4px; }
+h3 { margin: 20px 0 4px; font-size: 1.1rem; }
+
+.indietro {
+  display: inline-block;
+  padding: 10px 0;
+  color: var(--verde);
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.pulsante {
+  display: block;
+  margin-top: 24px;
+  padding: 14px;
+  text-align: center;
+  background: var(--verde);
+  color: #fff;
+  font-weight: bold;
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.colture { margin: 0; padding-left: 20px; }
