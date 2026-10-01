@@ -2,6 +2,8 @@
   --verde: #2e5e2e;
   --sfondo: #ffffff;
   --testo: #111111;
+  --aiuola: #e6efdc;
+  --vialetto: #d9c9a3;
 }
 
 * { box-sizing: border-box; }
@@ -24,3 +26,44 @@ header {
 header h1 { margin: 0; font-size: 1.4rem; }
 
 main { padding: 16px; }
+
+.mappa {
+  display: grid;
+  grid-template-columns: 1fr 28px 1fr;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.estremo {
+  grid-column: 1 / -1;
+  margin: 4px 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.lato {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* stacco tra il primo e il secondo settore di ogni lato */
+.lato .aiuola:nth-child(3) { margin-top: 16px; }
+
+.vialetto {
+  background: var(--vialetto);
+  margin: 0 6px;
+  border-radius: 4px;
+}
+
+.aiuola {
+  min-height: 72px;
+  font: inherit;
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: var(--testo);
+  background: var(--aiuola);
+  border: 2px solid var(--verde);
+  border-radius: 8px;
+}
