@@ -17,7 +17,7 @@ function schermata() {
   }
   if (pagina === 'coltura') {
     const coltura = dati.colture.find(c => c.id === id);
-    if (coltura) return schedaColtura(coltura);
+    if (coltura) return schedaColtura(dati, coltura);
   }
   return mappa(dati);
 }

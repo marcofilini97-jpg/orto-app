@@ -61,6 +61,7 @@ main { padding: 16px; }
 }
 
 .aiuola {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -161,3 +162,31 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
 .errore { margin: 16px 0 0; color: #b00020; font-weight: bold; white-space: pre-line; }
 
 .colture a { display: block; padding: 8px 0; color: var(--testo); }
+
+.aiuola span { position: relative; z-index: 1; padding: 0 6px; background: var(--aiuola); }
+
+.diviso-fondo-davanti::after,
+.diviso-vialetto-esterno::after {
+  content: '';
+  position: absolute;
+  border: 0 dashed var(--verde);
+}
+.diviso-fondo-davanti::after { left: 6px; right: 6px; top: 50%; border-top-width: 2px; }
+.diviso-vialetto-esterno::after { top: 6px; bottom: 6px; left: 50%; border-left-width: 2px; }
+
+.modulo .parte {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.modulo select {
+  font: inherit;
+  padding: 10px;
+  color: var(--testo);
+  background: #fff;
+  border: 2px solid #767676;
+  border-radius: 8px;
+}

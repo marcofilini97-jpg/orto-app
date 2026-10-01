@@ -2,6 +2,26 @@
 
 import { carica, salva, esporta, importa, oggi, nuovoId, dataPerUtente, dataPerArchivio } from './dati.js';
 
+// Ogni metà appartiene a uno dei due modi di dividere un'aiuola
+const ASSI = {
+  fondo: 'fondo-davanti', davanti: 'fondo-davanti',
+  vialetto: 'vialetto-esterno', esterno: 'vialetto-esterno',
+};
+
+// Come è divisa un'aiuola dalle colture attive: 'fondo-davanti', 'vialetto-esterno' o null
+function divisione(dati, aiuolaId) {
+  for (const c of dati.colture) {
+    const parte = c.parti?.[aiuolaId];
+    if (c.stato === 'attiva' && parte) return ASSI[parte];
+  }
+  return null;
+}
+
+// es. "2A, 2B metà fondo"
+function doveColtura(c) {
+  return c.aiuoleIds.map(id => c.parti?.[id] ? `${id} metà ${c.parti[id]}` : id).join(', ');
+}
+
 export function mappa(dati) {
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
@@ -17,9 +37,10 @@ function colonna(dati, lato) {
     .sort((x, y) => x.posizione - y.posizione);
   for (const a of aiuole) {
     const link = document.createElement('a');
-    link.className = 'aiuola';
+    const asse = divisione(dati, a.id);
+    link.className = asse ? `aiuola diviso-${asse}` : 'aiuola';
     link.href = `#/aiuola/${a.id}`;
-    link.textContent = a.id;
+    link.append(elemento('span', a.id));
     colonna.append(link);
   }
   return colonna;
@@ -46,6 +67,9 @@ export function schedaAiuola(dati, aiuola) {
     link('← Mappa', '#/', 'indietro'),
     elemento('h2', `Aiuola ${aiuola.id}`),
     elemento('p', `Settore ${aiuola.settore} · a ${aiuola.lato} · ${aiuola.posizione}ª dal fondo`),
+    elemento('p', divisione(dati, aiuola.id) === 'fondo-davanti' ? 'Divisa a metà: fondo / davanti'
+      : divisione(dati, aiuola.id) === 'vialetto-esterno' ? 'Divisa a metà: vialetto / esterno'
+      : 'Non divisa'),
     elemento('h3', 'Colture attive'),
     elencoColture(attive, 'Nessuna coltura attiva.'),
     link('Aggiungi coltura', `#/aiuola/${aiuola.id}/nuova-coltura`, 'pulsante'),
@@ -81,7 +105,8 @@ function elencoColture(colture, testoSeVuoto) {
     const periodo = c.dataFine
       ? `${dataPerUtente(c.dataInizio)} – ${dataPerUtente(c.dataFine)}`
       : `dal ${dataPerUtente(c.dataInizio)}`;
-    const dove = c.aiuoleIds.length > 1 ? ` (${c.aiuoleIds.join(', ')})` : '';
+    const mostraDove = c.aiuoleIds.length > 1 || c.aiuoleIds.some(id => c.parti?.[id]);
+    const dove = mostraDove ? ` (${doveColtura(c)})` : '';
     const voce = elemento('li');
     voce.append(link(`${nome} · ${periodo}${dove}`, `#/coltura/${c.id}`));
     ul.append(voce);
@@ -175,6 +200,10 @@ export function nuovaColtura(dati, aiuola) {
       <legend>Aiuole</legend>
       <div class="due-colonne">${caselleAiuole(dati, aiuola.id)}</div>
     </fieldset>
+    <fieldset>
+      <legend>Parte occupata</legend>
+      <div class="parti"></div>
+    </fieldset>
     <label>Data di inizio<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(oggi())}"></label>
     <fieldset>
       <legend>Metodo</legend>
@@ -187,6 +216,9 @@ export function nuovaColtura(dati, aiuola) {
     <p class="errore" role="alert" hidden></p>
     <button type="submit" class="pulsante">Salva coltura</button>
   `;
+  const aggiorna = () => aggiornaParti(modulo, dati);
+  modulo.querySelectorAll('input[name="aiuole"]').forEach(casella => casella.addEventListener('change', aggiorna));
+  aggiorna();
   modulo.addEventListener('submit', evento => {
     evento.preventDefault();
     salvaColtura(modulo);
@@ -207,6 +239,20 @@ function caselleAiuole(dati, spuntata) {
     .sort((x, y) => x.posizione - y.posizione || (x.lato === 'sinistra' ? -1 : 1))
     .map(a => `<label class="opzione"><input type="checkbox" name="aiuole" value="${a.id}"${a.id === spuntata ? ' checked' : ''}> ${a.id}</label>`)
     .join('');
+}
+
+// Una tendina per ogni aiuola spuntata, con solo le metà compatibili con la divisione esistente
+function aggiornaParti(modulo, dati) {
+  const scelte = new FormData(modulo);
+  const righe = scelte.getAll('aiuole').map(id => {
+    const asse = divisione(dati, id);
+    const opzioni = Object.keys(ASSI)
+      .filter(parte => !asse || ASSI[parte] === asse)
+      .map(parte => `<option value="${parte}"${scelte.get(`parte-${id}`) === parte ? ' selected' : ''}>Metà ${parte}</option>`)
+      .join('');
+    return `<label class="parte">${id}<select name="parte-${id}"><option value="">Intera</option>${opzioni}</select></label>`;
+  });
+  modulo.querySelector('.parti').innerHTML = righe.join('') || '<p>Scegli prima almeno un\'aiuola.</p>';
 }
 
 function salvaColtura(modulo) {
@@ -230,9 +276,14 @@ function salvaColtura(modulo) {
   }
 
   try {
+    const parti = {};
+    for (const id of aiuoleIds) {
+      const parte = campi.get(`parte-${id}`);
+      if (parte) parti[id] = parte;
+    }
     const dati = carica();
     dati.colture.push({
-      id: nuovoId('c'), nome, varieta: campi.get('varieta').trim(), aiuoleIds,
+      id: nuovoId('c'), nome, varieta: campi.get('varieta').trim(), aiuoleIds, parti,
       dataInizio, metodo, stato: 'attiva', dataFine: null, note: campi.get('note').trim(),
     });
     salva(dati);
@@ -243,7 +294,7 @@ function salvaColtura(modulo) {
   }
 }
 
-export function schedaColtura(coltura) {
+export function schedaColtura(dati, coltura) {
   const indietro = elemento('button', '← Indietro', 'indietro');
   indietro.type = 'button';
   indietro.addEventListener('click', () => history.back());
@@ -254,14 +305,14 @@ export function schedaColtura(coltura) {
     indietro,
     elemento('h2', coltura.varieta ? `${coltura.nome} – ${coltura.varieta}` : coltura.nome),
     riga('Stato', attiva ? 'Attiva' : 'Terminata'),
-    riga('Aiuole', coltura.aiuoleIds.join(', ')),
+    riga('Aiuole', doveColtura(coltura)),
     riga('Inizio', dataPerUtente(coltura.dataInizio)),
   );
   if (!attiva) sezione.append(riga('Fine', dataPerUtente(coltura.dataFine)));
   sezione.append(
     riga('Metodo', coltura.metodo === 'semina' ? 'Semina' : 'Trapianto'),
     riga('Note', coltura.note || 'Nessuna nota.'),
-    attiva ? moduloTermina(coltura) : pulsanteRiattiva(coltura),
+    attiva ? moduloTermina(coltura) : pulsanteRiattiva(dati, coltura),
   );
   return sezione;
 }
@@ -300,10 +351,19 @@ function moduloTermina(coltura) {
   return modulo;
 }
 
-function pulsanteRiattiva(coltura) {
+function pulsanteRiattiva(dati, coltura) {
   const pulsante = elemento('button', 'Riattiva coltura', 'pulsante secondario');
   pulsante.type = 'button';
   pulsante.addEventListener('click', () => {
+    const conflitti = coltura.aiuoleIds.filter(id => {
+      const parte = coltura.parti?.[id];
+      const asse = divisione(dati, id);
+      return parte && asse && ASSI[parte] !== asse;
+    });
+    if (conflitti.length > 0) {
+      alert(`Non si può riattivare: in ${conflitti.join(', ')} le colture attive dividono l'aiuola in un altro modo.`);
+      return;
+    }
     if (confirm(`Riattivare "${coltura.nome}"? Tornerà tra le colture attive e la data di fine verrà cancellata.`)) {
       modificaColtura(coltura.id, { stato: 'attiva', dataFine: null });
     }
