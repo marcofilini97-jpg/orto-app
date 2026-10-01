@@ -116,3 +116,42 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
   margin: -10px;
   color: #fff;
 }
+
+.modulo label { display: block; margin-top: 16px; font-weight: bold; }
+
+.modulo input[type="text"],
+.modulo textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 12px;
+  font: inherit;
+  border: 2px solid #767676;
+  border-radius: 8px;
+}
+
+.modulo fieldset { margin: 16px 0 0; padding: 0; border: 0; }
+.modulo legend { padding: 0; font-weight: bold; }
+
+.due-colonne {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.modulo .opzione {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  font-weight: normal;
+  background: var(--aiuola);
+  border: 2px solid var(--verde);
+  border-radius: 8px;
+}
+
+.opzione input { width: 24px; height: 24px; margin: 0; accent-color: var(--verde); }
+
+.errore { margin: 16px 0 0; color: #b00020; font-weight: bold; white-space: pre-line; }

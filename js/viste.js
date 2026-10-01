@@ -1,6 +1,6 @@
 // Funzioni che costruiscono le schermate. Ricevono i dati e restituiscono elementi da mostrare.
 
-import { carica, salva, esporta, importa, oggi, dataPerUtente } from './dati.js';
+import { carica, salva, esporta, importa, oggi, nuovoId, dataPerUtente, dataPerArchivio } from './dati.js';
 
 export function mappa(dati) {
   const mappa = document.createElement('section');
@@ -48,6 +48,7 @@ export function schedaAiuola(dati, aiuola) {
     elemento('p', `Settore ${aiuola.settore} · a ${aiuola.lato} · ${aiuola.posizione}ª dal fondo`),
     elemento('h3', 'Colture attive'),
     elencoColture(attive, 'Nessuna coltura attiva.'),
+    link('Aggiungi coltura', `#/aiuola/${aiuola.id}/nuova-coltura`, 'pulsante'),
     elemento('h3', 'Note'),
     elemento('p', aiuola.note || 'Nessuna nota.'),
     link('Mostra storico', `#/aiuola/${aiuola.id}/storico`, 'pulsante'),
@@ -157,5 +158,85 @@ async function caricaBackup(input) {
     location.hash = '#/';
   } catch (errore) {
     alert(errore.message);
+  }
+}
+
+export function nuovaColtura(dati, aiuola) {
+  const modulo = document.createElement('form');
+  modulo.className = 'modulo';
+  modulo.noValidate = true;
+  // Solo testo fisso e dati dell'app: nessun testo scritto dall'utente finisce qui dentro
+  modulo.innerHTML = `
+    <label>Nome<input type="text" name="nome" autocomplete="off" placeholder="es. Pomodoro"></label>
+    <label>Varietà (facoltativa)<input type="text" name="varieta" autocomplete="off" placeholder="es. Cuore di bue"></label>
+    <fieldset>
+      <legend>Aiuole</legend>
+      <div class="due-colonne">${caselleAiuole(dati, aiuola.id)}</div>
+    </fieldset>
+    <label>Data di inizio<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(oggi())}"></label>
+    <fieldset>
+      <legend>Metodo</legend>
+      <div class="due-colonne">
+        <label class="opzione"><input type="radio" name="metodo" value="semina"> Semina</label>
+        <label class="opzione"><input type="radio" name="metodo" value="trapianto"> Trapianto</label>
+      </div>
+    </fieldset>
+    <label>Note (facoltative)<textarea name="note" rows="3"></textarea></label>
+    <p class="errore" role="alert" hidden></p>
+    <button type="submit" class="pulsante">Salva coltura</button>
+  `;
+  modulo.addEventListener('submit', evento => {
+    evento.preventDefault();
+    salvaColtura(modulo);
+  });
+
+  const sezione = document.createElement('section');
+  sezione.append(
+    link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro'),
+    elemento('h2', `Nuova coltura in ${aiuola.id}`),
+    modulo,
+  );
+  return sezione;
+}
+
+// Stesso ordine della mappa: riga per riga, prima sinistra poi destra
+function caselleAiuole(dati, spuntata) {
+  return [...dati.aiuole]
+    .sort((x, y) => x.posizione - y.posizione || (x.lato === 'sinistra' ? -1 : 1))
+    .map(a => `<label class="opzione"><input type="checkbox" name="aiuole" value="${a.id}"${a.id === spuntata ? ' checked' : ''}> ${a.id}</label>`)
+    .join('');
+}
+
+function salvaColtura(modulo) {
+  const campi = new FormData(modulo);
+  const nome = campi.get('nome').trim();
+  const aiuoleIds = campi.getAll('aiuole');
+  const dataInizio = dataPerArchivio(campi.get('data'));
+  const metodo = campi.get('metodo');
+
+  const errori = [];
+  if (!nome) errori.push('Scrivi il nome della coltura.');
+  if (aiuoleIds.length === 0) errori.push('Scegli almeno un\'aiuola.');
+  if (!dataInizio) errori.push('Scrivi la data come gg/mm/aaaa, es. 20/04/2026.');
+  if (!metodo) errori.push('Scegli semina o trapianto.');
+
+  const avviso = modulo.querySelector('.errore');
+  if (errori.length > 0) {
+    avviso.textContent = errori.join('\n');
+    avviso.hidden = false;
+    return;
+  }
+
+  try {
+    const dati = carica();
+    dati.colture.push({
+      id: nuovoId('c'), nome, varieta: campi.get('varieta').trim(), aiuoleIds,
+      dataInizio, metodo, stato: 'attiva', dataFine: null, note: campi.get('note').trim(),
+    });
+    salva(dati);
+    history.back();
+  } catch (errore) {
+    avviso.textContent = errore.message;
+    avviso.hidden = false;
   }
 }

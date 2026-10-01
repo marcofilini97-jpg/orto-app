@@ -1,5 +1,5 @@
 import { carica } from './dati.js';
-import { mappa, schedaAiuola, storicoAiuola, impostazioni } from './viste.js';
+import { mappa, schedaAiuola, storicoAiuola, impostazioni, nuovaColtura } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
 
@@ -11,7 +11,9 @@ function schermata() {
   const dati = carica();
   const aiuola = dati.aiuole.find(a => a.id === id);
   if (pagina === 'aiuola' && aiuola) {
-    return sotto === 'storico' ? storicoAiuola(dati, aiuola) : schedaAiuola(dati, aiuola);
+    if (sotto === 'storico') return storicoAiuola(dati, aiuola);
+    if (sotto === 'nuova-coltura') return nuovaColtura(dati, aiuola);
+    return schedaAiuola(dati, aiuola);
   }
   return mappa(dati);
 }
