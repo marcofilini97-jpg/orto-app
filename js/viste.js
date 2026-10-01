@@ -1,6 +1,6 @@
 // Funzioni che costruiscono le schermate. Ricevono i dati e restituiscono elementi da mostrare.
 
-import { dataPerUtente } from './dati.js';
+import { carica, salva, esporta, importa, oggi, dataPerUtente } from './dati.js';
 
 export function mappa(dati) {
   const mappa = document.createElement('section');
@@ -97,4 +97,65 @@ function link(testo, href, classe) {
   const a = elemento('a', testo, classe);
   a.href = href;
   return a;
+}
+
+export function impostazioni() {
+  const esportaBtn = elemento('button', 'Esporta backup', 'pulsante');
+  esportaBtn.type = 'button';
+  esportaBtn.addEventListener('click', scaricaBackup);
+
+  const sceltaFile = elemento('input');
+  sceltaFile.type = 'file';
+  sceltaFile.accept = '.json,application/json';
+  sceltaFile.hidden = true;
+  sceltaFile.addEventListener('change', () => caricaBackup(sceltaFile));
+
+  const importaBtn = elemento('button', 'Importa backup', 'pulsante secondario');
+  importaBtn.type = 'button';
+  importaBtn.addEventListener('click', () => sceltaFile.click());
+
+  const sezione = document.createElement('section');
+  sezione.append(
+    link('← Mappa', '#/', 'indietro'),
+    elemento('h2', 'Impostazioni'),
+    elemento('h3', 'Backup'),
+    elemento('p', 'I dati sono salvati solo in questo browser. Esporta spesso un backup e conservalo in un posto sicuro: serve anche a passare i dati a un altro telefono.'),
+    esportaBtn,
+    elemento('p', 'Importare un backup sostituisce tutti i dati attuali.'),
+    importaBtn,
+    sceltaFile,
+  );
+  return sezione;
+}
+
+function scaricaBackup() {
+  try {
+    const file = new Blob([esporta(carica())], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file);
+    a.download = `orto-backup-${oggi()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } catch (errore) {
+    alert(errore.message);
+  }
+}
+
+async function caricaBackup(input) {
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    const dati = importa(await file.text());
+    const conferma = confirm(
+      `Il backup contiene ${dati.colture.length} colture, ${dati.registro.length} voci di registro e ${dati.task.length} task.\n\n` +
+      'Sostituire tutti i dati attuali? Se ti servono, esportali prima.'
+    );
+    if (!conferma) return;
+    salva(dati);
+    alert('Backup importato.');
+    location.hash = '#/';
+  } catch (errore) {
+    alert(errore.message);
+  }
 }
