@@ -82,7 +82,9 @@ function elencoColture(colture, testoSeVuoto) {
       ? `${dataPerUtente(c.dataInizio)} – ${dataPerUtente(c.dataFine)}`
       : `dal ${dataPerUtente(c.dataInizio)}`;
     const dove = c.aiuoleIds.length > 1 ? ` (${c.aiuoleIds.join(', ')})` : '';
-    ul.append(elemento('li', `${nome} · ${periodo}${dove}`));
+    const voce = elemento('li');
+    voce.append(link(`${nome} · ${periodo}${dove}`, `#/coltura/${c.id}`));
+    ul.append(voce);
   }
   return ul;
 }
@@ -238,5 +240,84 @@ function salvaColtura(modulo) {
   } catch (errore) {
     avviso.textContent = errore.message;
     avviso.hidden = false;
+  }
+}
+
+export function schedaColtura(coltura) {
+  const indietro = elemento('button', '← Indietro', 'indietro');
+  indietro.type = 'button';
+  indietro.addEventListener('click', () => history.back());
+
+  const attiva = coltura.stato === 'attiva';
+  const sezione = document.createElement('section');
+  sezione.append(
+    indietro,
+    elemento('h2', coltura.varieta ? `${coltura.nome} – ${coltura.varieta}` : coltura.nome),
+    riga('Stato', attiva ? 'Attiva' : 'Terminata'),
+    riga('Aiuole', coltura.aiuoleIds.join(', ')),
+    riga('Inizio', dataPerUtente(coltura.dataInizio)),
+  );
+  if (!attiva) sezione.append(riga('Fine', dataPerUtente(coltura.dataFine)));
+  sezione.append(
+    riga('Metodo', coltura.metodo === 'semina' ? 'Semina' : 'Trapianto'),
+    riga('Note', coltura.note || 'Nessuna nota.'),
+    attiva ? moduloTermina(coltura) : pulsanteRiattiva(coltura),
+  );
+  return sezione;
+}
+
+function riga(etichetta, valore) {
+  const p = document.createElement('p');
+  p.append(elemento('strong', `${etichetta}: `), valore);
+  return p;
+}
+
+function moduloTermina(coltura) {
+  const modulo = document.createElement('form');
+  modulo.className = 'modulo';
+  modulo.noValidate = true;
+  modulo.innerHTML = `
+    <label>Data di fine<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(oggi())}"></label>
+    <p class="errore" role="alert" hidden></p>
+    <button type="submit" class="pulsante">Termina coltura</button>
+  `;
+  modulo.addEventListener('submit', evento => {
+    evento.preventDefault();
+    const dataFine = dataPerArchivio(new FormData(modulo).get('data'));
+    const avviso = modulo.querySelector('.errore');
+    let errore = '';
+    if (!dataFine) errore = 'Scrivi la data come gg/mm/aaaa, es. 30/09/2026.';
+    else if (dataFine < coltura.dataInizio) errore = `La data di fine non può essere prima dell'inizio (${dataPerUtente(coltura.dataInizio)}).`;
+    if (errore) {
+      avviso.textContent = errore;
+      avviso.hidden = false;
+      return;
+    }
+    if (confirm(`Terminare "${coltura.nome}"? Passerà nello storico di ${coltura.aiuoleIds.join(', ')}.`)) {
+      modificaColtura(coltura.id, { stato: 'terminata', dataFine });
+    }
+  });
+  return modulo;
+}
+
+function pulsanteRiattiva(coltura) {
+  const pulsante = elemento('button', 'Riattiva coltura', 'pulsante secondario');
+  pulsante.type = 'button';
+  pulsante.addEventListener('click', () => {
+    if (confirm(`Riattivare "${coltura.nome}"? Tornerà tra le colture attive e la data di fine verrà cancellata.`)) {
+      modificaColtura(coltura.id, { stato: 'attiva', dataFine: null });
+    }
+  });
+  return pulsante;
+}
+
+function modificaColtura(id, modifiche) {
+  try {
+    const dati = carica();
+    Object.assign(dati.colture.find(c => c.id === id), modifiche);
+    salva(dati);
+    history.back();
+  } catch (errore) {
+    alert(errore.message);
   }
 }

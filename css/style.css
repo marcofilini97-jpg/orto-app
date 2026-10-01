@@ -82,6 +82,10 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
   display: inline-block;
   padding: 10px 0;
   color: var(--verde);
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
   font-weight: bold;
   text-decoration: none;
 }
@@ -155,3 +159,5 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
 .opzione input { width: 24px; height: 24px; margin: 0; accent-color: var(--verde); }
 
 .errore { margin: 16px 0 0; color: #b00020; font-weight: bold; white-space: pre-line; }
+
+.colture a { display: block; padding: 8px 0; color: var(--testo); }
