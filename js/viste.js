@@ -56,8 +56,7 @@ function posizioneBollino(zona, lato) {
 export function mappa(dati) {
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
-  mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(), colonna(dati, 'destra'), etichetta('Davanti'),
-    link('Registro', '#/registro', 'pulsante'));
+  mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(), colonna(dati, 'destra'), etichetta('Davanti'));
   return mappa;
 }
 

@@ -66,7 +66,7 @@ main { padding: 16px; }
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  min-height: 72px;
+  min-height: clamp(56px, calc((100dvh - 250px) / 4), 110px);
   font: inherit;
   font-size: 1.3rem;
   font-weight: bold;
@@ -115,7 +115,9 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
   border: 2px solid var(--verde);
 }
 
-.icona-impostazioni {
+.azioni { display: flex; gap: 24px; }
+
+.icona {
   display: flex;
   padding: 10px;
   margin: -10px;
@@ -188,8 +190,6 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
 }
 .aiuola .bollino-alto { bottom: calc(50% + 4px); }
 .aiuola .bollino-sinistra { right: calc(50% + 4px); }
-
-.mappa .pulsante { grid-column: 1 / -1; }
 
 .modulo .tutto-orto { margin-top: 8px; }
 
