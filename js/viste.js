@@ -446,16 +446,22 @@ function ordinaVoci(voci) {
   return [...voci].reverse().sort((x, y) => y.data.localeCompare(x.data));
 }
 
+function doveVoce(dati, v) {
+  return v.aiuoleIds.length === dati.aiuole.length ? 'tutto l\'orto' : v.aiuoleIds.join(', ');
+}
+
 function elencoVoci(dati, voci, testoSeVuoto) {
   if (voci.length === 0) return elemento('p', testoSeVuoto);
   const ul = elemento('ul', '', 'registro');
   for (const v of voci) {
     const coltura = dati.colture.find(c => c.id === v.colturaId);
-    const dove = v.aiuoleIds.length === dati.aiuole.length ? 'tutto l\'orto' : v.aiuoleIds.join(', ');
+    const dove = doveVoce(dati, v);
     const dettagli = [coltura && nomeColtura(coltura), dove, v.chi, v.quantita].filter(Boolean).join(' · ');
+    const collegamento = link('', `#/voce/${v.id}`);
+    collegamento.append(elemento('strong', `${dataPerUtente(v.data)} · ${TIPI[v.tipo]}`), elemento('br'), dettagli);
+    if (v.note) collegamento.append(elemento('br'), v.note);
     const voce = elemento('li');
-    voce.append(elemento('strong', `${dataPerUtente(v.data)} · ${TIPI[v.tipo]}`), elemento('br'), dettagli);
-    if (v.note) voce.append(elemento('br'), v.note);
+    voce.append(collegamento);
     ul.append(voce);
   }
   return ul;
@@ -562,5 +568,39 @@ function salvaVoce(modulo) {
   } catch (errore) {
     avviso.textContent = errore.message;
     avviso.hidden = false;
+  }
+}
+
+export function schedaVoce(dati, voce) {
+  const indietro = elemento('button', '← Indietro', 'indietro');
+  indietro.type = 'button';
+  indietro.addEventListener('click', () => history.back());
+
+  const coltura = dati.colture.find(c => c.id === voce.colturaId);
+  const elimina = elemento('button', 'Elimina voce', 'pulsante pericolo');
+  elimina.type = 'button';
+  elimina.addEventListener('click', () => eliminaVoce(voce));
+
+  const sezione = document.createElement('section');
+  sezione.append(indietro, elemento('h2', TIPI[voce.tipo]), riga('Data', dataPerUtente(voce.data)));
+  if (coltura) sezione.append(riga('Coltura', nomeColtura(coltura)));
+  sezione.append(
+    riga('Aiuole', doveVoce(dati, voce) || 'Nessuna'),
+    riga('Chi', voce.chi),
+  );
+  if (voce.quantita) sezione.append(riga('Quantità', voce.quantita));
+  sezione.append(riga('Note', voce.note || 'Nessuna nota.'), elimina);
+  return sezione;
+}
+
+function eliminaVoce(voce) {
+  if (!confirm(`Eliminare la voce "${TIPI[voce.tipo]} del ${dataPerUtente(voce.data)}"? Non si potrà recuperare.`)) return;
+  try {
+    const dati = carica();
+    dati.registro = dati.registro.filter(v => v.id !== voce.id);
+    salva(dati);
+    history.back();
+  } catch (errore) {
+    alert(errore.message);
   }
 }

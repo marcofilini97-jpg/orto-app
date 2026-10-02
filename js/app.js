@@ -1,6 +1,6 @@
 import { carica } from './dati.js';
 import {
-  mappa, schedaAiuola, storicoAiuola, impostazioni, nuovaColtura, schedaColtura, registro, nuovaVoce,
+  mappa, schedaAiuola, storicoAiuola, impostazioni, nuovaColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -26,6 +26,10 @@ function schermata() {
     const coltura = dati.colture.find(c => c.id === id);
     if (coltura && sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: coltura.aiuoleIds, coltura });
     if (coltura) return schedaColtura(dati, coltura);
+  }
+  if (pagina === 'voce') {
+    const voce = dati.registro.find(v => v.id === id);
+    if (voce) return schedaVoce(dati, voce);
   }
   return mappa(dati);
 }

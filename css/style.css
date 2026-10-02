@@ -196,6 +196,14 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
 .registro { margin: 0; padding-left: 20px; }
 .registro li { padding: 6px 0; }
 
+.registro a { display: block; color: var(--testo); }
+
+.pericolo {
+  background: #fff;
+  color: #b00020;
+  border: 2px solid #b00020;
+}
+
 .modulo .parte {
   display: flex;
   align-items: center;
