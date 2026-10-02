@@ -715,28 +715,33 @@ export function listaTask(dati, fatti = false) {
   return sezione;
 }
 
-export function nuovoTask(dati, { aiuoleIds = [], coltura = null } = {}) {
+export function moduloTask(dati, { aiuoleIds = [], coltura = null, task = null } = {}) {
   const modulo = document.createElement('form');
   modulo.className = 'modulo';
   modulo.noValidate = true;
-  // Solo testo fisso e dati dell'app: i nomi delle colture si aggiungono sotto, con textContent
+  // Solo testo fisso e dati dell'app: titolo e nomi delle colture si aggiungono sotto, senza innerHTML
   modulo.innerHTML = `
     <label>Cosa fare<input type="text" name="titolo" autocomplete="off" placeholder="es. Legare i pomodori"></label>
     <label>Scadenza (facoltativa)<input type="text" name="scadenza" placeholder="gg/mm/aaaa"></label>
     <fieldset>
       <legend>Aiuole (facoltative)</legend>
-      <div class="due-colonne">${caselleAiuole(dati, aiuoleIds)}</div>
+      <div class="due-colonne">${caselleAiuole(dati, task ? task.aiuoleIds : aiuoleIds)}</div>
       <button type="button" class="pulsante secondario tutto-orto">Tutto l'orto</button>
     </fieldset>
     <label>Coltura (facoltativa)<select name="coltura"><option value="">Nessuna</option></select></label>
     <p class="errore" role="alert" hidden></p>
-    <button type="submit" class="pulsante">Salva task</button>
+    <button type="submit" class="pulsante">${task ? 'Salva modifiche' : 'Salva task'}</button>
   `;
-  riempiColture(modulo.querySelector('select[name="coltura"]'), dati, coltura);
+  riempiColture(modulo.querySelector('select[name="coltura"]'), dati,
+    task ? dati.colture.find(c => c.id === task.colturaId) : coltura);
+  if (task) {
+    modulo.elements.titolo.value = task.titolo;
+    modulo.elements.scadenza.value = dataPerUtente(task.scadenza);
+  }
   collegaTuttoOrto(modulo);
   modulo.addEventListener('submit', evento => {
     evento.preventDefault();
-    salvaTask(modulo);
+    salvaTask(modulo, task?.id);
   });
 
   const indietro = elemento('button', '← Indietro', 'indietro');
@@ -744,11 +749,11 @@ export function nuovoTask(dati, { aiuoleIds = [], coltura = null } = {}) {
   indietro.addEventListener('click', () => history.back());
 
   const sezione = document.createElement('section');
-  sezione.append(indietro, elemento('h2', 'Nuovo task'), modulo);
+  sezione.append(indietro, elemento('h2', task ? 'Modifica task' : 'Nuovo task'), modulo);
   return sezione;
 }
 
-function salvaTask(modulo) {
+function salvaTask(modulo, id = null) {
   const campi = new FormData(modulo);
   const titolo = campi.get('titolo').trim();
   const testoScad = campi.get('scadenza').trim();
@@ -766,11 +771,12 @@ function salvaTask(modulo) {
   }
 
   try {
+    const campiTask = {
+      titolo, scadenza, aiuoleIds: campi.getAll('aiuole'), colturaId: campi.get('coltura') || null,
+    };
     const dati = carica();
-    dati.task.push({
-      id: nuovoId('t'), titolo, scadenza, aiuoleIds: campi.getAll('aiuole'),
-      colturaId: campi.get('coltura') || null, fatto: false, fattoIl: null,
-    });
+    if (id) Object.assign(dati.task.find(t => t.id === id), campiTask);
+    else dati.task.push({ id: nuovoId('t'), ...campiTask, fatto: false, fattoIl: null });
     salva(dati);
     history.back();
   } catch (errore) {
@@ -798,7 +804,7 @@ export function schedaTask(dati, task) {
     riga('Aiuole', doveVoce(dati, task) || 'Nessuna'),
   );
   if (coltura) sezione.append(riga('Coltura', nomeColtura(coltura)));
-  sezione.append(elimina);
+  sezione.append(link('Modifica task', `#/task/${task.id}/modifica`, 'pulsante'), elimina);
   return sezione;
 }
 
