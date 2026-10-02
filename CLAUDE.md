@@ -91,6 +91,13 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Quando si crea una coltura, l'app aggiunge da sola la voce di registro "semina" o "trapianto"
 - L'ultima persona scelta è una preferenza del singolo telefono: sta in `localStorage` con una chiave a parte e non finisce nel backup
 
+## Task
+- `assegnatoA`: Marco, Mauro, Entrambi o Chiunque
+- `scadenza` facoltativa (`null` se manca); aiuole e coltura facoltative
+- Quando un task è fatto si salva solo la data (`fattoIl`), non chi l'ha fatto
+- Urgente = non fatto e scaduto, oppure in scadenza oggi o domani
+- Niente task ripetuti e nessuna voce di registro automatica quando un task è fatto
+
 ## Regole di lavoro
 - Sto imparando terminale e git: spiega ogni comando prima di eseguirlo, in modo semplice, e aspetta la mia approvazione
 - Cambia solo ciò che ti chiedo, senza riscrivere tutto

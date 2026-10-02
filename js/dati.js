@@ -79,9 +79,18 @@ export function dataPerArchivio(testo) {      // '12/06/2026' → '2026-06-12'
   return `${a}-${String(m).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
 }
 
-export function oggi() {                      // data di oggi in AAAA-MM-GG
-  const d = new Date();
+function aIso(d) {                            // oggetto data → 'AAAA-MM-GG'
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function oggi() {                      // data di oggi in AAAA-MM-GG
+  return aIso(new Date());
+}
+
+export function domani() {                    // data di domani in AAAA-MM-GG
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return aIso(d);
 }
 
 // Preferenza di questo telefono: non fa parte dei dati né del backup

@@ -66,7 +66,7 @@ main { padding: 16px; }
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  min-height: clamp(56px, calc((100dvh - 250px) / 4), 110px);
+  min-height: clamp(56px, calc((100dvh - 340px) / 4), 110px);
   font: inherit;
   font-size: 1.3rem;
   font-weight: bold;
@@ -203,6 +203,31 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
   color: #b00020;
   border: 2px solid #b00020;
 }
+
+.scorciatoie {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-around;
+  margin-top: 12px;
+}
+
+.scorciatoia {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 16px;
+  color: var(--verde);
+  font-size: 0.95rem;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.lista-task { margin: 0; padding: 0; list-style: none; }
+.lista-task li { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ddd; }
+.lista-task input { flex: none; width: 28px; height: 28px; margin: 2px 0 0; accent-color: var(--verde); }
+
+.urgente { color: #b00020; font-weight: bold; }
 
 .modulo .parte {
   display: flex;

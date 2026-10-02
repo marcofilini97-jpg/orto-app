@@ -1,7 +1,7 @@
 // Funzioni che costruiscono le schermate. Ricevono i dati e restituiscono elementi da mostrare.
 
 import {
-  carica, salva, esporta, importa, oggi, nuovoId, dataPerUtente, dataPerArchivio, ultimaPersona, ricordaPersona,
+  carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio, ultimaPersona, ricordaPersona,
 } from './dati.js';
 
 const TIPI = {
@@ -12,6 +12,14 @@ const TIPI = {
 };
 
 const PERSONE = ['Marco', 'Mauro', 'Entrambi'];
+
+const ASSEGNATARI = [...PERSONE, 'Chiunque'];
+
+// Icone di Feather Icons (licenza MIT)
+const ICONE = {
+  registro: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  task: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+};
 
 // Ogni metà appartiene a uno dei due modi di dividere un'aiuola
 const ASSI = {
@@ -57,7 +65,18 @@ export function mappa(dati) {
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
   mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(), colonna(dati, 'destra'), etichetta('Davanti'));
+  const scorciatoie = elemento('div', '', 'scorciatoie');
+  scorciatoie.append(scorciatoia('Registro', '#/registro', 'registro'), scorciatoia('Da fare', '#/task', 'task'));
+  mappa.append(scorciatoie);
   return mappa;
+}
+
+function scorciatoia(testo, href, icona) {
+  const a = link('', href, 'scorciatoia');
+  a.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONE[icona]}</svg>`;
+  a.append(elemento('span', testo));
+  return a;
 }
 
 function colonna(dati, lato) {
@@ -505,17 +524,8 @@ export function nuovaVoce(dati, { aiuoleIds = [], coltura = null } = {}) {
     <button type="submit" class="pulsante">Salva nel registro</button>
   `;
 
-  const sceltaColtura = modulo.querySelector('select[name="coltura"]');
-  for (const c of dati.colture.filter(c => c.stato === 'attiva' || c.id === coltura?.id)) {
-    const opzione = elemento('option', nomeColtura(c));
-    opzione.value = c.id;
-    opzione.selected = c.id === coltura?.id;
-    sceltaColtura.append(opzione);
-  }
-
-  modulo.querySelector('.tutto-orto').addEventListener('click', () => {
-    modulo.querySelectorAll('input[name="aiuole"]').forEach(casella => { casella.checked = true; });
-  });
+  riempiColture(modulo.querySelector('select[name="coltura"]'), dati, coltura);
+  collegaTuttoOrto(modulo);
   modulo.addEventListener('submit', evento => {
     evento.preventDefault();
     salvaVoce(modulo);
@@ -528,6 +538,22 @@ export function nuovaVoce(dati, { aiuoleIds = [], coltura = null } = {}) {
   const sezione = document.createElement('section');
   sezione.append(indietro, elemento('h2', 'Nuova voce di registro'), modulo);
   return sezione;
+}
+
+// Riempie la tendina "Coltura" con le colture attive (più quella di partenza, se c'è)
+function riempiColture(scelta, dati, coltura) {
+  for (const c of dati.colture.filter(c => c.stato === 'attiva' || c.id === coltura?.id)) {
+    const opzione = elemento('option', nomeColtura(c));
+    opzione.value = c.id;
+    opzione.selected = c.id === coltura?.id;
+    scelta.append(opzione);
+  }
+}
+
+function collegaTuttoOrto(modulo) {
+  modulo.querySelector('.tutto-orto').addEventListener('click', () => {
+    modulo.querySelectorAll('input[name="aiuole"]').forEach(casella => { casella.checked = true; });
+  });
 }
 
 function opzioniRadio(nome, opzioni, scelta) {
@@ -601,5 +627,151 @@ function eliminaVoce(voce) {
     history.back();
   } catch (errore) {
     alert(errore.message);
+  }
+}
+
+function urgente(t) {
+  return !t.fatto && t.scadenza && t.scadenza <= domani();
+}
+
+function testoScadenza(t) {
+  if (!t.scadenza) return '';
+  if (t.scadenza < oggi()) return `scaduto il ${dataPerUtente(t.scadenza)}`;
+  if (t.scadenza === oggi()) return 'entro oggi';
+  if (t.scadenza === domani()) return 'entro domani';
+  return `entro ${dataPerUtente(t.scadenza)}`;
+}
+
+// Prima quelli con scadenza (dalla più vicina; gli scaduti finiscono in cima), poi quelli senza
+function ordinaTask(tasks) {
+  return [...tasks].sort((x, y) => (x.scadenza ?? '9999').localeCompare(y.scadenza ?? '9999'));
+}
+
+function elencoTask(dati, tasks, testoSeVuoto) {
+  if (tasks.length === 0) return elemento('p', testoSeVuoto);
+  const ul = elemento('ul', '', 'lista-task');
+  for (const t of tasks) {
+    const casella = elemento('input');
+    casella.type = 'checkbox';
+    casella.checked = t.fatto;
+    casella.setAttribute('aria-label', `Fatto: ${t.titolo}`);
+    casella.addEventListener('change', () => segnaTask(t.id, casella.checked));
+
+    const coltura = dati.colture.find(c => c.id === t.colturaId);
+    const dettagli = [doveVoce(dati, t), coltura && nomeColtura(coltura), t.assegnatoA].filter(Boolean).join(' · ');
+    const quando = t.fatto ? `fatto il ${dataPerUtente(t.fattoIl)}` : testoScadenza(t);
+
+    const testo = elemento('div');
+    testo.append(elemento('strong', t.titolo));
+    if (quando) testo.append(' · ', elemento('span', quando, urgente(t) ? 'urgente' : ''));
+    testo.append(elemento('br'), dettagli);
+
+    const voce = elemento('li');
+    voce.append(casella, testo);
+    ul.append(voce);
+  }
+  return ul;
+}
+
+function segnaTask(id, fatto) {
+  try {
+    const dati = carica();
+    Object.assign(dati.task.find(t => t.id === id), { fatto, fattoIl: fatto ? oggi() : null });
+    salva(dati);
+    document.dispatchEvent(new Event('dati-cambiati'));
+  } catch (errore) {
+    alert(errore.message);
+  }
+}
+
+export function listaTask(dati, fatti = false) {
+  const sezione = document.createElement('section');
+  if (fatti) {
+    const elenco = dati.task.filter(t => t.fatto).sort((x, y) => y.fattoIl.localeCompare(x.fattoIl));
+    sezione.append(
+      link('← Da fare', '#/task', 'indietro'),
+      elemento('h2', 'Fatti'),
+      elencoTask(dati, elenco, 'Nessun task fatto.'),
+    );
+  } else {
+    const daFare = ordinaTask(dati.task.filter(t => !t.fatto));
+    const quantiFatti = dati.task.length - daFare.length;
+    sezione.append(
+      link('← Mappa', '#/', 'indietro'),
+      elemento('h2', 'Da fare'),
+      link('Aggiungi task', '#/task/nuovo', 'pulsante'),
+      elencoTask(dati, daFare, 'Niente da fare.'),
+      link(`Mostra quelli fatti (${quantiFatti})`, '#/task/fatti', 'pulsante secondario'),
+    );
+  }
+  return sezione;
+}
+
+export function nuovoTask(dati, { aiuoleIds = [], coltura = null } = {}) {
+  const modulo = document.createElement('form');
+  modulo.className = 'modulo';
+  modulo.noValidate = true;
+  // Solo testo fisso e dati dell'app: i nomi delle colture si aggiungono sotto, con textContent
+  modulo.innerHTML = `
+    <label>Cosa fare<input type="text" name="titolo" autocomplete="off" placeholder="es. Legare i pomodori"></label>
+    <label>Scadenza (facoltativa)<input type="text" name="scadenza" placeholder="gg/mm/aaaa"></label>
+    <fieldset>
+      <legend>Aiuole (facoltative)</legend>
+      <div class="due-colonne">${caselleAiuole(dati, aiuoleIds)}</div>
+      <button type="button" class="pulsante secondario tutto-orto">Tutto l'orto</button>
+    </fieldset>
+    <label>Coltura (facoltativa)<select name="coltura"><option value="">Nessuna</option></select></label>
+    <fieldset>
+      <legend>Chi lo deve fare</legend>
+      <div class="due-colonne">${opzioniRadio('assegnatoA', ASSEGNATARI.map(p => [p, p]), 'Chiunque')}</div>
+    </fieldset>
+    <p class="errore" role="alert" hidden></p>
+    <button type="submit" class="pulsante">Salva task</button>
+  `;
+  riempiColture(modulo.querySelector('select[name="coltura"]'), dati, coltura);
+  collegaTuttoOrto(modulo);
+  modulo.addEventListener('submit', evento => {
+    evento.preventDefault();
+    salvaTask(modulo);
+  });
+
+  const indietro = elemento('button', '← Indietro', 'indietro');
+  indietro.type = 'button';
+  indietro.addEventListener('click', () => history.back());
+
+  const sezione = document.createElement('section');
+  sezione.append(indietro, elemento('h2', 'Nuovo task'), modulo);
+  return sezione;
+}
+
+function salvaTask(modulo) {
+  const campi = new FormData(modulo);
+  const titolo = campi.get('titolo').trim();
+  const testoScad = campi.get('scadenza').trim();
+  const scadenza = testoScad ? dataPerArchivio(testoScad) : null;
+
+  const errori = [];
+  if (!titolo) errori.push('Scrivi cosa c\'è da fare.');
+  if (testoScad && !scadenza) errori.push('Scrivi la scadenza come gg/mm/aaaa, es. 05/10/2026, oppure lasciala vuota.');
+
+  const avviso = modulo.querySelector('.errore');
+  if (errori.length > 0) {
+    avviso.textContent = errori.join('\n');
+    avviso.hidden = false;
+    return;
+  }
+
+  try {
+    const dati = carica();
+    dati.task.push({
+      id: nuovoId('t'), titolo, scadenza, aiuoleIds: campi.getAll('aiuole'),
+      colturaId: campi.get('coltura') || null, assegnatoA: campi.get('assegnatoA'),
+      fatto: false, fattoIl: null,
+    });
+    salva(dati);
+    history.back();
+  } catch (errore) {
+    avviso.textContent = errore.message;
+    avviso.hidden = false;
   }
 }

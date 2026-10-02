@@ -1,6 +1,7 @@
 import { carica } from './dati.js';
 import {
   mappa, schedaAiuola, storicoAiuola, impostazioni, nuovaColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
+  listaTask, nuovoTask,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -11,6 +12,10 @@ function schermata() {
   // Impostazioni non legge i dati: così si può ripristinare un backup anche se sono danneggiati
   if (pagina === 'impostazioni') return impostazioni();
   const dati = carica();
+  if (pagina === 'task') {
+    if (id === 'nuovo') return nuovoTask(dati);
+    return listaTask(dati, id === 'fatti');
+  }
   if (pagina === 'registro') {
     return id === 'nuova-voce' ? nuovaVoce(dati) : registro(dati);
   }
@@ -34,14 +39,20 @@ function schermata() {
   return mappa(dati);
 }
 
-function mostra() {
+function disegna() {
   try {
     contenuto.replaceChildren(schermata());
   } catch (errore) {
     contenuto.textContent = errore.message;
   }
+}
+
+function mostra() {
+  disegna();
   window.scrollTo(0, 0);
 }
 
 window.addEventListener('hashchange', mostra);
+// Dopo una modifica che non cambia schermata (es. spuntare un task) si ridisegna restando dove si è
+document.addEventListener('dati-cambiati', disegna);
 mostra();
