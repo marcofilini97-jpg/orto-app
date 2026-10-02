@@ -89,13 +89,13 @@ export function schedaAiuola(dati, aiuola) {
   sezione.append(
     link('← Mappa', '#/', 'indietro'),
     elemento('h2', `Aiuola ${aiuola.id}`),
+    elemento('h3', 'Colture attive'),
+    elencoColture(attive, 'Nessuna coltura attiva.'),
+    link('Aggiungi coltura', `#/aiuola/${aiuola.id}/nuova-coltura`, 'pulsante'),
     elemento('p', `Settore ${aiuola.settore} · a ${aiuola.lato} · ${aiuola.posizione}ª dal fondo`),
     elemento('p', divisione(dati, aiuola.id) === 'fondo-davanti' ? 'Divisa a metà: fondo / davanti'
       : divisione(dati, aiuola.id) === 'vialetto-esterno' ? 'Divisa a metà: vialetto / esterno'
       : 'Non divisa'),
-    elemento('h3', 'Colture attive'),
-    elencoColture(attive, 'Nessuna coltura attiva.'),
-    link('Aggiungi coltura', `#/aiuola/${aiuola.id}/nuova-coltura`, 'pulsante'),
     elemento('h3', 'Note'),
     elemento('p', aiuola.note || 'Nessuna nota.'),
     link('Mostra storico', `#/aiuola/${aiuola.id}/storico`, 'pulsante'),
