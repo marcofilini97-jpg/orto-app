@@ -60,9 +60,12 @@ function posizioneBollino(zona, lato) {
 export function mappa(dati) {
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
-  mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(), colonna(dati, 'destra'), etichetta('Davanti'));
+  mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(dati), colonna(dati, 'destra'), etichetta('Davanti'));
   const scorciatoie = elemento('div', '', 'scorciatoie');
-  scorciatoie.append(scorciatoia('Registro', '#/registro', 'registro'), scorciatoia('Da fare', '#/task', 'task'));
+  const daFare = scorciatoia('Da fare', '#/task', 'task');
+  const segnoSenzaAiuole = segnoTask(dati.task.filter(t => t.aiuoleIds.length === 0));
+  if (segnoSenzaAiuole) daFare.append(puntino(segnoSenzaAiuole));
+  scorciatoie.append(scorciatoia('Registro', '#/registro', 'registro'), daFare);
   mappa.append(scorciatoie);
   return mappa;
 }
@@ -86,19 +89,23 @@ function colonna(dati, lato) {
     const asse = divisione(dati, a.id);
     link.className = asse ? `aiuola diviso-${asse}` : 'aiuola';
     link.href = `#/aiuola/${a.id}`;
-    link.append(elemento('span', a.id));
+    link.append(elemento('span', a.id, 'nome'));
     for (const { zona, n } of bollini(dati, a)) {
       link.append(elemento('span', `× ${n}`, `bollino bollino-${posizioneBollino(zona, a.lato)}`));
     }
+    const segno = segnoTask(taskAiuola(dati, a.id));
+    if (segno) link.append(puntino(segno));
     colonna.append(link);
   }
   return colonna;
 }
 
-function vialetto() {
+function vialetto(dati) {
   const vialetto = document.createElement('div');
   vialetto.className = 'vialetto';
   vialetto.setAttribute('aria-hidden', 'true');
+  const segno = segnoTask(dati.task.filter(t => t.aiuoleIds.length === dati.aiuole.length));
+  if (segno) vialetto.append(puntino(segno));
   return vialetto;
 }
 
@@ -125,6 +132,9 @@ export function schedaAiuola(dati, aiuola) {
     elemento('h3', 'Note'),
     elemento('p', aiuola.note || 'Nessuna nota.'),
     link('Mostra storico', `#/aiuola/${aiuola.id}/storico`, 'pulsante'),
+    elemento('h3', 'Da fare'),
+    elencoTask(dati, ordinaTask(dati.task.filter(t => !t.fatto && t.aiuoleIds.includes(aiuola.id))), 'Niente da fare.'),
+    link('Aggiungi task', `#/aiuola/${aiuola.id}/nuovo-task`, 'pulsante secondario'),
     elemento('h3', 'Registro'),
     elencoVoci(dati, ordinaVoci(dati.registro.filter(v => v.aiuoleIds.includes(aiuola.id))).slice(0, 5), 'Nessuna voce nel registro.'),
     link('Aggiungi al registro', `#/aiuola/${aiuola.id}/nuova-voce`, 'pulsante'),
@@ -371,6 +381,9 @@ export function schedaColtura(dati, coltura) {
   sezione.append(
     riga('Metodo', coltura.metodo === 'semina' ? 'Semina' : 'Trapianto'),
     riga('Note', coltura.note || 'Nessuna nota.'),
+    elemento('h3', 'Da fare'),
+    elencoTask(dati, ordinaTask(dati.task.filter(t => !t.fatto && t.colturaId === coltura.id)), 'Niente da fare.'),
+    link('Aggiungi task', `#/coltura/${coltura.id}/nuovo-task`, 'pulsante secondario'),
     elemento('h3', 'Registro'),
     elencoVoci(dati, ordinaVoci(dati.registro.filter(v => v.colturaId === coltura.id)), 'Nessuna voce nel registro.'),
     link('Aggiungi al registro', `#/coltura/${coltura.id}/nuova-voce`, 'pulsante secondario'),
@@ -613,6 +626,22 @@ function urgente(t) {
   return !t.fatto && t.scadenza && t.scadenza <= domani();
 }
 
+// Task di aiuole specifiche (non quelli su tutto l'orto, che vanno sul vialetto)
+function taskAiuola(dati, aiuolaId) {
+  return dati.task.filter(t => t.aiuoleIds.length < dati.aiuole.length && t.aiuoleIds.includes(aiuolaId));
+}
+
+// 'urgente' se almeno un task da fare è urgente, 'programmato' se ce ne sono altri, altrimenti null
+function segnoTask(tasks) {
+  const daFare = tasks.filter(t => !t.fatto);
+  if (daFare.some(urgente)) return 'urgente';
+  return daFare.length > 0 ? 'programmato' : null;
+}
+
+function puntino(segno) {
+  return elemento('span', segno === 'urgente' ? '!' : '', `puntino puntino-${segno}`);
+}
+
 function testoScadenza(t) {
   if (!t.scadenza) return '';
   if (t.scadenza < oggi()) return `scaduto il ${dataPerUtente(t.scadenza)}`;
@@ -641,7 +670,7 @@ function elencoTask(dati, tasks, testoSeVuoto) {
     const quando = t.fatto ? `fatto il ${dataPerUtente(t.fattoIl)}` : testoScadenza(t);
 
     const testo = elemento('div');
-    testo.append(elemento('strong', t.titolo));
+    testo.append(link(t.titolo, `#/task/${t.id}`, 'titolo-task'));
     if (quando) testo.append(' · ', elemento('span', quando, urgente(t) ? 'urgente' : ''));
     testo.append(elemento('br'), dettagli);
 
@@ -747,5 +776,40 @@ function salvaTask(modulo) {
   } catch (errore) {
     avviso.textContent = errore.message;
     avviso.hidden = false;
+  }
+}
+
+export function schedaTask(dati, task) {
+  const indietro = elemento('button', '← Indietro', 'indietro');
+  indietro.type = 'button';
+  indietro.addEventListener('click', () => history.back());
+
+  const elimina = elemento('button', 'Elimina task', 'pulsante pericolo');
+  elimina.type = 'button';
+  elimina.addEventListener('click', () => eliminaTask(task));
+
+  const coltura = dati.colture.find(c => c.id === task.colturaId);
+  const sezione = document.createElement('section');
+  sezione.append(
+    indietro,
+    elemento('h2', task.titolo),
+    riga('Stato', task.fatto ? `Fatto il ${dataPerUtente(task.fattoIl)}` : 'Da fare'),
+    riga('Scadenza', task.scadenza ? dataPerUtente(task.scadenza) : 'Nessuna'),
+    riga('Aiuole', doveVoce(dati, task) || 'Nessuna'),
+  );
+  if (coltura) sezione.append(riga('Coltura', nomeColtura(coltura)));
+  sezione.append(elimina);
+  return sezione;
+}
+
+function eliminaTask(task) {
+  if (!confirm(`Eliminare il task "${task.titolo}"? Non si potrà recuperare.`)) return;
+  try {
+    const dati = carica();
+    dati.task = dati.task.filter(t => t.id !== task.id);
+    salva(dati);
+    history.back();
+  } catch (errore) {
+    alert(errore.message);
   }
 }

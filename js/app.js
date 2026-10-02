@@ -1,7 +1,7 @@
 import { carica } from './dati.js';
 import {
   mappa, schedaAiuola, storicoAiuola, impostazioni, nuovaColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
-  listaTask, nuovoTask,
+  listaTask, nuovoTask, schedaTask,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -14,7 +14,10 @@ function schermata() {
   const dati = carica();
   if (pagina === 'task') {
     if (id === 'nuovo') return nuovoTask(dati);
-    return listaTask(dati, id === 'fatti');
+    if (id === 'fatti') return listaTask(dati, true);
+    const task = dati.task.find(t => t.id === id);
+    if (task) return schedaTask(dati, task);
+    return listaTask(dati);
   }
   if (pagina === 'registro') {
     return id === 'nuova-voce' ? nuovaVoce(dati) : registro(dati);
@@ -25,11 +28,13 @@ function schermata() {
     if (sotto === 'nuova-coltura') return nuovaColtura(dati, aiuola);
     if (sotto === 'registro') return registro(dati, aiuola);
     if (sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: [aiuola.id] });
+    if (sotto === 'nuovo-task') return nuovoTask(dati, { aiuoleIds: [aiuola.id] });
     return schedaAiuola(dati, aiuola);
   }
   if (pagina === 'coltura') {
     const coltura = dati.colture.find(c => c.id === id);
     if (coltura && sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: coltura.aiuoleIds, coltura });
+    if (coltura && sotto === 'nuovo-task') return nuovoTask(dati, { aiuoleIds: coltura.aiuoleIds, coltura });
     if (coltura) return schedaColtura(dati, coltura);
   }
   if (pagina === 'voce') {

@@ -95,6 +95,7 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Non si indica chi deve fare un task; quando è fatto si salva solo la data (`fattoIl`)
 - Urgente = non fatto e scaduto, oppure in scadenza oggi o domani
 - Niente task ripetuti e nessuna voce di registro automatica quando un task è fatto
+- Segni sulla mappa per i task da fare: puntino arancione = programmato, cerchio rosso con "!" = almeno uno urgente. Il segno va sull'angolo delle aiuole per i task su aiuole specifiche, in cima al vialetto per i task su tutto l'orto, sull'icona "Da fare" per i task senza aiuole
 
 ## Regole di lavoro
 - Sto imparando terminale e git: spiega ogni comando prima di eseguirlo, in modo semplice, e aspetta la mia approvazione
