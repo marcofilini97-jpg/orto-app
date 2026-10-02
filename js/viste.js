@@ -1,6 +1,17 @@
 // Funzioni che costruiscono le schermate. Ricevono i dati e restituiscono elementi da mostrare.
 
-import { carica, salva, esporta, importa, oggi, nuovoId, dataPerUtente, dataPerArchivio } from './dati.js';
+import {
+  carica, salva, esporta, importa, oggi, nuovoId, dataPerUtente, dataPerArchivio, ultimaPersona, ricordaPersona,
+} from './dati.js';
+
+const TIPI = {
+  semina: 'Semina', trapianto: 'Trapianto', irrigazione: 'Irrigazione',
+  concimazione: 'Concimazione', trattamento: 'Trattamento',
+  diserbo: 'Diserbo/pulizia', lavorazione: 'Zappatura/lavorazione del terreno',
+  raccolto: 'Raccolto', nota: 'Nota',
+};
+
+const PERSONE = ['Marco', 'Mauro', 'Entrambi'];
 
 // Ogni metà appartiene a uno dei due modi di dividere un'aiuola
 const ASSI = {
@@ -45,7 +56,8 @@ function posizioneBollino(zona, lato) {
 export function mappa(dati) {
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
-  mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(), colonna(dati, 'destra'), etichetta('Davanti'));
+  mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(), colonna(dati, 'destra'), etichetta('Davanti'),
+    link('Registro', '#/registro', 'pulsante'));
   return mappa;
 }
 
@@ -99,6 +111,10 @@ export function schedaAiuola(dati, aiuola) {
     elemento('h3', 'Note'),
     elemento('p', aiuola.note || 'Nessuna nota.'),
     link('Mostra storico', `#/aiuola/${aiuola.id}/storico`, 'pulsante'),
+    elemento('h3', 'Registro'),
+    elencoVoci(dati, ordinaVoci(dati.registro.filter(v => v.aiuoleIds.includes(aiuola.id))).slice(0, 5), 'Nessuna voce nel registro.'),
+    link('Aggiungi al registro', `#/aiuola/${aiuola.id}/nuova-voce`, 'pulsante'),
+    link(`Vedi tutto il registro di ${aiuola.id}`, `#/aiuola/${aiuola.id}/registro`, 'pulsante secondario'),
   );
   return sezione;
 }
@@ -221,7 +237,7 @@ export function nuovaColtura(dati, aiuola) {
     <label>Varietà (facoltativa)<input type="text" name="varieta" autocomplete="off" placeholder="es. Cuore di bue"></label>
     <fieldset>
       <legend>Aiuole</legend>
-      <div class="due-colonne">${caselleAiuole(dati, aiuola.id)}</div>
+      <div class="due-colonne">${caselleAiuole(dati, [aiuola.id])}</div>
     </fieldset>
     <fieldset>
       <legend>Parte occupata</legend>
@@ -234,6 +250,10 @@ export function nuovaColtura(dati, aiuola) {
         <label class="opzione"><input type="radio" name="metodo" value="semina"> Semina</label>
         <label class="opzione"><input type="radio" name="metodo" value="trapianto"> Trapianto</label>
       </div>
+    </fieldset>
+    <fieldset>
+      <legend>Chi</legend>
+      <div class="due-colonne">${opzioniRadio('chi', PERSONE.map(p => [p, p]), ultimaPersona())}</div>
     </fieldset>
     <label>Note (facoltative)<textarea name="note" rows="3"></textarea></label>
     <p class="errore" role="alert" hidden></p>
@@ -257,10 +277,10 @@ export function nuovaColtura(dati, aiuola) {
 }
 
 // Stesso ordine della mappa: riga per riga, prima sinistra poi destra
-function caselleAiuole(dati, spuntata) {
+function caselleAiuole(dati, spuntate) {
   return [...dati.aiuole]
     .sort((x, y) => x.posizione - y.posizione || (x.lato === 'sinistra' ? -1 : 1))
-    .map(a => `<label class="opzione"><input type="checkbox" name="aiuole" value="${a.id}"${a.id === spuntata ? ' checked' : ''}> ${a.id}</label>`)
+    .map(a => `<label class="opzione"><input type="checkbox" name="aiuole" value="${a.id}"${spuntate.includes(a.id) ? ' checked' : ''}> ${a.id}</label>`)
     .join('');
 }
 
@@ -284,12 +304,14 @@ function salvaColtura(modulo) {
   const aiuoleIds = campi.getAll('aiuole');
   const dataInizio = dataPerArchivio(campi.get('data'));
   const metodo = campi.get('metodo');
+  const chi = campi.get('chi');
 
   const errori = [];
   if (!nome) errori.push('Scrivi il nome della coltura.');
   if (aiuoleIds.length === 0) errori.push('Scegli almeno un\'aiuola.');
   if (!dataInizio) errori.push('Scrivi la data come gg/mm/aaaa, es. 20/04/2026.');
   if (!metodo) errori.push('Scegli semina o trapianto.');
+  if (!chi) errori.push('Scegli chi l\'ha fatto.');
 
   const avviso = modulo.querySelector('.errore');
   if (errori.length > 0) {
@@ -305,11 +327,18 @@ function salvaColtura(modulo) {
       if (parte) parti[id] = parte;
     }
     const dati = carica();
+    const colturaId = nuovoId('c');
     dati.colture.push({
-      id: nuovoId('c'), nome, varieta: campi.get('varieta').trim(), aiuoleIds, parti,
+      id: colturaId, nome, varieta: campi.get('varieta').trim(), aiuoleIds, parti,
       dataInizio, metodo, stato: 'attiva', dataFine: null, note: campi.get('note').trim(),
     });
+    // La semina o il trapianto finiscono anche nel registro
+    dati.registro.push({
+      id: nuovoId('r'), data: dataInizio, tipo: metodo, aiuoleIds, colturaId,
+      chi, quantita: '', note: '',
+    });
     salva(dati);
+    ricordaPersona(chi);
     history.back();
   } catch (errore) {
     avviso.textContent = errore.message;
@@ -335,6 +364,9 @@ export function schedaColtura(dati, coltura) {
   sezione.append(
     riga('Metodo', coltura.metodo === 'semina' ? 'Semina' : 'Trapianto'),
     riga('Note', coltura.note || 'Nessuna nota.'),
+    elemento('h3', 'Registro'),
+    elencoVoci(dati, ordinaVoci(dati.registro.filter(v => v.colturaId === coltura.id)), 'Nessuna voce nel registro.'),
+    link('Aggiungi al registro', `#/coltura/${coltura.id}/nuova-voce`, 'pulsante secondario'),
     attiva ? moduloTermina(coltura) : pulsanteRiattiva(dati, coltura),
   );
   return sezione;
@@ -402,5 +434,133 @@ function modificaColtura(id, modifiche) {
     history.back();
   } catch (errore) {
     alert(errore.message);
+  }
+}
+
+function nomeColtura(c) {
+  return c.varieta ? `${c.nome} – ${c.varieta}` : c.nome;
+}
+
+// Dalla più recente; a parità di data, prima l'ultima inserita
+function ordinaVoci(voci) {
+  return [...voci].reverse().sort((x, y) => y.data.localeCompare(x.data));
+}
+
+function elencoVoci(dati, voci, testoSeVuoto) {
+  if (voci.length === 0) return elemento('p', testoSeVuoto);
+  const ul = elemento('ul', '', 'registro');
+  for (const v of voci) {
+    const coltura = dati.colture.find(c => c.id === v.colturaId);
+    const dove = v.aiuoleIds.length === dati.aiuole.length ? 'tutto l\'orto' : v.aiuoleIds.join(', ');
+    const dettagli = [coltura && nomeColtura(coltura), dove, v.chi, v.quantita].filter(Boolean).join(' · ');
+    const voce = elemento('li');
+    voce.append(elemento('strong', `${dataPerUtente(v.data)} · ${TIPI[v.tipo]}`), elemento('br'), dettagli);
+    if (v.note) voce.append(elemento('br'), v.note);
+    ul.append(voce);
+  }
+  return ul;
+}
+
+export function registro(dati, aiuola = null) {
+  const voci = aiuola ? dati.registro.filter(v => v.aiuoleIds.includes(aiuola.id)) : dati.registro;
+  const sezione = document.createElement('section');
+  sezione.append(
+    aiuola ? link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro') : link('← Mappa', '#/', 'indietro'),
+    elemento('h2', aiuola ? `Registro ${aiuola.id}` : 'Registro'),
+    link('Aggiungi al registro', aiuola ? `#/aiuola/${aiuola.id}/nuova-voce` : '#/registro/nuova-voce', 'pulsante'),
+    elencoVoci(dati, ordinaVoci(voci), 'Nessuna voce nel registro.'),
+  );
+  return sezione;
+}
+
+export function nuovaVoce(dati, { aiuoleIds = [], coltura = null } = {}) {
+  const modulo = document.createElement('form');
+  modulo.className = 'modulo';
+  modulo.noValidate = true;
+  // Solo testo fisso e dati dell'app: i nomi delle colture si aggiungono sotto, con textContent
+  modulo.innerHTML = `
+    <fieldset>
+      <legend>Attività</legend>
+      <div class="due-colonne">${opzioniRadio('tipo', Object.entries(TIPI))}</div>
+    </fieldset>
+    <label>Data<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(oggi())}"></label>
+    <label>Coltura (facoltativa)<select name="coltura"><option value="">Nessuna</option></select></label>
+    <fieldset>
+      <legend>Aiuole</legend>
+      <div class="due-colonne">${caselleAiuole(dati, aiuoleIds)}</div>
+      <button type="button" class="pulsante secondario tutto-orto">Tutto l'orto</button>
+    </fieldset>
+    <fieldset>
+      <legend>Chi</legend>
+      <div class="due-colonne">${opzioniRadio('chi', PERSONE.map(p => [p, p]), ultimaPersona())}</div>
+    </fieldset>
+    <label>Quantità (facoltativa)<input type="text" name="quantita" autocomplete="off" placeholder="es. 3 kg, 20 litri"></label>
+    <label>Note (facoltative)<textarea name="note" rows="3"></textarea></label>
+    <p class="errore" role="alert" hidden></p>
+    <button type="submit" class="pulsante">Salva nel registro</button>
+  `;
+
+  const sceltaColtura = modulo.querySelector('select[name="coltura"]');
+  for (const c of dati.colture.filter(c => c.stato === 'attiva' || c.id === coltura?.id)) {
+    const opzione = elemento('option', nomeColtura(c));
+    opzione.value = c.id;
+    opzione.selected = c.id === coltura?.id;
+    sceltaColtura.append(opzione);
+  }
+
+  modulo.querySelector('.tutto-orto').addEventListener('click', () => {
+    modulo.querySelectorAll('input[name="aiuole"]').forEach(casella => { casella.checked = true; });
+  });
+  modulo.addEventListener('submit', evento => {
+    evento.preventDefault();
+    salvaVoce(modulo);
+  });
+
+  const indietro = elemento('button', '← Indietro', 'indietro');
+  indietro.type = 'button';
+  indietro.addEventListener('click', () => history.back());
+
+  const sezione = document.createElement('section');
+  sezione.append(indietro, elemento('h2', 'Nuova voce di registro'), modulo);
+  return sezione;
+}
+
+function opzioniRadio(nome, opzioni, scelta) {
+  return opzioni
+    .map(([valore, testo]) => `<label class="opzione"><input type="radio" name="${nome}" value="${valore}"${valore === scelta ? ' checked' : ''}> ${testo}</label>`)
+    .join('');
+}
+
+function salvaVoce(modulo) {
+  const campi = new FormData(modulo);
+  const tipo = campi.get('tipo');
+  const data = dataPerArchivio(campi.get('data'));
+  const chi = campi.get('chi');
+
+  const errori = [];
+  if (!tipo) errori.push('Scegli l\'attività.');
+  if (!data) errori.push('Scrivi la data come gg/mm/aaaa, es. 02/10/2026.');
+  if (!chi) errori.push('Scegli chi l\'ha fatto.');
+
+  const avviso = modulo.querySelector('.errore');
+  if (errori.length > 0) {
+    avviso.textContent = errori.join('\n');
+    avviso.hidden = false;
+    return;
+  }
+
+  try {
+    const dati = carica();
+    dati.registro.push({
+      id: nuovoId('r'), data, tipo, aiuoleIds: campi.getAll('aiuole'),
+      colturaId: campi.get('coltura') || null, chi,
+      quantita: campi.get('quantita').trim(), note: campi.get('note').trim(),
+    });
+    salva(dati);
+    ricordaPersona(chi);
+    history.back();
+  } catch (errore) {
+    avviso.textContent = errore.message;
+    avviso.hidden = false;
   }
 }

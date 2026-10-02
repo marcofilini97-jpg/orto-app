@@ -83,3 +83,14 @@ export function oggi() {                      // data di oggi in AAAA-MM-GG
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+// Preferenza di questo telefono: non fa parte dei dati né del backup
+const CHIAVE_PERSONA = 'orto-ultima-persona';
+
+export function ultimaPersona() {
+  return localStorage.getItem(CHIAVE_PERSONA);
+}
+
+export function ricordaPersona(nome) {
+  localStorage.setItem(CHIAVE_PERSONA, nome);
+}

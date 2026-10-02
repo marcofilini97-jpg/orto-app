@@ -1,5 +1,7 @@
 import { carica } from './dati.js';
-import { mappa, schedaAiuola, storicoAiuola, impostazioni, nuovaColtura, schedaColtura } from './viste.js';
+import {
+  mappa, schedaAiuola, storicoAiuola, impostazioni, nuovaColtura, schedaColtura, registro, nuovaVoce,
+} from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
 
@@ -9,14 +11,20 @@ function schermata() {
   // Impostazioni non legge i dati: così si può ripristinare un backup anche se sono danneggiati
   if (pagina === 'impostazioni') return impostazioni();
   const dati = carica();
+  if (pagina === 'registro') {
+    return id === 'nuova-voce' ? nuovaVoce(dati) : registro(dati);
+  }
   const aiuola = dati.aiuole.find(a => a.id === id);
   if (pagina === 'aiuola' && aiuola) {
     if (sotto === 'storico') return storicoAiuola(dati, aiuola);
     if (sotto === 'nuova-coltura') return nuovaColtura(dati, aiuola);
+    if (sotto === 'registro') return registro(dati, aiuola);
+    if (sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: [aiuola.id] });
     return schedaAiuola(dati, aiuola);
   }
   if (pagina === 'coltura') {
     const coltura = dati.colture.find(c => c.id === id);
+    if (coltura && sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: coltura.aiuoleIds, coltura });
     if (coltura) return schedaColtura(dati, coltura);
   }
   return mappa(dati);

@@ -64,13 +64,13 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
     {
       "id": "r-…", "data": "2026-06-12", "tipo": "irrigazione",
       "aiuoleIds": ["2A"], "colturaId": null, "chi": "Marco",
-      "quantita": null, "note": ""
+      "quantita": "", "note": ""
     }
   ],
   "task": [
     {
       "id": "t-…", "titolo": "Legare i pomodori", "scadenza": "2026-06-15",
-      "aiuoleIds": ["2A"], "colturaId": "c-…", "assegnatoA": "Papà",
+      "aiuoleIds": ["2A"], "colturaId": "c-…", "assegnatoA": "Mauro",
       "fatto": false, "fattoIl": null
     }
   ]
@@ -83,6 +83,13 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - `parti` (nelle colture): aiuole occupate solo a metà, con valore fondo, davanti, vialetto o esterno; le aiuole non elencate sono occupate per intero. In un'aiuola le colture attive usano un solo modo di dividere (fondo/davanti oppure vialetto/esterno)
 - `registro`: diario delle attività (semina, trapianto, irrigazione, concimazione, trattamento, raccolto, nota); aiuole e coltura facoltative
 - `task`: cose da fare, con scadenza e stato fatto/non fatto
+
+## Registro
+- Persone (`chi`): Marco, Mauro (mio padre), Entrambi
+- Tipi (`tipo`, nome breve → testo mostrato): semina, trapianto, irrigazione, concimazione, trattamento, diserbo (Diserbo/pulizia), lavorazione (Zappatura/lavorazione del terreno), raccolto, nota
+- `quantita`: testo libero facoltativo (es. "3 kg", "20 litri"), niente totali
+- Quando si crea una coltura, l'app aggiunge da sola la voce di registro "semina" o "trapianto"
+- L'ultima persona scelta è una preferenza del singolo telefono: sta in `localStorage` con una chiave a parte e non finisce nel backup
 
 ## Regole di lavoro
 - Sto imparando terminale e git: spiega ogni comando prima di eseguirlo, in modo semplice, e aspetta la mia approvazione

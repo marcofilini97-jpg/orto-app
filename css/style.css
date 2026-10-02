@@ -189,6 +189,13 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
 .aiuola .bollino-alto { bottom: calc(50% + 4px); }
 .aiuola .bollino-sinistra { right: calc(50% + 4px); }
 
+.mappa .pulsante { grid-column: 1 / -1; }
+
+.modulo .tutto-orto { margin-top: 8px; }
+
+.registro { margin: 0; padding-left: 20px; }
+.registro li { padding: 6px 0; }
+
 .modulo .parte {
   display: flex;
   align-items: center;
