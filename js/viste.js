@@ -1,7 +1,7 @@
 // Funzioni che costruiscono le schermate. Ricevono i dati e restituiscono elementi da mostrare.
 
 import {
-  carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio, ultimaPersona, ricordaPersona,
+  carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio,
 } from './dati.js';
 
 const TIPI = {
@@ -10,10 +10,6 @@ const TIPI = {
   diserbo: 'Diserbo/pulizia', lavorazione: 'Zappatura/lavorazione del terreno',
   raccolto: 'Raccolto', nota: 'Nota',
 };
-
-const PERSONE = ['Marco', 'Mauro', 'Entrambi'];
-
-const ASSEGNATARI = [...PERSONE, 'Chiunque'];
 
 // Icone di Feather Icons (licenza MIT)
 const ICONE = {
@@ -269,10 +265,6 @@ export function nuovaColtura(dati, aiuola) {
         <label class="opzione"><input type="radio" name="metodo" value="trapianto"> Trapianto</label>
       </div>
     </fieldset>
-    <fieldset>
-      <legend>Chi</legend>
-      <div class="due-colonne">${opzioniRadio('chi', PERSONE.map(p => [p, p]), ultimaPersona())}</div>
-    </fieldset>
     <label>Note (facoltative)<textarea name="note" rows="3"></textarea></label>
     <p class="errore" role="alert" hidden></p>
     <button type="submit" class="pulsante">Salva coltura</button>
@@ -322,14 +314,12 @@ function salvaColtura(modulo) {
   const aiuoleIds = campi.getAll('aiuole');
   const dataInizio = dataPerArchivio(campi.get('data'));
   const metodo = campi.get('metodo');
-  const chi = campi.get('chi');
 
   const errori = [];
   if (!nome) errori.push('Scrivi il nome della coltura.');
   if (aiuoleIds.length === 0) errori.push('Scegli almeno un\'aiuola.');
   if (!dataInizio) errori.push('Scrivi la data come gg/mm/aaaa, es. 20/04/2026.');
   if (!metodo) errori.push('Scegli semina o trapianto.');
-  if (!chi) errori.push('Scegli chi l\'ha fatto.');
 
   const avviso = modulo.querySelector('.errore');
   if (errori.length > 0) {
@@ -353,10 +343,9 @@ function salvaColtura(modulo) {
     // La semina o il trapianto finiscono anche nel registro
     dati.registro.push({
       id: nuovoId('r'), data: dataInizio, tipo: metodo, aiuoleIds, colturaId,
-      chi, quantita: '', note: '',
+      quantita: '', note: '',
     });
     salva(dati);
-    ricordaPersona(chi);
     history.back();
   } catch (errore) {
     avviso.textContent = errore.message;
@@ -474,7 +463,7 @@ function elencoVoci(dati, voci, testoSeVuoto) {
   for (const v of voci) {
     const coltura = dati.colture.find(c => c.id === v.colturaId);
     const dove = doveVoce(dati, v);
-    const dettagli = [coltura && nomeColtura(coltura), dove, v.chi, v.quantita].filter(Boolean).join(' · ');
+    const dettagli = [coltura && nomeColtura(coltura), dove, v.quantita].filter(Boolean).join(' · ');
     const collegamento = link('', `#/voce/${v.id}`);
     collegamento.append(elemento('strong', `${dataPerUtente(v.data)} · ${TIPI[v.tipo]}`), elemento('br'), dettagli);
     if (v.note) collegamento.append(elemento('br'), v.note);
@@ -513,10 +502,6 @@ export function nuovaVoce(dati, { aiuoleIds = [], coltura = null } = {}) {
       <legend>Aiuole</legend>
       <div class="due-colonne">${caselleAiuole(dati, aiuoleIds)}</div>
       <button type="button" class="pulsante secondario tutto-orto">Tutto l'orto</button>
-    </fieldset>
-    <fieldset>
-      <legend>Chi</legend>
-      <div class="due-colonne">${opzioniRadio('chi', PERSONE.map(p => [p, p]), ultimaPersona())}</div>
     </fieldset>
     <label>Quantità (facoltativa)<input type="text" name="quantita" autocomplete="off" placeholder="es. 3 kg, 20 litri"></label>
     <label>Note (facoltative)<textarea name="note" rows="3"></textarea></label>
@@ -566,12 +551,10 @@ function salvaVoce(modulo) {
   const campi = new FormData(modulo);
   const tipo = campi.get('tipo');
   const data = dataPerArchivio(campi.get('data'));
-  const chi = campi.get('chi');
 
   const errori = [];
   if (!tipo) errori.push('Scegli l\'attività.');
   if (!data) errori.push('Scrivi la data come gg/mm/aaaa, es. 02/10/2026.');
-  if (!chi) errori.push('Scegli chi l\'ha fatto.');
 
   const avviso = modulo.querySelector('.errore');
   if (errori.length > 0) {
@@ -584,11 +567,10 @@ function salvaVoce(modulo) {
     const dati = carica();
     dati.registro.push({
       id: nuovoId('r'), data, tipo, aiuoleIds: campi.getAll('aiuole'),
-      colturaId: campi.get('coltura') || null, chi,
+      colturaId: campi.get('coltura') || null,
       quantita: campi.get('quantita').trim(), note: campi.get('note').trim(),
     });
     salva(dati);
-    ricordaPersona(chi);
     history.back();
   } catch (errore) {
     avviso.textContent = errore.message;
@@ -609,10 +591,7 @@ export function schedaVoce(dati, voce) {
   const sezione = document.createElement('section');
   sezione.append(indietro, elemento('h2', TIPI[voce.tipo]), riga('Data', dataPerUtente(voce.data)));
   if (coltura) sezione.append(riga('Coltura', nomeColtura(coltura)));
-  sezione.append(
-    riga('Aiuole', doveVoce(dati, voce) || 'Nessuna'),
-    riga('Chi', voce.chi),
-  );
+  sezione.append(riga('Aiuole', doveVoce(dati, voce) || 'Nessuna'));
   if (voce.quantita) sezione.append(riga('Quantità', voce.quantita));
   sezione.append(riga('Note', voce.note || 'Nessuna nota.'), elimina);
   return sezione;
@@ -658,7 +637,7 @@ function elencoTask(dati, tasks, testoSeVuoto) {
     casella.addEventListener('change', () => segnaTask(t.id, casella.checked));
 
     const coltura = dati.colture.find(c => c.id === t.colturaId);
-    const dettagli = [doveVoce(dati, t), coltura && nomeColtura(coltura), t.assegnatoA].filter(Boolean).join(' · ');
+    const dettagli = [doveVoce(dati, t), coltura && nomeColtura(coltura)].filter(Boolean).join(' · ');
     const quando = t.fatto ? `fatto il ${dataPerUtente(t.fattoIl)}` : testoScadenza(t);
 
     const testo = elemento('div');
@@ -721,10 +700,6 @@ export function nuovoTask(dati, { aiuoleIds = [], coltura = null } = {}) {
       <button type="button" class="pulsante secondario tutto-orto">Tutto l'orto</button>
     </fieldset>
     <label>Coltura (facoltativa)<select name="coltura"><option value="">Nessuna</option></select></label>
-    <fieldset>
-      <legend>Chi lo deve fare</legend>
-      <div class="due-colonne">${opzioniRadio('assegnatoA', ASSEGNATARI.map(p => [p, p]), 'Chiunque')}</div>
-    </fieldset>
     <p class="errore" role="alert" hidden></p>
     <button type="submit" class="pulsante">Salva task</button>
   `;
@@ -765,8 +740,7 @@ function salvaTask(modulo) {
     const dati = carica();
     dati.task.push({
       id: nuovoId('t'), titolo, scadenza, aiuoleIds: campi.getAll('aiuole'),
-      colturaId: campi.get('coltura') || null, assegnatoA: campi.get('assegnatoA'),
-      fatto: false, fattoIl: null,
+      colturaId: campi.get('coltura') || null, fatto: false, fattoIl: null,
     });
     salva(dati);
     history.back();

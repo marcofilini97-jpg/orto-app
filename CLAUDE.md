@@ -1,6 +1,6 @@
 # Orto App
 
-App per gestire un orto comunale a Bologna, che curo insieme a mio padre.
+App per gestire un orto comunale a Bologna, che curo insieme a mio padre Mauro.
 
 ## L'orto
 - Circa 24 m², 8 aiuole disposte 4 per lato di un vialetto centrale
@@ -63,14 +63,14 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
   "registro": [
     {
       "id": "r-…", "data": "2026-06-12", "tipo": "irrigazione",
-      "aiuoleIds": ["2A"], "colturaId": null, "chi": "Marco",
+      "aiuoleIds": ["2A"], "colturaId": null,
       "quantita": "", "note": ""
     }
   ],
   "task": [
     {
       "id": "t-…", "titolo": "Legare i pomodori", "scadenza": "2026-06-15",
-      "aiuoleIds": ["2A"], "colturaId": "c-…", "assegnatoA": "Mauro",
+      "aiuoleIds": ["2A"], "colturaId": "c-…",
       "fatto": false, "fattoIl": null
     }
   ]
@@ -85,16 +85,14 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - `task`: cose da fare, con scadenza e stato fatto/non fatto
 
 ## Registro
-- Persone (`chi`): Marco, Mauro (mio padre), Entrambi
 - Tipi (`tipo`, nome breve → testo mostrato): semina, trapianto, irrigazione, concimazione, trattamento, diserbo (Diserbo/pulizia), lavorazione (Zappatura/lavorazione del terreno), raccolto, nota
 - `quantita`: testo libero facoltativo (es. "3 kg", "20 litri"), niente totali
 - Quando si crea una coltura, l'app aggiunge da sola la voce di registro "semina" o "trapianto"
-- L'ultima persona scelta è una preferenza del singolo telefono: sta in `localStorage` con una chiave a parte e non finisce nel backup
+- Non si registra chi ha fatto un'attività (scelta tolta perché poco utile)
 
 ## Task
-- `assegnatoA`: Marco, Mauro, Entrambi o Chiunque
 - `scadenza` facoltativa (`null` se manca); aiuole e coltura facoltative
-- Quando un task è fatto si salva solo la data (`fattoIl`), non chi l'ha fatto
+- Non si indica chi deve fare un task; quando è fatto si salva solo la data (`fattoIl`)
 - Urgente = non fatto e scaduto, oppure in scadenza oggi o domani
 - Niente task ripetuti e nessuna voce di registro automatica quando un task è fatto
 

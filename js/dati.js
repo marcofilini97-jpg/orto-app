@@ -92,14 +92,3 @@ export function domani() {                    // data di domani in AAAA-MM-GG
   d.setDate(d.getDate() + 1);
   return aIso(d);
 }
-
-// Preferenza di questo telefono: non fa parte dei dati né del backup
-const CHIAVE_PERSONA = 'orto-ultima-persona';
-
-export function ultimaPersona() {
-  return localStorage.getItem(CHIAVE_PERSONA);
-}
-
-export function ricordaPersona(nome) {
-  localStorage.setItem(CHIAVE_PERSONA, nome);
-}
