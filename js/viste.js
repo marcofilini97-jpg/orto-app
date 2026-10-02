@@ -22,6 +22,26 @@ function doveColtura(c) {
   return c.aiuoleIds.map(id => c.parti?.[id] ? `${id} metà ${c.parti[id]}` : id).join(', ');
 }
 
+// Spazi dell'aiuola dove più colture attive si sovrappongono, es. [{ zona: 'fondo', n: 2 }]
+function bollini(dati, aiuola) {
+  const attive = dati.colture.filter(c => c.stato === 'attiva' && c.aiuoleIds.includes(aiuola.id));
+  const asse = divisione(dati, aiuola.id);
+  const zone = !asse ? ['tutta'] : asse === 'fondo-davanti' ? ['fondo', 'davanti'] : ['vialetto', 'esterno'];
+  return zone
+    .map(zona => ({
+      zona,
+      n: attive.filter(c => !c.parti?.[aiuola.id] || c.parti[aiuola.id] === zona).length,
+    }))
+    .filter(z => z.n > 1);
+}
+
+// Dove va il bollino nel riquadro: 'alto' (metà di sopra), 'sinistra' (metà di sinistra) o 'angolo' (in basso a destra)
+function posizioneBollino(zona, lato) {
+  if (zona === 'fondo') return 'alto';
+  const metaSinistra = lato === 'sinistra' ? 'esterno' : 'vialetto';
+  return zona === metaSinistra ? 'sinistra' : 'angolo';
+}
+
 export function mappa(dati) {
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
@@ -41,6 +61,9 @@ function colonna(dati, lato) {
     link.className = asse ? `aiuola diviso-${asse}` : 'aiuola';
     link.href = `#/aiuola/${a.id}`;
     link.append(elemento('span', a.id));
+    for (const { zona, n } of bollini(dati, a)) {
+      link.append(elemento('span', `× ${n}`, `bollino bollino-${posizioneBollino(zona, a.lato)}`));
+    }
     colonna.append(link);
   }
   return colonna;
