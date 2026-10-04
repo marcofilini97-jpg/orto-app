@@ -1,6 +1,6 @@
 # Orto App
 
-App per gestire un orto comunale a Bologna, che curo insieme a mio padre Mauro.
+App per gestire un orto comunale, che curo insieme a mio padre Mauro.
 
 ## L'orto
 - Circa 24 m², 8 aiuole disposte 4 per lato di un vialetto centrale
@@ -96,6 +96,10 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Urgente = non fatto e scaduto, oppure in scadenza oggi o domani
 - Niente task ripetuti e nessuna voce di registro automatica quando un task è fatto
 - Segni sulla mappa per i task da fare: puntino arancione = programmato, cerchio rosso con "!" = almeno uno urgente. Il segno va sull'angolo delle aiuole per i task su aiuole specifiche, in cima al vialetto per i task su tutto l'orto, sull'icona "Da fare" per i task senza aiuole
+
+## Idee per il futuro
+- Grafica più accattivante in stile cartone animato: disegni stilizzati delle colture sulla mappa e nelle aiuole (es. carote disegnate nell'aiuola dove sono piantate le carote)
+- Ordine concordato: prima pubblicazione su GitHub Pages (senza offline), poi grafica provata sul telefono, per ultimo offline e installazione
 
 ## Regole di lavoro
 - Sto imparando terminale e git: spiega ogni comando prima di eseguirlo, in modo semplice, e aspetta la mia approvazione
