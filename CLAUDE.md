@@ -110,7 +110,7 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 
 - Stile dei disegni (definitivo): solo l'ortaggio nella sua forma più riconoscibile, appoggiato sulla terra con l'ombra, niente piante né buche. Aglio con gli spicchi visibili
 - Il disegno si sceglie da parole chiave nel nome (minuscole, senza accenti, es. "pomodor"); senza corrispondenza: piantina generica
-- Sulla mappa: tanti disegnini piccoli per aiuola (fino a 8 se intera, 4 per metà); più colture nello stesso spazio si alternano
+- Sulla mappa: tanti disegnini piccoli per aiuola (4 se intera, 2 per metà, 38px); più colture nello stesso spazio si alternano
 - Da disegnare: gruppo 2 (altri ortaggi dell'elenco) e gruppo 3 (aromatiche, fiori, sovesci, frutta)
 
 ## Idee per il futuro
