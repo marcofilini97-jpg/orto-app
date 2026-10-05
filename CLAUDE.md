@@ -88,6 +88,7 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Tipi (`tipo`, nome breve → testo mostrato): semina, trapianto, irrigazione, concimazione, trattamento, diserbo (Diserbo/pulizia), lavorazione (Zappatura/lavorazione del terreno), raccolto, nota
 - `quantita`: testo libero facoltativo (es. "3 kg", "20 litri"), niente totali
 - Quando si crea una coltura, l'app aggiunge da sola la voce di registro "semina" o "trapianto"
+- Quando si termina una coltura, l'app aggiunge da sola una voce "raccolto" con `data` = fine e `dal` = inizio della coltura (campo `dal` presente solo in queste voci). Riattivando la coltura, quella voce viene tolta
 - Non si registra chi ha fatto un'attività (scelta tolta perché poco utile)
 
 ## Task

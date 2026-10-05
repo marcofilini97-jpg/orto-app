@@ -419,8 +419,8 @@ function moduloTermina(coltura) {
       avviso.hidden = false;
       return;
     }
-    if (confirm(`Terminare "${coltura.nome}"? Passerà nello storico di ${coltura.aiuoleIds.join(', ')}.`)) {
-      modificaColtura(coltura.id, { stato: 'terminata', dataFine });
+    if (confirm(`Terminare "${coltura.nome}"? Passerà nello storico di ${coltura.aiuoleIds.join(', ')} e nel registro verrà aggiunto il raccolto.`)) {
+      terminaColtura(coltura, dataFine);
     }
   });
   return modulo;
@@ -440,16 +440,34 @@ function pulsanteRiattiva(dati, coltura) {
       return;
     }
     if (confirm(`Riattivare "${coltura.nome}"? Tornerà tra le colture attive e la data di fine verrà cancellata.`)) {
-      modificaColtura(coltura.id, { stato: 'attiva', dataFine: null });
+      riattivaColtura(coltura);
     }
   });
   return pulsante;
 }
 
-function modificaColtura(id, modifiche) {
+function terminaColtura(coltura, dataFine) {
   try {
     const dati = carica();
-    Object.assign(dati.colture.find(c => c.id === id), modifiche);
+    Object.assign(dati.colture.find(c => c.id === coltura.id), { stato: 'terminata', dataFine });
+    // Il raccolto finisce da solo nel registro, con il periodo della coltura
+    dati.registro.push({
+      id: nuovoId('r'), tipo: 'raccolto', data: dataFine, dal: coltura.dataInizio,
+      aiuoleIds: coltura.aiuoleIds, colturaId: coltura.id, quantita: '', note: '',
+    });
+    salva(dati);
+    history.back();
+  } catch (errore) {
+    alert(errore.message);
+  }
+}
+
+function riattivaColtura(coltura) {
+  try {
+    const dati = carica();
+    Object.assign(dati.colture.find(c => c.id === coltura.id), { stato: 'attiva', dataFine: null });
+    // Toglie il raccolto automatico creato quando era stata terminata
+    dati.registro = dati.registro.filter(v => !(v.colturaId === coltura.id && v.tipo === 'raccolto' && v.dal));
     salva(dati);
     history.back();
   } catch (errore) {
@@ -476,7 +494,8 @@ function elencoVoci(dati, voci, testoSeVuoto) {
   for (const v of voci) {
     const coltura = dati.colture.find(c => c.id === v.colturaId);
     const dove = doveVoce(dati, v);
-    const dettagli = [coltura && nomeColtura(coltura), dove, v.quantita].filter(Boolean).join(' · ');
+    const periodo = v.dal ? `dal ${dataPerUtente(v.dal)} al ${dataPerUtente(v.data)}` : '';
+    const dettagli = [coltura && nomeColtura(coltura), dove, periodo, v.quantita].filter(Boolean).join(' · ');
     const collegamento = link('', `#/voce/${v.id}`);
     collegamento.append(elemento('strong', `${dataPerUtente(v.data)} · ${TIPI[v.tipo]}`), elemento('br'), dettagli);
     if (v.note) collegamento.append(elemento('br'), v.note);
@@ -603,6 +622,7 @@ export function schedaVoce(dati, voce) {
 
   const sezione = document.createElement('section');
   sezione.append(indietro, elemento('h2', TIPI[voce.tipo]), riga('Data', dataPerUtente(voce.data)));
+  if (voce.dal) sezione.append(riga('Periodo', `dal ${dataPerUtente(voce.dal)} al ${dataPerUtente(voce.data)}`));
   if (coltura) sezione.append(riga('Coltura', nomeColtura(coltura)));
   sezione.append(riga('Aiuole', doveVoce(dati, voce) || 'Nessuna'));
   if (voce.quantita) sezione.append(riga('Quantità', voce.quantita));
