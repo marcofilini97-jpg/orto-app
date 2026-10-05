@@ -4,6 +4,7 @@
   --testo: #111111;
   --aiuola: #e6efdc;
   --vialetto: #d9c9a3;
+  --verde-scuro: #1b3d1b;
 }
 
 * { box-sizing: border-box; }
@@ -260,6 +261,70 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
 .scorciatoia .puntino { top: 2px; right: 10px; }
 
 .titolo { color: inherit; text-decoration: none; }
+
+.mini-mappa { display: grid; grid-template-columns: 1fr 20px 1fr; max-width: 320px; margin: 8px auto 0; }
+.mini-lato { display: flex; flex-direction: column; gap: 6px; }
+.mini-lato .mini-aiuola:nth-child(3) { margin-top: 10px; }
+.mini-vialetto { margin: 0 4px; background: var(--vialetto); border-radius: 4px; }
+
+.mini-aiuola {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  padding: 0;
+  overflow: hidden;
+  font: inherit;
+  font-weight: bold;
+  color: var(--testo);
+  background: var(--aiuola);
+  border: 2px solid var(--verde);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.mini-aiuola .nome { position: relative; z-index: 1; padding: 0 6px; border-radius: 4px; background: var(--aiuola); }
+
+.riempimento { position: absolute; background: var(--verde-scuro); }
+.riempimento-tutta { inset: 0; }
+.riempimento-sopra { inset: 0 0 50% 0; }
+.riempimento-sotto { inset: 50% 0 0 0; }
+.riempimento-sinistra { inset: 0 50% 0 0; }
+.riempimento-destra { inset: 0 0 0 50%; }
+
+.popup { width: min(92vw, 400px); padding: 0; border: 0; border-radius: 12px; }
+.popup::backdrop { background: rgb(0 0 0 / 0.5); }
+.popup-contenuto { padding: 16px; }
+.popup h3 { margin: 0 0 12px; }
+.popup-corpo { display: flex; align-items: center; gap: 16px; }
+.anteprima .mini-aiuola { width: 110px; height: 150px; font-size: 1.4rem; cursor: default; }
+
+.rotella {
+  flex: 1;
+  height: 144px;
+  padding: 48px 0;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  border: 2px solid #767676;
+  border-radius: 8px;
+  /* fascia centrale fissa: segna la voce scelta */
+  background: linear-gradient(transparent 46px, var(--aiuola) 46px, var(--aiuola) 94px, transparent 94px);
+}
+.voce-rotella {
+  display: block;
+  width: 100%;
+  height: 48px;
+  scroll-snap-align: center;
+  font: inherit;
+  color: #767676;
+  background: none;
+  border: 0;
+}
+.voce-rotella.attiva { color: var(--testo); font-weight: bold; }
+
+.popup-azioni { display: flex; gap: 12px; margin-top: 16px; }
+.popup-azioni .pulsante { margin-top: 0; }
 
 .modulo .parte {
   display: flex;

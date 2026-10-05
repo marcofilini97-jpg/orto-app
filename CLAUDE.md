@@ -63,14 +63,14 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
   "registro": [
     {
       "id": "r-…", "data": "2026-06-12", "tipo": "irrigazione",
-      "aiuoleIds": ["2A"], "colturaId": null,
+      "aiuoleIds": ["2A"], "parti": {}, "colturaId": null,
       "quantita": "", "note": ""
     }
   ],
   "task": [
     {
       "id": "t-…", "titolo": "Legare i pomodori", "scadenza": "2026-06-15",
-      "aiuoleIds": ["2A"], "colturaId": "c-…",
+      "aiuoleIds": ["2A"], "parti": {}, "colturaId": "c-…",
       "fatto": false, "fattoIl": null
     }
   ]
@@ -80,7 +80,8 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - `versione`: permette di riconoscere e convertire i backup vecchi se la struttura cambia
 - `aiuole`: fisse (8); l'id è il nome. `posizione` va da 1 (fondo) a 4 (davanti) sul proprio lato
 - `colture`: ogni record è una coltivazione (anche su più aiuole), non una specie in generale, così resta lo storico per la rotazione
-- `parti` (nelle colture): aiuole occupate solo a metà, con valore fondo, davanti, vialetto o esterno; le aiuole non elencate sono occupate per intero. In un'aiuola le colture attive usano un solo modo di dividere (fondo/davanti oppure vialetto/esterno)
+- `parti` (nelle colture): aiuole occupate solo a metà, con valore fondo, davanti, vialetto o esterno; le aiuole non elencate sono occupate per intero. In un'aiuola le colture attive usano un solo modo di dividere (fondo/davanti oppure vialetto/esterno). Anche voci di registro e task hanno `parti`, con le stesse regole; "tutto l'orto" = tutte e 8 le aiuole intere
+- Nei moduli le aiuole si scelgono da una mini-mappa: tocco = aiuola intera, tocco su una già scelta = pop-up con rotella per scegliere la metà o togliere l'aiuola
 - `registro`: diario delle attività (semina, trapianto, irrigazione, concimazione, trattamento, raccolto, nota); aiuole e coltura facoltative
 - `task`: cose da fare, con scadenza e stato fatto/non fatto
 

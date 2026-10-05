@@ -104,7 +104,7 @@ function vialetto(dati) {
   const vialetto = document.createElement('div');
   vialetto.className = 'vialetto';
   vialetto.setAttribute('aria-hidden', 'true');
-  const segno = segnoTask(dati.task.filter(t => t.aiuoleIds.length === dati.aiuole.length));
+  const segno = segnoTask(dati.task.filter(t => tuttoOrto(dati, t)));
   if (segno) vialetto.append(puntino(segno));
   return vialetto;
 }
@@ -259,14 +259,7 @@ export function nuovaColtura(dati, aiuola) {
   modulo.innerHTML = `
     <label>Nome<input type="text" name="nome" autocomplete="off" placeholder="es. Pomodoro"></label>
     <label>Varietà (facoltativa)<input type="text" name="varieta" autocomplete="off" placeholder="es. Cuore di bue"></label>
-    <fieldset>
-      <legend>Aiuole</legend>
-      <div class="due-colonne">${caselleAiuole(dati, [aiuola.id])}</div>
-    </fieldset>
-    <fieldset>
-      <legend>Parte occupata</legend>
-      <div class="parti"></div>
-    </fieldset>
+    <div class="posto-aiuole"></div>
     <label>Data di inizio<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(oggi())}"></label>
     <fieldset>
       <legend>Metodo</legend>
@@ -279,9 +272,7 @@ export function nuovaColtura(dati, aiuola) {
     <p class="errore" role="alert" hidden></p>
     <button type="submit" class="pulsante">Salva coltura</button>
   `;
-  const aggiorna = () => aggiornaParti(modulo, dati);
-  modulo.querySelectorAll('input[name="aiuole"]').forEach(casella => casella.addEventListener('change', aggiorna));
-  aggiorna();
+  modulo.querySelector('.posto-aiuole').replaceWith(selettoreAiuole(dati, { [aiuola.id]: '' }));
   modulo.addEventListener('submit', evento => {
     evento.preventDefault();
     salvaColtura(modulo);
@@ -296,26 +287,163 @@ export function nuovaColtura(dati, aiuola) {
   return sezione;
 }
 
-// Stesso ordine della mappa: riga per riga, prima sinistra poi destra
-function caselleAiuole(dati, spuntate) {
-  return [...dati.aiuole]
-    .sort((x, y) => x.posizione - y.posizione || (x.lato === 'sinistra' ? -1 : 1))
-    .map(a => `<label class="opzione"><input type="checkbox" name="aiuole" value="${a.id}"${spuntate.includes(a.id) ? ' checked' : ''}> ${a.id}</label>`)
-    .join('');
+// Mini-mappa per scegliere aiuole e metà. Le scelte finiscono in campi nascosti del modulo:
+// "aiuole" (una per aiuola scelta) e "parte-2A" ecc. (solo per quelle a metà)
+function selettoreAiuole(dati, scelteIniziali) {
+  const scelte = new Map(Object.entries(scelteIniziali));   // id → '' (intera) oppure una metà
+  const mini = elemento('div', '', 'mini-mappa');
+  const nascosti = elemento('div');
+  const tutto = elemento('button', 'Tutto l\'orto', 'pulsante secondario tutto-orto');
+  tutto.type = 'button';
+  tutto.addEventListener('click', () => {
+    for (const a of dati.aiuole) scelte.set(a.id, '');
+    aggiorna();
+  });
+
+  function aggiorna() {
+    mini.replaceChildren(miniColonna('sinistra'), elemento('div', '', 'mini-vialetto'), miniColonna('destra'));
+    nascosti.replaceChildren();
+    for (const [id, parte] of [...scelte].sort(([x], [y]) => x.localeCompare(y))) {
+      nascosti.append(campoNascosto('aiuole', id));
+      if (parte) nascosti.append(campoNascosto(`parte-${id}`, parte));
+    }
+  }
+
+  function miniColonna(lato) {
+    const colonna = elemento('div', '', 'mini-lato');
+    for (const a of dati.aiuole.filter(a => a.lato === lato).sort((x, y) => x.posizione - y.posizione)) {
+      const pulsante = disegnoAiuola(a, scelte.has(a.id) ? scelte.get(a.id) || 'intera' : null, 'button');
+      pulsante.type = 'button';
+      pulsante.setAttribute('aria-pressed', scelte.has(a.id));
+      pulsante.addEventListener('click', () => {
+        if (!scelte.has(a.id)) {
+          scelte.set(a.id, '');
+          aggiorna();
+          return;
+        }
+        apriPopup(dati, a, scelte.get(a.id), parte => {
+          if (parte === null) scelte.delete(a.id);
+          else scelte.set(a.id, parte);
+          aggiorna();
+        });
+      });
+      colonna.append(pulsante);
+    }
+    return colonna;
+  }
+
+  const riquadro = elemento('fieldset');
+  riquadro.append(elemento('legend', 'Aiuole (tocca per scegliere)'), mini, tutto, nascosti);
+  aggiorna();
+  return riquadro;
 }
 
-// Una tendina per ogni aiuola spuntata, con solo le metà compatibili con la divisione esistente
-function aggiornaParti(modulo, dati) {
-  const scelte = new FormData(modulo);
-  const righe = scelte.getAll('aiuole').map(id => {
-    const asse = divisione(dati, id);
-    const opzioni = Object.keys(ASSI)
-      .filter(parte => !asse || ASSI[parte] === asse)
-      .map(parte => `<option value="${parte}"${scelte.get(`parte-${id}`) === parte ? ' selected' : ''}>Metà ${parte}</option>`)
-      .join('');
-    return `<label class="parte">${id}<select name="parte-${id}"><option value="">Intera</option>${opzioni}</select></label>`;
+function campoNascosto(nome, valore) {
+  const campo = elemento('input');
+  campo.type = 'hidden';
+  campo.name = nome;
+  campo.value = valore;
+  return campo;
+}
+
+// Riquadro di un'aiuola con la parte scelta in verde scuro: parte = null (non scelta), 'intera' o una metà
+function disegnoAiuola(aiuola, parte, tag = 'div') {
+  const riquadro = elemento(tag, '', 'mini-aiuola');
+  if (parte) riquadro.append(elemento('span', '', `riempimento riempimento-${latoDisegno(parte, aiuola.lato)}`));
+  riquadro.append(elemento('span', aiuola.id, 'nome'));
+  return riquadro;
+}
+
+// Da metà "logica" a lato del disegno: il vialetto è a destra per le aiuole di sinistra e viceversa
+function latoDisegno(parte, lato) {
+  if (parte === 'intera') return 'tutta';
+  if (parte === 'fondo') return 'sopra';
+  if (parte === 'davanti') return 'sotto';
+  const versoVialetto = lato === 'sinistra' ? 'destra' : 'sinistra';
+  if (parte === 'vialetto') return versoVialetto;
+  return versoVialetto === 'destra' ? 'sinistra' : 'destra';
+}
+
+const ALTEZZA_VOCE = 48;   // altezza di ogni voce della rotella, in pixel
+
+// Pop-up: disegno dell'aiuola a sinistra, rotella delle parti a destra.
+// scegli(parte) riceve la parte confermata, oppure null se l'aiuola va tolta
+function apriPopup(dati, aiuola, parteAttuale, scegli) {
+  const asse = divisione(dati, aiuola.id);
+  const opzioni = ['', ...Object.keys(ASSI).filter(p => !asse || ASSI[p] === asse)];
+  let indice = Math.max(0, opzioni.indexOf(parteAttuale));
+
+  const anteprima = elemento('div', '', 'anteprima');
+  const rotella = elemento('div', '', 'rotella');
+  const voci = opzioni.map((parte, i) => {
+    const voce = elemento('button', parte ? `Metà ${parte}` : 'Intera', 'voce-rotella');
+    voce.type = 'button';
+    voce.addEventListener('click', () => rotella.scrollTo({ top: i * ALTEZZA_VOCE, behavior: 'smooth' }));
+    return voce;
   });
-  modulo.querySelector('.parti').innerHTML = righe.join('') || '<p>Scegli prima almeno un\'aiuola.</p>';
+  rotella.append(...voci);
+
+  function mostraScelta() {
+    voci.forEach((voce, i) => voce.classList.toggle('attiva', i === indice));
+    anteprima.replaceChildren(disegnoAiuola(aiuola, opzioni[indice] || 'intera'));
+  }
+  rotella.addEventListener('scroll', () => {
+    const nuovo = Math.min(opzioni.length - 1, Math.max(0, Math.round(rotella.scrollTop / ALTEZZA_VOCE)));
+    if (nuovo !== indice) {
+      indice = nuovo;
+      mostraScelta();
+    }
+  });
+
+  const finestra = elemento('dialog', '', 'popup');
+  const togli = elemento('button', 'Togli aiuola', 'pulsante pericolo');
+  togli.type = 'button';
+  togli.addEventListener('click', () => {
+    scegli(null);
+    finestra.close();
+  });
+  const conferma = elemento('button', 'Conferma', 'pulsante');
+  conferma.type = 'button';
+  conferma.addEventListener('click', () => {
+    scegli(opzioni[indice]);
+    finestra.close();
+  });
+
+  const corpo = elemento('div', '', 'popup-corpo');
+  corpo.append(anteprima, rotella);
+  const azioni = elemento('div', '', 'popup-azioni');
+  azioni.append(togli, conferma);
+  const contenuto = elemento('div', '', 'popup-contenuto');
+  contenuto.append(elemento('h3', `Aiuola ${aiuola.id}`), corpo, azioni);
+  finestra.append(contenuto);
+
+  // Un tocco sullo sfondo scuro (fuori dal contenuto) chiude senza cambiare niente
+  finestra.addEventListener('click', evento => {
+    if (evento.target === finestra) finestra.close();
+  });
+  finestra.addEventListener('close', () => finestra.remove());
+  document.body.append(finestra);
+  finestra.showModal();
+  mostraScelta();
+  rotella.scrollTop = indice * ALTEZZA_VOCE;
+}
+
+function scelteDa(aiuoleIds, parti = {}) {
+  return Object.fromEntries(aiuoleIds.map(id => [id, parti[id] ?? '']));
+}
+
+function leggiParti(campi, aiuoleIds) {
+  const parti = {};
+  for (const id of aiuoleIds) {
+    const parte = campi.get(`parte-${id}`);
+    if (parte) parti[id] = parte;
+  }
+  return parti;
+}
+
+// "Tutto l'orto" = tutte le aiuole, tutte intere
+function tuttoOrto(dati, x) {
+  return x.aiuoleIds.length === dati.aiuole.length && Object.keys(x.parti ?? {}).length === 0;
 }
 
 function salvaColtura(modulo) {
@@ -339,11 +467,7 @@ function salvaColtura(modulo) {
   }
 
   try {
-    const parti = {};
-    for (const id of aiuoleIds) {
-      const parte = campi.get(`parte-${id}`);
-      if (parte) parti[id] = parte;
-    }
+    const parti = leggiParti(campi, aiuoleIds);
     const dati = carica();
     const colturaId = nuovoId('c');
     dati.colture.push({
@@ -352,7 +476,7 @@ function salvaColtura(modulo) {
     });
     // La semina o il trapianto finiscono anche nel registro
     dati.registro.push({
-      id: nuovoId('r'), data: dataInizio, tipo: metodo, aiuoleIds, colturaId,
+      id: nuovoId('r'), data: dataInizio, tipo: metodo, aiuoleIds, parti, colturaId,
       quantita: '', note: '',
     });
     salva(dati);
@@ -453,7 +577,7 @@ function terminaColtura(coltura, dataFine) {
     // Il raccolto finisce da solo nel registro, con il periodo della coltura
     dati.registro.push({
       id: nuovoId('r'), tipo: 'raccolto', data: dataFine, dal: coltura.dataInizio,
-      aiuoleIds: coltura.aiuoleIds, colturaId: coltura.id, quantita: '', note: '',
+      aiuoleIds: coltura.aiuoleIds, parti: coltura.parti ?? {}, colturaId: coltura.id, quantita: '', note: '',
     });
     salva(dati);
     history.back();
@@ -485,7 +609,7 @@ function ordinaVoci(voci) {
 }
 
 function doveVoce(dati, v) {
-  return v.aiuoleIds.length === dati.aiuole.length ? 'tutto l\'orto' : v.aiuoleIds.join(', ');
+  return tuttoOrto(dati, v) ? 'tutto l\'orto' : doveColtura(v);
 }
 
 function elencoVoci(dati, voci, testoSeVuoto) {
@@ -530,11 +654,7 @@ export function nuovaVoce(dati, { aiuoleIds = [], coltura = null } = {}) {
     </fieldset>
     <label>Data<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(oggi())}"></label>
     <label>Coltura (facoltativa)<select name="coltura"><option value="">Nessuna</option></select></label>
-    <fieldset>
-      <legend>Aiuole</legend>
-      <div class="due-colonne">${caselleAiuole(dati, aiuoleIds)}</div>
-      <button type="button" class="pulsante secondario tutto-orto">Tutto l'orto</button>
-    </fieldset>
+    <div class="posto-aiuole"></div>
     <label>Quantità (facoltativa)<input type="text" name="quantita" autocomplete="off" placeholder="es. 3 kg, 20 litri"></label>
     <label>Note (facoltative)<textarea name="note" rows="3"></textarea></label>
     <p class="errore" role="alert" hidden></p>
@@ -542,7 +662,7 @@ export function nuovaVoce(dati, { aiuoleIds = [], coltura = null } = {}) {
   `;
 
   riempiColture(modulo.querySelector('select[name="coltura"]'), dati, coltura);
-  collegaTuttoOrto(modulo);
+  modulo.querySelector('.posto-aiuole').replaceWith(selettoreAiuole(dati, scelteDa(aiuoleIds, coltura?.parti)));
   modulo.addEventListener('submit', evento => {
     evento.preventDefault();
     salvaVoce(modulo);
@@ -565,12 +685,6 @@ function riempiColture(scelta, dati, coltura) {
     opzione.selected = c.id === coltura?.id;
     scelta.append(opzione);
   }
-}
-
-function collegaTuttoOrto(modulo) {
-  modulo.querySelector('.tutto-orto').addEventListener('click', () => {
-    modulo.querySelectorAll('input[name="aiuole"]').forEach(casella => { casella.checked = true; });
-  });
 }
 
 function opzioniRadio(nome, opzioni, scelta) {
@@ -599,6 +713,7 @@ function salvaVoce(modulo) {
     const dati = carica();
     dati.registro.push({
       id: nuovoId('r'), data, tipo, aiuoleIds: campi.getAll('aiuole'),
+      parti: leggiParti(campi, campi.getAll('aiuole')),
       colturaId: campi.get('coltura') || null,
       quantita: campi.get('quantita').trim(), note: campi.get('note').trim(),
     });
@@ -648,7 +763,7 @@ function urgente(t) {
 
 // Task di aiuole specifiche (non quelli su tutto l'orto, che vanno sul vialetto)
 function taskAiuola(dati, aiuolaId) {
-  return dati.task.filter(t => t.aiuoleIds.length < dati.aiuole.length && t.aiuoleIds.includes(aiuolaId));
+  return dati.task.filter(t => !tuttoOrto(dati, t) && t.aiuoleIds.includes(aiuolaId));
 }
 
 // 'urgente' se almeno un task da fare è urgente, 'programmato' se ce ne sono altri, altrimenti null
@@ -743,11 +858,7 @@ export function moduloTask(dati, { aiuoleIds = [], coltura = null, task = null }
   modulo.innerHTML = `
     <label>Cosa fare<input type="text" name="titolo" autocomplete="off" placeholder="es. Legare i pomodori"></label>
     <label>Scadenza (facoltativa)<input type="text" name="scadenza" placeholder="gg/mm/aaaa"></label>
-    <fieldset>
-      <legend>Aiuole (facoltative)</legend>
-      <div class="due-colonne">${caselleAiuole(dati, task ? task.aiuoleIds : aiuoleIds)}</div>
-      <button type="button" class="pulsante secondario tutto-orto">Tutto l'orto</button>
-    </fieldset>
+    <div class="posto-aiuole"></div>
     <label>Coltura (facoltativa)<select name="coltura"><option value="">Nessuna</option></select></label>
     <p class="errore" role="alert" hidden></p>
     <button type="submit" class="pulsante">${task ? 'Salva modifiche' : 'Salva task'}</button>
@@ -758,7 +869,8 @@ export function moduloTask(dati, { aiuoleIds = [], coltura = null, task = null }
     modulo.elements.titolo.value = task.titolo;
     modulo.elements.scadenza.value = dataPerUtente(task.scadenza);
   }
-  collegaTuttoOrto(modulo);
+  modulo.querySelector('.posto-aiuole').replaceWith(selettoreAiuole(dati,
+    task ? scelteDa(task.aiuoleIds, task.parti) : scelteDa(aiuoleIds, coltura?.parti)));
   modulo.addEventListener('submit', evento => {
     evento.preventDefault();
     salvaTask(modulo, task?.id);
@@ -792,7 +904,8 @@ function salvaTask(modulo, id = null) {
 
   try {
     const campiTask = {
-      titolo, scadenza, aiuoleIds: campi.getAll('aiuole'), colturaId: campi.get('coltura') || null,
+      titolo, scadenza, aiuoleIds: campi.getAll('aiuole'), parti: leggiParti(campi, campi.getAll('aiuole')),
+      colturaId: campi.get('coltura') || null,
     };
     const dati = carica();
     if (id) Object.assign(dati.task.find(t => t.id === id), campiTask);
