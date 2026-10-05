@@ -120,6 +120,154 @@ const DISEGNI = [
 <path d="M25 46 L26.5 32 H33.5 L35 46 Z" fill="#9CC46A"></path>
 <circle cx="20" cy="27" r="7" fill="#3E7D28"></circle><circle cx="40" cy="27" r="7" fill="#3E7D28"></circle><circle cx="30" cy="20" r="8" fill="#4E8F32"></circle><circle cx="30" cy="30" r="6.5" fill="#3E7D28"></circle><circle cx="24" cy="19" r="5" fill="#4E8F32"></circle><circle cx="36" cy="19" r="5" fill="#4E8F32"></circle>
 <circle cx="27" cy="17" r="1.6" fill="#8CC46A" stroke="none"></circle><circle cx="18" cy="25" r="1.3" fill="#8CC46A" stroke="none"></circle><circle cx="38" cy="25" r="1.3" fill="#8CC46A" stroke="none"></circle>` },
+
+  // Gruppo 2
+  { parole: ['verz'], svg: `
+<ellipse cx="30" cy="47" rx="17" ry="3.2" fill="#4E3220" stroke="none"></ellipse>
+<path d="M13 40 C9 30 16 22 24 24 C28 16 40 18 41 25 C49 25 52 36 46 43 C40 47 20 47 13 40 Z" fill="#6F9E45"></path>
+<circle cx="30" cy="35" r="11" fill="#A7CF72"></circle>
+<path d="M30 24 C26 29 25 37 27 46 M30 24 C34 29 35 37 33 46 M20 32 Q25 34 28 39 M40 32 Q35 34 32 39" fill="none" stroke="#5E8F3A" stroke-width="1"></path>
+<path d="M22 28 Q24 25 27 24.5" fill="none" stroke="#D2EBA8" stroke-width="1.4"></path>` },
+
+  { parole: ['cavolo nero'], svg: `
+<ellipse cx="30" cy="47" rx="16" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M28 46 C20 40 14 26 16 10 C22 16 27 30 28 46 Z" fill="#2F4F3A"></path>
+<path d="M32 46 C40 40 46 26 44 11 C38 17 33 30 32 46 Z" fill="#2F4F3A"></path>
+<path d="M30 46 C27 34 27 18 31 6 C34 18 33 34 30 46 Z" fill="#3A5E45"></path>
+<path d="M27 44 C22 34 19 24 17 13 M30 44 C29.5 32 30 18 31 8 M33 44 C38 34 41 24 43 14" fill="none" stroke="#8FAE95" stroke-width="1"></path>` },
+
+  { parole: ['cappucc', 'cavol'], svg: `
+<ellipse cx="30" cy="47" rx="17" ry="3.2" fill="#4E3220" stroke="none"></ellipse>
+<path d="M12 42 C8 30 18 22 30 24 C42 22 52 30 48 42 C42 47 18 47 12 42 Z" fill="#8DBE5A"></path>
+<circle cx="30" cy="34" r="12" fill="#CBE5A0"></circle>
+<path d="M19 35 Q24 26 35 24 M41 33 Q38 41 28 45 M22 41 Q30 38 36 30" fill="none" stroke="#8DBE5A" stroke-width="1.3"></path>
+<path d="M22 29 Q24 25 28 24" fill="none" stroke="#EEF7DA" stroke-width="1.6"></path>` },
+
+  { parole: ['spinac'], svg: `
+<ellipse cx="30" cy="47" rx="15" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M30 46 L21 30 M30 46 L39 30 M30 46 V26 M30 46 L23 39 M30 46 L37 39" fill="none" stroke="#8CC46A" stroke-width="1.8"></path>
+<path d="M21 31 C13 31 9 21 15 15 C23 15 25 25 21 31 Z" fill="#2E6B2A"></path>
+<path d="M39 31 C47 31 51 21 45 15 C37 15 35 25 39 31 Z" fill="#2E6B2A"></path>
+<path d="M30 27 C22 23 22 11 30 6 C38 11 38 23 30 27 Z" fill="#3D7A2A"></path>
+<path d="M23 40 C15 42 9 36 11 30 C17 30 23 34 23 40 Z" fill="#3D7A2A"></path>
+<path d="M37 40 C45 42 51 36 49 30 C43 30 37 34 37 40 Z" fill="#3D7A2A"></path>` },
+
+  { parole: ['valerian', 'songino', 'gallinell'], svg: `
+<ellipse cx="30" cy="45" rx="16" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<ellipse cx="30" cy="29" rx="4" ry="8" fill="#4F8F3A"></ellipse>
+<ellipse cx="30" cy="29" rx="4" ry="8" transform="rotate(60 30 37)" fill="#3F7F35"></ellipse>
+<ellipse cx="30" cy="29" rx="4" ry="8" transform="rotate(120 30 37)" fill="#4F8F3A"></ellipse>
+<ellipse cx="30" cy="29" rx="4" ry="8" transform="rotate(180 30 37)" fill="#3F7F35"></ellipse>
+<ellipse cx="30" cy="29" rx="4" ry="8" transform="rotate(240 30 37)" fill="#4F8F3A"></ellipse>
+<ellipse cx="30" cy="29" rx="4" ry="8" transform="rotate(300 30 37)" fill="#3F7F35"></ellipse>
+<circle cx="30" cy="37" r="2.4" fill="#8CC46A"></circle>` },
+
+  { parole: ['rucol', 'rucchet'], svg: `
+<ellipse cx="30" cy="47" rx="14" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M28 46 C25 38 22 32 18 24 L14 25 L16 21 L11 19 L16 16 L13 12 L19 13 C23 21 27 32 29 46 Z" fill="#4E8F32"></path>
+<path d="M32 46 C35 38 38 32 42 24 L46 25 L44 21 L49 19 L44 16 L47 12 L41 13 C37 21 33 32 31 46 Z" fill="#4E8F32"></path>
+<path d="M30 46 C29 36 28 26 27 18 L23 17 L27 14 L24 10 L29 9 L28 5 L32 8 L34 5 L33 10 L37 11 L33 14 L36 17 L32 18 C31 27 31 36 30 46 Z" fill="#5FA83C"></path>
+<path d="M28.5 45 C26 35 22 26 18 18 M31.5 45 C34 35 38 26 42 18 M30 45 C30 34 30 22 30 10" fill="none" stroke="#A8D27A" stroke-width="1"></path>` },
+
+  { parole: ['ravanell'], svg: `
+<ellipse cx="30" cy="47" rx="19" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M17 32 C10 26 8 18 12 13 C18 17 19 25 17 32 Z" fill="#5FA83C"></path>
+<path d="M19 31 C18 22 22 15 27 14 C28 21 25 27 19 31 Z" fill="#6FBF45"></path>
+<path d="M31 39 C38 40.5 45 42 53 44 C45 44.5 38 44 31 43 Z" fill="#F4EEE6"></path>
+<circle cx="24" cy="38" r="9" fill="#D83A55"></circle>
+<path d="M19 34 Q21 31 24 30.5" fill="none" stroke="#F49AAC" stroke-width="1.6"></path>` },
+
+  { parole: ['carciof'], svg: `
+<ellipse cx="30" cy="48" rx="13" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M28 47 L28.5 37 H31.5 L32 47 Z" fill="#7F9A55"></path>
+<path d="M30 9 C17 17 14 31 21 38 C25 41.5 35 41.5 39 38 C46 31 43 17 30 9 Z" fill="#6E8F4A"></path>
+<path d="M30 9 C24 13 22 17 22 21 Q30 15 38 21 C38 17 36 13 30 9 Z" fill="#8A5A8A"></path>
+<path d="M21 37 Q25.5 28 30 37 Q34.5 28 39 37 M19 29 Q24.5 20 30 29 Q35.5 20 41 29 M23 21 Q26.5 14 30 21 Q33.5 14 37 21" fill="none" stroke="#3E5F2A" stroke-width="1.1"></path>` },
+
+  { parole: ['radicch'], svg: `
+<ellipse cx="30" cy="47" rx="17" ry="3.2" fill="#4E3220" stroke="none"></ellipse>
+<path d="M13 40 C10 30 18 22 30 23 C42 22 50 30 47 40 C42 46 18 46 13 40 Z" fill="#7A1F3A"></path>
+<circle cx="30" cy="34" r="11" fill="#A8294E"></circle>
+<path d="M30 24 C26 30 26 38 28 45 M30 24 C34 30 34 38 32 45 M20 32 Q25 33 27 40 M40 32 Q35 33 33 40" fill="none" stroke="#F4E6EA" stroke-width="1.4"></path>` },
+
+  { parole: ['cicori', 'catalogn'], svg: `
+<ellipse cx="30" cy="47" rx="14" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M27 46 C20 36 15 22 18 8 C24 14 28 28 27 46 Z" fill="#5FA83C"></path>
+<path d="M33 46 C40 36 45 22 42 8 C36 14 32 28 33 46 Z" fill="#5FA83C"></path>
+<path d="M30 46 C26 32 26 18 30 5 C34 18 34 32 30 46 Z" fill="#7CC04A"></path>
+<path d="M27 45 C23 34 20 22 19 12 M33 45 C37 34 40 22 41 12 M30 45 C29.5 32 29.5 18 30 8" fill="none" stroke="#F2F2E0" stroke-width="1.5"></path>` },
+
+  { parole: ['porr'], svg: `
+<ellipse cx="32" cy="46" rx="22" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M40 35 C46 30 51 26 55 21 C54 27 49 32 44 36.5 Z" fill="#3D7A2A"></path>
+<path d="M40 41 C46 43 51 45 56 48 C51 49 45 46 40 43 Z" fill="#3D7A2A"></path>
+<path d="M40 37 C47 36 52 35 57 34 C53 37.5 47 39.5 40 40 Z" fill="#4F8F34"></path>
+<path d="M32 35 L40 34.5 L40 41.5 L32 41 Z" fill="#C8E39A"></path>
+<path d="M10 38 C10 35.5 12 34.5 14 34.5 L32 35 L32 41 L14 41.8 C12 41.8 10 40.8 10 38 Z" fill="#F4F2E6"></path>` },
+
+  { parole: ['scalogn'], svg: `
+<ellipse cx="31" cy="47" rx="19" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M14 44 C10 38 14 28 22 26 C24 22 26 20 27 18 C28 21 28 24 28 27 C34 31 32 42 26 45 C22 46.5 17 46 14 44 Z" fill="#C77A55"></path>
+<path d="M32 45 C30 38 34 30 41 29 C43 25 45 23 46 21 C46.5 24 46 27 46 30 C51 34 50 42 45 45 C41 47 35 47 32 45 Z" fill="#B5674A"></path>
+<path d="M22 27 C18 32 18 40 20 45 M41 30 C38 35 38 41 39 46" fill="none" stroke="#8E4A30" stroke-width="1"></path>` },
+
+  { parole: ['fava', 'fave'], svg: `
+<ellipse cx="30" cy="46" rx="22" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M8 38 C10 30 20 28 26 31 C30 27 36 27 40 31 C46 29 52 32 52 37 C52 42 46 44 40 42 C36 45 30 45 26 42 C20 45 10 44 8 38 Z" fill="#6FAE3A"></path>
+<path d="M12 37 Q30 39.5 48 37" fill="none" stroke="#4E8F32" stroke-width="1"></path>
+<path d="M15 33 Q19 31 23 33 M29 31.5 Q33 30 37 32 M42 33 Q45.5 32 48.5 34" fill="none" stroke="#C2E383" stroke-width="1.4"></path>` },
+
+  { parole: ['fagiol', 'borlott'], svg: `
+<ellipse cx="30" cy="46" rx="21" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M8 34 C16 27 40 27 52 34 C53 36 52 38 50 38 C40 33 18 33 10 38 C8 39 7 36 8 34 Z" fill="#F2E2C0"></path>
+<path d="M14 33 l3 2 M20 31 l4 3 M27 30.5 l3 3 M34 31 l4 3 M41 32 l3 2.5" fill="none" stroke="#C0394A" stroke-width="1.6"></path>
+<ellipse cx="22" cy="42.5" rx="4.5" ry="3.2" fill="#EED9C0"></ellipse><ellipse cx="33" cy="43" rx="4.5" ry="3.2" fill="#EED9C0"></ellipse>
+<path d="M20 41.5 l1.5 1 M23 43 l1.5 0.5 M31 42 l1.5 1 M34 43.5 l1.5 0.5" fill="none" stroke="#B3304A" stroke-width="1.3"></path>` },
+
+  { parole: ['zucca', 'zucche'], svg: `
+<ellipse cx="30" cy="48" rx="19" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<ellipse cx="30" cy="36" rx="19" ry="12" fill="#E8822A"></ellipse>
+<path d="M30 24 C24 28 24 44 30 48 M30 24 C36 28 36 44 30 48 M20 26 C14 31 14 41 20 46 M40 26 C46 31 46 41 40 46" fill="none" stroke="#B85E1A" stroke-width="1.2"></path>
+<path d="M30 25 C29 20 31 17 34 15" fill="none" stroke="#6B4A2A" stroke-width="3"></path>
+<path d="M16 32 Q18 28 22 26.5" fill="none" stroke="#F7B46A" stroke-width="1.6"></path>` },
+
+  { parole: ['mais', 'granoturc'], svg: `
+<ellipse cx="30" cy="46" rx="21" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<g transform="rotate(-20 30 34)">
+<path d="M16 34 C10 26 7 22 4 17 C11 21 15 27 19 30 Z" fill="#8CC46A"></path>
+<path d="M16 34 C10 42 7 46 4 51 C11 47 15 41 19 38 Z" fill="#7CB45A"></path>
+<rect x="15" y="28" width="35" height="12" rx="6" fill="#F2C230"></rect>
+<path d="M21 28.5 V39.5 M26 28 V40 M31 28 V40 M36 28 V40 M41 28 V40 M46 28.5 V39.5 M15.5 32 H49.5 M15.5 36 H49.5" fill="none" stroke="#D49A1A" stroke-width="0.8"></path>
+</g>` },
+
+  { parole: ['melon'], svg: `
+<ellipse cx="30" cy="48" rx="15" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<circle cx="30" cy="34" r="14" fill="#E3C98A"></circle>
+<path d="M18 27 Q30 35 42 27 M16.5 34 Q30 42 43.5 34 M18 41 Q30 48 42 41 M22 22 Q26 34 22 46 M30 20 V48 M38 22 Q34 34 38 46" fill="none" stroke="#B89A55" stroke-width="0.9"></path>
+<path d="M30 20 q1 -4 4 -5" fill="none" stroke="#5E8F3A" stroke-width="2"></path>` },
+
+  { parole: ['anguri', 'cocomer'], svg: `
+<ellipse cx="30" cy="47" rx="21" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<ellipse cx="30" cy="35" rx="20" ry="12" fill="#5DA34A"></ellipse>
+<path d="M12 31 Q16 29 20 31 Q24 33 28 31 Q32 29 36 31 Q40 33 44 31 Q47 30 48 31 M11 36 Q15 34 19 36 Q23 38 27 36 Q31 34 35 36 Q39 38 43 36 Q47 34 49 36 M13 41 Q17 39 21 41 Q25 43 29 41 Q33 39 37 41 Q41 43 45 41 M17 26 Q21 24 25 26 Q29 28 33 26 Q37 24 41 26" fill="none" stroke="#1F5A26" stroke-width="2.2"></path>
+<path d="M50 35 l4 -2" fill="none" stroke="#6B4A2A" stroke-width="2"></path>` },
+
+  { parole: ['asparag'], svg: `
+<ellipse cx="30" cy="48" rx="13" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M21 47 L18.5 15 C18.5 11 21.5 11 21.5 15 L24 47 Z" fill="#7CB45A"></path>
+<path d="M28.5 47 L28.5 11 C28.5 7 31.5 7 31.5 11 L31.5 47 Z" fill="#8CC46A"></path>
+<path d="M36 47 L38.5 15 C38.5 11 41.5 11 41.5 15 L39 47 Z" fill="#7CB45A"></path>
+<path d="M18.5 16 C18 10 20 7 20 7 C20 7 22 10 21.5 16 Z" fill="#8A6A9A"></path>
+<path d="M28.5 12 C28 6 30 3 30 3 C30 3 32 6 31.5 12 Z" fill="#8A6A9A"></path>
+<path d="M38.5 16 C38 10 40 7 40 7 C40 7 42 10 41.5 16 Z" fill="#8A6A9A"></path>
+<rect x="17" y="34" width="26" height="4.5" rx="1.5" fill="#D9A86C"></rect>` },
+
+  { parole: ['fragol'], svg: `
+<ellipse cx="30" cy="48" rx="13" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M30 47 C20 41 15 31 18 25 C21 20 27 21 30 23 C33 21 39 20 42 25 C45 31 40 41 30 47 Z" fill="#E0303A"></path>
+<path d="M30 23 L23 18 L28 20 L30 14 L32 20 L37 18 Z" fill="#4E8F32"></path>
+<path d="M30 17 V12" fill="none" stroke="#4E8F32" stroke-width="2"></path>
+<ellipse cx="24" cy="28" rx="0.8" ry="1.2" fill="#F2D25A" stroke="none"></ellipse><ellipse cx="30" cy="29" rx="0.8" ry="1.2" fill="#F2D25A" stroke="none"></ellipse><ellipse cx="36" cy="28" rx="0.8" ry="1.2" fill="#F2D25A" stroke="none"></ellipse><ellipse cx="25" cy="35" rx="0.8" ry="1.2" fill="#F2D25A" stroke="none"></ellipse><ellipse cx="35" cy="35" rx="0.8" ry="1.2" fill="#F2D25A" stroke="none"></ellipse><ellipse cx="30" cy="41" rx="0.8" ry="1.2" fill="#F2D25A" stroke="none"></ellipse>` },
 ];
 
 // Piantina generica per gli ortaggi che non hanno ancora un disegno

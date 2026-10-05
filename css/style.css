@@ -118,7 +118,7 @@ main > section:not(.mappa) {
 /* Cartellino con il nome, in alto a sinistra */
 .aiuola .nome {
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   top: 5px;
   left: 5px;
   padding: 0 8px;
@@ -253,12 +253,14 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 /* Disegnini delle colture dentro le aiuole della mappa */
 .piantine {
   position: absolute;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-content: center;
   justify-content: center;
   gap: 2px 6px;
-  overflow: hidden;
+  /* meglio un disegno che sborda un po' che un disegno tagliato */
+  overflow: visible;
   pointer-events: none;
 }
 .piantine-tutta { inset: 28px 4px 4px; }
