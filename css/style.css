@@ -257,7 +257,7 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
   flex-wrap: wrap;
   align-content: center;
   justify-content: center;
-  gap: 0 2px;
+  gap: 2px 6px;
   overflow: hidden;
   pointer-events: none;
 }
@@ -266,7 +266,7 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 .piantine-sotto { inset: 50% 4px 3px; }
 .piantine-sinistra { inset: 28px 50% 4px 4px; }
 .piantine-destra { inset: 4px 4px 4px 50%; }
-.piantina { display: flex; width: 26px; height: 26px; }
+.piantina { display: flex; width: 38px; height: 38px; }
 .piantina svg { width: 100%; height: 100%; }
 
 .registro { margin: 0; padding-left: 20px; }

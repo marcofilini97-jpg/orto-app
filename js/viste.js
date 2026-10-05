@@ -121,8 +121,8 @@ function piantine(dati, aiuola) {
     const qui = attive.filter(c => !c.parti?.[aiuola.id] || c.parti[aiuola.id] === zona);
     const posto = zona === 'tutta' ? 'tutta' : latoDisegno(zona, aiuola.lato);
     const spazio = elemento('span', '', `piantine piantine-${posto}`);
-    const quante = zona === 'tutta' ? 8 : 4;
-    for (let i = 0; qui.length > 0 && i < quante; i++) spazio.append(icona(qui[i % qui.length].nome, 'piantina', 2));
+    const quante = zona === 'tutta' ? 4 : 2;
+    for (let i = 0; qui.length > 0 && i < quante; i++) spazio.append(icona(qui[i % qui.length].nome, 'piantina', 2.6));
     return spazio;
   });
 }
