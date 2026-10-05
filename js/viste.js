@@ -296,11 +296,18 @@ function selettoreAiuole(dati, scelteIniziali) {
   const tutto = elemento('button', 'Tutto l\'orto', 'pulsante secondario tutto-orto');
   tutto.type = 'button';
   tutto.addEventListener('click', () => {
-    for (const a of dati.aiuole) scelte.set(a.id, '');
+    if (tutteScelte()) scelte.clear();
+    else for (const a of dati.aiuole) scelte.set(a.id, '');
     aggiorna();
   });
 
+  // Tutte le aiuole scelte, tutte intere
+  function tutteScelte() {
+    return dati.aiuole.every(a => scelte.get(a.id) === '');
+  }
+
   function aggiorna() {
+    tutto.textContent = tutteScelte() ? 'Togli tutte' : 'Tutto l\'orto';
     mini.replaceChildren(miniColonna('sinistra'), elemento('div', '', 'mini-vialetto'), miniColonna('destra'));
     nascosti.replaceChildren();
     for (const [id, parte] of [...scelte].sort(([x], [y]) => x.localeCompare(y))) {
