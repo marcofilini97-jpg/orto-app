@@ -35,6 +35,7 @@ orto-app/
 ├── js/
 │   ├── app.js            ← avvio e navigazione
 │   ├── dati.js           ← lettura/scrittura dati, esporta/importa
+│   ├── disegni.js        ← disegni SVG degli ortaggi, scelti dal nome della coltura
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
 ```
@@ -106,6 +107,11 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Pulsanti Registro / Da fare come cartelli di legno; le altre schermate stanno in un riquadro crema con bordo di legno
 - Caratteri: Baloo 2 (testi) e Fredoka (cartellini delle aiuole), file in `font/` per funzionare offline (licenza OFL)
 - Disegni degli ortaggi: SVG stilizzati, contorno scuro, piantati nella terra (ombra/buca); approvati carota, pomodoro con fusto, lattuga, cavolfiore, zucchina, melanzana, peperone, cetriolo, fagiolino, pisello, cipolla, aglio, patata, bietola, finocchio, broccolo
+
+- Stile dei disegni (definitivo): solo l'ortaggio nella sua forma più riconoscibile, appoggiato sulla terra con l'ombra, niente piante né buche. Aglio con gli spicchi visibili
+- Il disegno si sceglie da parole chiave nel nome (minuscole, senza accenti, es. "pomodor"); senza corrispondenza: piantina generica
+- Sulla mappa: tanti disegnini piccoli per aiuola (fino a 8 se intera, 4 per metà); più colture nello stesso spazio si alternano
+- Da disegnare: gruppo 2 (altri ortaggi dell'elenco) e gruppo 3 (aromatiche, fiori, sovesci, frutta)
 
 ## Idee per il futuro
 - Grafica più accattivante in stile cartone animato: disegni stilizzati delle colture sulla mappa e nelle aiuole (es. carote disegnate nell'aiuola dove sono piantate le carote)

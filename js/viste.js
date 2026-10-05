@@ -3,6 +3,7 @@
 import {
   carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio,
 } from './dati.js';
+import { iconaSvg } from './disegni.js';
 
 const TIPI = {
   semina: 'Semina', trapianto: 'Trapianto', irrigazione: 'Irrigazione',
@@ -89,7 +90,7 @@ function colonna(dati, lato) {
     const asse = divisione(dati, a.id);
     link.className = asse ? `aiuola diviso-${asse}` : 'aiuola';
     link.href = `#/aiuola/${a.id}`;
-    link.append(elemento('span', a.id, 'nome'));
+    link.append(elemento('span', a.id, 'nome'), ...piantine(dati, a));
     for (const { zona, n } of bollini(dati, a)) {
       link.append(elemento('span', `× ${n}`, `bollino bollino-${posizioneBollino(zona, a.lato)}`));
     }
@@ -107,6 +108,30 @@ function vialetto(dati) {
   const segno = segnoTask(dati.task.filter(t => tuttoOrto(dati, t)));
   if (segno) vialetto.append(puntino(segno));
   return vialetto;
+}
+
+// Disegnini delle colture attive: uno spazio per tutta l'aiuola, oppure uno per ogni metà.
+// Più colture nello stesso spazio si alternano
+function piantine(dati, aiuola) {
+  const attive = dati.colture.filter(c => c.stato === 'attiva' && c.aiuoleIds.includes(aiuola.id));
+  if (attive.length === 0) return [];
+  const asse = divisione(dati, aiuola.id);
+  const zone = !asse ? ['tutta'] : asse === 'fondo-davanti' ? ['fondo', 'davanti'] : ['vialetto', 'esterno'];
+  return zone.map(zona => {
+    const qui = attive.filter(c => !c.parti?.[aiuola.id] || c.parti[aiuola.id] === zona);
+    const posto = zona === 'tutta' ? 'tutta' : latoDisegno(zona, aiuola.lato);
+    const spazio = elemento('span', '', `piantine piantine-${posto}`);
+    const quante = zona === 'tutta' ? 8 : 4;
+    for (let i = 0; qui.length > 0 && i < quante; i++) spazio.append(icona(qui[i % qui.length].nome, 'piantina', 2));
+    return spazio;
+  });
+}
+
+// Disegno fisso scelto in base al nome; il nome scritto dall'utente non entra nell'HTML
+function icona(nome, classe, tratto) {
+  const contenitore = elemento('span', '', classe);
+  contenitore.innerHTML = iconaSvg(nome, tratto);
+  return contenitore;
 }
 
 // Staccionata davanti all'orto, con l'ingresso libero in corrispondenza del vialetto
@@ -190,7 +215,9 @@ function elencoColture(colture, testoSeVuoto) {
     const mostraDove = c.aiuoleIds.length > 1 || c.aiuoleIds.some(id => c.parti?.[id]);
     const dove = mostraDove ? ` (${doveColtura(c)})` : '';
     const voce = elemento('li');
-    voce.append(link(`${nome} · ${periodo}${dove}`, `#/coltura/${c.id}`));
+    const collegamento = link(`${nome} · ${periodo}${dove}`, `#/coltura/${c.id}`);
+    collegamento.prepend(icona(c.nome, 'icona-coltura', 1.6));
+    voce.append(collegamento);
     ul.append(voce);
   }
   return ul;
