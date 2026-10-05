@@ -259,6 +259,8 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; }
 .vialetto .puntino { top: 4px; right: auto; left: 50%; transform: translateX(-50%); }
 .scorciatoia .puntino { top: 2px; right: 10px; }
 
+.titolo { color: inherit; text-decoration: none; }
+
 .modulo .parte {
   display: flex;
   align-items: center;
