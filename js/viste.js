@@ -60,7 +60,7 @@ function posizioneBollino(zona, lato) {
 export function mappa(dati) {
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
-  mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(dati), colonna(dati, 'destra'), etichetta('Davanti'));
+  mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(dati), colonna(dati, 'destra'), staccionata(), etichetta('Davanti'));
   const scorciatoie = elemento('div', '', 'scorciatoie');
   const daFare = scorciatoia('Da fare', '#/task', 'task');
   const segnoSenzaAiuole = segnoTask(dati.task.filter(t => t.aiuoleIds.length === 0));
@@ -107,6 +107,25 @@ function vialetto(dati) {
   const segno = segnoTask(dati.task.filter(t => tuttoOrto(dati, t)));
   if (segno) vialetto.append(puntino(segno));
   return vialetto;
+}
+
+// Staccionata davanti all'orto, con l'ingresso libero in corrispondenza del vialetto
+function staccionata() {
+  const riga = elemento('div', '', 'staccionata');
+  riga.setAttribute('aria-hidden', 'true');
+  // Solo disegno fisso, nessun testo dell'utente
+  const tratto = `<svg width="100%" height="32">
+    <rect x="0" y="28" width="100%" height="4" rx="2" fill="#4F6E33" opacity="0.5"></rect>
+    <rect x="0" y="9" width="100%" height="5" rx="2" fill="#B27A42" stroke="#5C3D22" stroke-width="1.5"></rect>
+    <rect x="0" y="19" width="100%" height="5" rx="2" fill="#B27A42" stroke="#5C3D22" stroke-width="1.5"></rect>
+    <rect x="0" y="0" width="100%" height="30" fill="url(#paletti)"></rect></svg>`;
+  riga.innerHTML = `<svg width="0" height="0" style="position:absolute"><defs>
+    <pattern id="paletti" width="18" height="30" patternUnits="userSpaceOnUse">
+      <path d="M3 9 L8.5 2 L14 9 V27 H3 Z" fill="#EBBE80" stroke="#5C3D22" stroke-width="1.5" stroke-linejoin="round"></path>
+      <path d="M11 7 L14 9 V27 H11 Z" fill="#C88F52"></path>
+      <path d="M5.5 10 V24" stroke="#FFE2B0" stroke-width="1.5" stroke-linecap="round"></path>
+    </pattern></defs></svg>${tratto}<div></div>${tratto}`;
+  return riga;
 }
 
 function etichetta(testo) {
