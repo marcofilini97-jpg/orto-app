@@ -1,6 +1,6 @@
 # Orto App
 
-App per gestire un orto comunale, che curo insieme a mio padre Mauro.
+App per gestire un orto comunale, che curo insieme a mio padre.
 
 ## L'orto
 - Circa 24 m², 8 aiuole disposte 4 per lato di un vialetto centrale
@@ -14,8 +14,8 @@ App per gestire un orto comunale, che curo insieme a mio padre Mauro.
 - Mobile-first: si usa in piedi nell'orto, spesso al sole (contrasto alto, pulsanti grandi)
 - Funziona offline (PWA)
 - Dati salvati nel browser, con esporta/importa JSON per il backup
-- Sincronizzazione e backup automatico su Supabase (piano gratuito, regione Francoforte), due account (Marco e Mauro). Esporta/importa JSON resta come riserva
-- Modalità prova (per Marco): copia separata dei dati, mai sincronizzata, scritta "PROVA" nella barra
+- Sincronizzazione e backup automatico su Supabase (piano gratuito, regione Francoforte), due account (io e mio padre). Esporta/importa JSON resta come riserva
+- Modalità prova (per me): copia separata dei dati, mai sincronizzata, scritta "PROVA" nella barra
 
 ## Stack
 - HTML + CSS + JavaScript puro (moduli ES), senza framework, senza npm, senza build
