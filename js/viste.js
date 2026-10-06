@@ -154,7 +154,7 @@ function piantine(dati, aiuola) {
   });
 }
 
-const PRESSIONE = 1000;   // millisecondi di pressione per "sollevare" un ortaggio
+const PRESSIONE = 500;   // millisecondi di pressione per "sollevare" un ortaggio
 
 // Tenendo premuto 1 secondo l'ortaggio si solleva e si può trascinare dentro la sua sezione.
 // Verso il fondo (in alto) può sporgere al massimo per metà; mai oltre gli altri bordi
