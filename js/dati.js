@@ -240,6 +240,12 @@ export function scollegaTelefono() {
   localStorage.removeItem(CHIAVE_SYNC);
 }
 
+// Cancella tutto ciò che l'app ha salvato su questo telefono (i dati sul server restano)
+export function cancellaDatiTelefono() {
+  scollegaTelefono();
+  for (const chiave of [CHIAVE, CHIAVE_PROVA, CHIAVE_MODO]) localStorage.removeItem(chiave);
+}
+
 export function statoSincronizzazione() {
   const stato = statoSync();
   return {

@@ -3,7 +3,7 @@
 import {
   carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio, orarioPerUtente,
   inProva, attivaProva, disattivaProva, ricominciaProva,
-  sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione,
+  sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione, cancellaDatiTelefono,
 } from './dati.js';
 import { iconaSvg } from './disegni.js';
 
@@ -432,8 +432,24 @@ export function impostazioni() {
     sezioneSincronizzazione(),
     elemento('h3', 'Modalità prova'),
     sezioneProva(),
+    elemento('h3', 'Cancella dati'),
+    elemento('p', 'Cancella tutti i dati dell\'orto da questo telefono e lo scollega dal server. I dati sul server non vengono toccati: ricollegandoti li riscarichi.'),
+    pulsanteCancellaTutto(),
   );
   return sezione;
+}
+
+function pulsanteCancellaTutto() {
+  const pulsante = elemento('button', 'Cancella i dati di questo telefono', 'pulsante pericolo');
+  pulsante.type = 'button';
+  pulsante.addEventListener('click', () => {
+    if (!confirm('Cancellare tutti i dati dell\'orto da questo telefono?')) return;
+    if (!confirm('Sicuro? Quello che non è sul server o in un backup andrà perso.')) return;
+    cancellaDatiTelefono();
+    location.hash = '#/';
+    document.dispatchEvent(new Event('dati-cambiati'));
+  });
+  return pulsante;
 }
 
 // Login, stato e pulsanti della sincronizzazione con il server
