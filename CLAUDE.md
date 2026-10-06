@@ -14,12 +14,12 @@ App per gestire un orto comunale, che curo insieme a mio padre Mauro.
 - Mobile-first: si usa in piedi nell'orto, spesso al sole (contrasto alto, pulsanti grandi)
 - Funziona offline (PWA)
 - Dati salvati nel browser, con esporta/importa JSON per il backup
-- Niente backend e niente account (almeno all'inizio)
-- Sincronizzazione: per ora solo export/import JSON a mano. In futuro un NAS condiviso potrebbe fare da server: tenere la struttura dei dati e `js/dati.js` isolati dal resto per permetterlo, ma non costruire niente adesso
+- Sincronizzazione e backup automatico su Supabase (piano gratuito, regione Francoforte), due account (Marco e Mauro). Esporta/importa JSON resta come riserva
+- Modalità prova (per Marco): copia separata dei dati, mai sincronizzata, scritta "PROVA" nella barra
 
 ## Stack
 - HTML + CSS + JavaScript puro (moduli ES), senza framework, senza npm, senza build
-- Dati in `localStorage`, letti e scritti solo da `js/dati.js`
+- Dati in `localStorage`, letti e scritti solo da `js/dati.js`; il dialogo con Supabase (solo `fetch`, nessuna libreria) sta in `js/server.js`
 - PWA con `manifest.webmanifest` e service worker (`sw.js`) scritti a mano
 - Pubblicazione prevista su GitHub Pages (serve HTTPS)
 - In locale serve un piccolo server (es. `python -m http.server`): il service worker non funziona aprendo il file con doppio clic
@@ -34,7 +34,8 @@ orto-app/
 ├── css/style.css
 ├── js/
 │   ├── app.js            ← avvio e navigazione
-│   ├── dati.js           ← lettura/scrittura dati, esporta/importa
+│   ├── dati.js           ← lettura/scrittura dati, esporta/importa, sincronizzazione, modalità prova
+│   ├── server.js         ← login e richieste a Supabase
 │   ├── disegni.js        ← disegni SVG degli ortaggi, scelti dal nome della coltura
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
@@ -125,6 +126,15 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Icone: `icone/icona-192.png` = solo la zappa (schermata Home), `icone/icona-512.png` = zappa e cesto (avvio). Sorgenti SVG in `icone/`, PNG creati con Edge headless tramite `icone/genera-png.html`
 - `sw.js`: strategia "prima la rete" (`fetch` con `cache: 'no-cache'`), copia salvata solo senza rete. Ogni nuovo file dell'app va aggiunto all'elenco `FILE` in `sw.js`
 - iPhone: l'app installata ha dati separati da Safari (spostarli con esporta/importa backup)
+
+## Sincronizzazione (Supabase)
+- Tabella `elementi`: una riga per aiuola/coltura/voce/task (`id`, `tipo`, `dati` jsonb, `modificato`, `eliminato`, `ricevuto` messo dal server con un trigger). Tabella `membri`: gli account autorizzati. Row Level Security: leggono/scrivono solo i membri dopo il login; nessuna cancellazione vera (si usa `eliminato`)
+- In `js/server.js` stanno URL del progetto e chiave pubblica (`sb_publishable_…`, fatta per stare nel codice). Mai mettere nel codice la chiave `secret`/`service_role`
+- `salva()` confronta i dati prima/dopo e mette le modifiche in "da inviare" (localStorage `orto-sync`), con l'ora di modifica per elemento. `sincronizza()`: prima scarica le righe ricevute dopo l'ultima volta (`ricevuto`), vince la modifica più recente; poi invia. Parte all'avvio, 2 s dopo ogni salvataggio, al ritorno sull'app e della rete, e dal pulsante nelle Impostazioni
+- Primo collegamento: se il server ha già dati si sceglie se usarli (consigliato) o unirli a quelli del telefono
+- Se arrivano dati dall'altro telefono la schermata si ridisegna, ma non mentre si compila un modulo
+- Il service worker non intercetta le richieste verso altri siti (Supabase)
+- Il progetto gratuito va in pausa dopo 7 giorni senza uso: si riattiva dal pannello di Supabase
 
 ## Idee per il futuro
 - Grafica più accattivante in stile cartone animato: disegni stilizzati delle colture sulla mappa e nelle aiuole (es. carote disegnate nell'aiuola dove sono piantate le carote)

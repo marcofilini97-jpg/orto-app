@@ -1,7 +1,9 @@
 // Funzioni che costruiscono le schermate. Ricevono i dati e restituiscono elementi da mostrare.
 
 import {
-  carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio,
+  carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio, orarioPerUtente,
+  inProva, attivaProva, disattivaProva, ricominciaProva,
+  sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione,
 } from './dati.js';
 import { iconaSvg } from './disegni.js';
 
@@ -426,8 +428,108 @@ export function impostazioni() {
     elemento('p', 'Importare un backup sostituisce tutti i dati attuali.'),
     importaBtn,
     sceltaFile,
+    elemento('h3', 'Sincronizzazione'),
+    sezioneSincronizzazione(),
+    elemento('h3', 'Modalità prova'),
+    sezioneProva(),
   );
   return sezione;
+}
+
+// Login, stato e pulsanti della sincronizzazione con il server
+function sezioneSincronizzazione() {
+  const box = elemento('div');
+  if (inProva()) {
+    box.append(elemento('p', 'In modalità prova la sincronizzazione è sospesa: le prove restano solo su questo telefono.'));
+    return box;
+  }
+  const stato = statoSincronizzazione();
+  if (!stato.collegato) {
+    const modulo = document.createElement('form');
+    modulo.className = 'modulo';
+    modulo.noValidate = true;
+    modulo.innerHTML = `
+      <p>Collegando il telefono, i dati dell'orto si salvano anche online e si condividono con l'altro telefono.</p>
+      <label>Email<input type="email" name="email" autocomplete="username"></label>
+      <label>Password<input type="password" name="password" autocomplete="current-password"></label>
+      <p class="errore" role="alert" hidden></p>
+      <button type="submit" class="pulsante">Collega questo telefono</button>
+    `;
+    modulo.addEventListener('submit', async evento => {
+      evento.preventDefault();
+      const avviso = modulo.querySelector('.errore');
+      const pulsante = modulo.querySelector('button');
+      pulsante.disabled = true;
+      pulsante.textContent = 'Collegamento in corso…';
+      try {
+        await collegaTelefono(modulo.elements.email.value.trim(), modulo.elements.password.value, () => confirm(
+          'Sul server ci sono già i dati dell\'orto.\n\n' +
+          'OK = usa i dati del server su questo telefono (consigliato)\n' +
+          'Annulla = unisci i dati di questo telefono a quelli del server'));
+        document.dispatchEvent(new Event('dati-cambiati'));
+      } catch (errore) {
+        avviso.textContent = errore instanceof TypeError ? 'Server non raggiungibile: controlla la connessione.' : errore.message;
+        avviso.hidden = false;
+        pulsante.disabled = false;
+        pulsante.textContent = 'Collega questo telefono';
+      }
+    });
+    box.append(modulo);
+    return box;
+  }
+
+  box.append(
+    riga('Collegato come', stato.email ?? '—'),
+    riga('Ultima sincronizzazione', stato.ultimaSync ? orarioPerUtente(stato.ultimaSync) : 'mai'),
+  );
+  if (stato.inAttesa > 0) box.append(riga('Modifiche in attesa di invio', String(stato.inAttesa)));
+  if (stato.errore) box.append(elemento('p', stato.errore, 'errore'));
+
+  const ora = elemento('button', 'Sincronizza ora', 'pulsante');
+  ora.type = 'button';
+  ora.addEventListener('click', async () => {
+    ora.disabled = true;
+    ora.textContent = 'Sincronizzazione…';
+    await sincronizza();
+    document.dispatchEvent(new Event('dati-cambiati'));
+  });
+  const scollega = elemento('button', 'Scollega questo telefono', 'pulsante secondario');
+  scollega.type = 'button';
+  scollega.addEventListener('click', () => {
+    if (!confirm('Scollegare questo telefono? I dati restano sul telefono, ma non si sincronizzano più.')) return;
+    scollegaTelefono();
+    document.dispatchEvent(new Event('dati-cambiati'));
+  });
+  box.append(ora, scollega);
+  return box;
+}
+
+// Modalità prova: una copia separata dei dati, per fare esperimenti senza toccare quelli veri
+function sezioneProva() {
+  const box = elemento('div');
+  const attiva = inProva();
+  box.append(elemento('p', attiva
+    ? 'Stai lavorando su una copia di prova: niente di quello che fai arriva ai dati veri né all\'altro telefono.'
+    : 'Lavora su una copia separata dei dati per fare prove: i dati veri restano intatti e non si sincronizza niente.'));
+  const interruttore = elemento('button', attiva ? 'Disattiva modalità prova' : 'Attiva modalità prova', attiva ? 'pulsante' : 'pulsante secondario');
+  interruttore.type = 'button';
+  interruttore.addEventListener('click', () => {
+    if (attiva) disattivaProva();
+    else attivaProva();
+    document.dispatchEvent(new Event('dati-cambiati'));
+  });
+  box.append(interruttore);
+  if (attiva) {
+    const ricomincia = elemento('button', 'Ricomincia la prova dai dati veri', 'pulsante secondario');
+    ricomincia.type = 'button';
+    ricomincia.addEventListener('click', () => {
+      if (!confirm('Cancellare le prove e ripartire da una copia dei dati veri?')) return;
+      ricominciaProva();
+      document.dispatchEvent(new Event('dati-cambiati'));
+    });
+    box.append(ricomincia);
+  }
+  return box;
 }
 
 function scaricaBackup() {
@@ -451,7 +553,10 @@ async function caricaBackup(input) {
     const dati = importa(await file.text());
     const conferma = confirm(
       `Il backup contiene ${dati.colture.length} colture, ${dati.registro.length} voci di registro e ${dati.task.length} task.\n\n` +
-      'Sostituire tutti i dati attuali? Se ti servono, esportali prima.'
+      'Sostituire tutti i dati attuali? Se ti servono, esportali prima.' +
+      (statoSincronizzazione().collegato && !inProva()
+        ? '\n\nAttenzione: il telefono è sincronizzato, quindi la sostituzione arriverà anche sull\'altro telefono.'
+        : '')
     );
     if (!conferma) return;
     salva(dati);

@@ -193,6 +193,18 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 
 .titolo { color: inherit; text-decoration: none; }
 
+/* Modalità prova: scritta gialla accanto al titolo, per non confondersi */
+.prova header h1::after {
+  content: 'PROVA';
+  margin-left: 10px;
+  padding: 0 8px;
+  font-size: 0.85rem;
+  vertical-align: middle;
+  color: var(--testo);
+  background: #f2c230;
+  border-radius: 6px;
+}
+
 .intestazione { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .link-info { padding: 8px 0 8px 12px; font-weight: 700; color: var(--verde); text-decoration: underline; }
 
@@ -317,6 +329,8 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 
 .modulo label { display: block; margin-top: 16px; font-weight: 700; }
 
+.modulo input[type="email"],
+.modulo input[type="password"],
 .modulo input[type="text"],
 .modulo textarea,
 .modulo select {
