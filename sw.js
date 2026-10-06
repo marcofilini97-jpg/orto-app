@@ -1,7 +1,7 @@
 // Service worker: con la rete prende sempre la versione più recente e ne tiene una copia;
 // senza rete usa la copia salvata.
 // Ogni nuovo file dell'app va aggiunto a FILE.
-const CACHE = 'orto-v1';
+const CACHE = 'orto-v2';
 const FILE = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/app.js', './js/dati.js', './js/viste.js', './js/disegni.js',

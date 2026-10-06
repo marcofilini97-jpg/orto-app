@@ -7,6 +7,8 @@
     </pattern>
   </defs>
   <rect width="512" height="512" fill="url(#prato)"/>
+  <!-- Tutto rimpicciolito all'80% verso il centro: resta intero anche se Android ritaglia l'icona a cerchio -->
+  <g transform="translate(256 256) scale(0.8) translate(-240 -270)">
   <ellipse cx="300" cy="446" rx="130" ry="18" fill="#4f6e33" opacity="0.55"/>
   <!-- manico in noce -->
   <path d="M66 92 L380 256" stroke="#4a2e15" stroke-width="46" stroke-linecap="round"/>
@@ -21,5 +23,6 @@
     <path d="M294 300 C294 270 316 262 348 262 C380 262 402 270 402 300 L394 444 L258 444 Z" fill="none" stroke="#1d1f21" stroke-width="11" stroke-linejoin="round"/>
     <ellipse cx="348" cy="240" rx="40" ry="46" transform="rotate(28 348 240)" fill="#2f3438" stroke="#1d1f21" stroke-width="11"/>
     <ellipse cx="390" cy="262" rx="15" ry="20" transform="rotate(28 390 262)" fill="#a8743f" stroke="#4a2e15" stroke-width="9"/>
+  </g>
   </g>
 </svg>
