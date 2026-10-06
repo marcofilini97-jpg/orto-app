@@ -135,6 +135,9 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Se arrivano dati dall'altro telefono la schermata si ridisegna, ma non mentre si compila un modulo
 - Il service worker non intercetta le richieste verso altri siti (Supabase)
 - Il progetto gratuito va in pausa dopo 7 giorni senza uso: si riattiva dal pannello di Supabase
+- Oltre alle policy servono i permessi sulle tabelle (nei progetti nuovi non sono automatici, altrimenti errore "permission denied for table elementi"):
+  `grant usage on schema public to authenticated; grant select, insert, update on table elementi to authenticated; grant select on table membri to authenticated; notify pgrst, 'reload schema';`
+- Il codice SQL va eseguito in un editor vuoto: se un blocco dà errore, Supabase annulla tutto il blocco
 
 ## Idee per il futuro
 - Grafica più accattivante in stile cartone animato: disegni stilizzati delle colture sulla mappa e nelle aiuole (es. carote disegnate nell'aiuola dove sono piantate le carote)
