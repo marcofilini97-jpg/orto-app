@@ -139,6 +139,29 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
   `grant usage on schema public to authenticated; grant select, insert, update on table elementi to authenticated; grant select on table membri to authenticated; notify pgrst, 'reload schema';`
 - Il codice SQL va eseguito in un editor vuoto: se un blocco dà errore, Supabase annulla tutto il blocco
 
+## Prossimi passi (decisi, da costruire in quest'ordine)
+1. Catalogo delle colture in `js/catalogo.js`: conoscenza generale, uguale per tutti gli orti di Bologna (periodi in `MM-GG`, distanze, piante per aiuola da 1,2 × 1,8 m, resa in kg sempre "stima indicativa", famiglia, tappa della rotazione, consigli). Nel codice va solo conoscenza generale: mai il piano o dati personali di un orto
+2. Pianificatore
+3. Suolo (proprietà del terreno, con stima guidata se non note)
+4. Arcade (simulatore)
+5. Impara (schede dal catalogo e guide brevi)
+6. Più orti e più utenti
+
+## Pianificatore
+- Pulsante "Pianifica una coltura"; nella scheda aiuola la sezione "In programma"
+- Una coltura pianificata è una coltura normale con `stato: "pianificata"` e `finePrevista`; il pulsante "Inizia" la rende attiva (data modificabile) e aggiunge la voce automatica di semina/trapianto. Campo facoltativo `catalogoId` per legarla alla scheda del catalogo (per le colture vecchie si ricava dal nome)
+- Nel modulo il catalogo suggerisce date tipiche a Bologna, fine prevista e resa stimata. Gli avvisi (rotazione, fuori stagione, aiuola occupata, aiuola vuota a lungo) non bloccano mai il salvataggio
+- Vista "Piano": un binario per aiuola, raggruppate per settore, da un mese fa a 12 mesi da oggi, frecce per spostarsi di 3 mesi; barre piene = attive, tratteggiate = pianificate, colore = tappa della rotazione
+- Sulla mappa: segnino sulle aiuole con qualcosa in programma nei prossimi 30 giorni
+- Rotazione, scelta nelle Impostazioni: regola base (la stessa famiglia non torna nello stesso settore prima di 4 anni; rucola e ravanelli contano come cavoli; perenni e colture "jolly" esclusi), personalizzata (anni da 2 a 5 e famiglie da controllare), nessun controllo
+
+## Arcade (simulatore)
+- Diverso dalla modalità prova: PROVA serve solo allo sviluppatore per collaudare l'app; Arcade è per tutti gli utenti
+- Si parte dal piano vero (copia) o da zero; si accelera il tempo e si vede cosa cresce, quando e quanto si raccoglie, cosa piantare dopo
+- Non tocca mai i dati veri e non si sincronizza: resta nella sezione Arcade del singolo telefono
+- Chiede le priorità dell'utente e personalizza la coltivazione (es. "non mi piace l'aglio", "niente finocchi", "massimizza i pomodori")
+- Spazio quasi creativo, da gioco
+
 ## Idee per il futuro
 - Grafica più accattivante in stile cartone animato: disegni stilizzati delle colture sulla mappa e nelle aiuole (es. carote disegnate nell'aiuola dove sono piantate le carote)
 - Ordine concordato: prima pubblicazione su GitHub Pages (senza offline), poi grafica provata sul telefono, per ultimo offline e installazione
