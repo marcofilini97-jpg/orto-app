@@ -1,10 +1,10 @@
 // Service worker: con la rete prende sempre la versione più recente e ne tiene una copia;
 // senza rete usa la copia salvata.
 // Ogni nuovo file dell'app va aggiunto a FILE.
-const CACHE = 'orto-v2';
+const CACHE = 'orto-v3';
 const FILE = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
-  './js/app.js', './js/dati.js', './js/viste.js', './js/disegni.js',
+  './js/app.js', './js/dati.js', './js/server.js', './js/viste.js', './js/disegni.js',
   './font/baloo2.woff2', './font/fredoka.woff2', './icone/icona-192.png', './icone/icona-512.png',
 ];
 
@@ -24,6 +24,8 @@ self.addEventListener('activate', evento => {
 // Prima la rete (chiedendo sempre al server se il file è cambiato), poi la copia salvata
 self.addEventListener('fetch', evento => {
   if (evento.request.method !== 'GET') return;
+  // Le richieste verso altri siti (es. Supabase) non si toccano: servono i loro dati di accesso
+  if (new URL(evento.request.url).origin !== self.location.origin) return;
   evento.respondWith((async () => {
     try {
       const risposta = await fetch(evento.request.url, { cache: 'no-cache' });

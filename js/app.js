@@ -1,4 +1,4 @@
-import { carica } from './dati.js';
+import { carica, sincronizza, inProva } from './dati.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask,
@@ -48,6 +48,7 @@ function schermata() {
 }
 
 function disegna() {
+  document.body.classList.toggle('prova', inProva());
   try {
     contenuto.replaceChildren(schermata());
   } catch (errore) {
@@ -63,7 +64,18 @@ function mostra() {
 window.addEventListener('hashchange', mostra);
 // Dopo una modifica che non cambia schermata (es. spuntare un task) si ridisegna restando dove si è
 document.addEventListener('dati-cambiati', disegna);
+// Arrivano modifiche dall'altro telefono: si ridisegna, ma non se si sta compilando un modulo
+document.addEventListener('dati-sincronizzati', () => {
+  if (!contenuto.querySelector('form')) disegna();
+});
 mostra();
+
+// Sincronizzazione: all'avvio, quando torna la rete e quando si torna sull'app
+sincronizza();
+window.addEventListener('online', sincronizza);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') sincronizza();
+});
 
 // Offline e aggiornamenti: il service worker (sw.js) gestisce la copia dei file
 if ('serviceWorker' in navigator) {
