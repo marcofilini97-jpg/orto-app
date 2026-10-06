@@ -90,6 +90,8 @@ function colonna(dati, lato) {
     const asse = divisione(dati, a.id);
     link.className = asse ? `aiuola diviso-${asse}` : 'aiuola';
     link.href = `#/aiuola/${a.id}`;
+    // Il "tieni premuto" serve a spostare gli ortaggi: niente menu del browser sul link
+    link.addEventListener('contextmenu', evento => evento.preventDefault());
     link.append(elemento('span', a.id, 'nome'), ...piantine(dati, a));
     for (const { zona, n } of bollini(dati, a)) {
       link.append(elemento('span', `× ${n}`, `bollino bollino-${posizioneBollino(zona, a.lato)}`));
@@ -126,22 +128,101 @@ function piantine(dati, aiuola) {
     const righe = zona === 'tutta' || verticale ? 2 : 1;
     const colonne = verticale ? 1 : 2;
     for (let i = 0; qui.length > 0 && i < righe * colonne; i++) {
-      const pianta = icona(qui[i % qui.length].nome, 'piantina', 2.6);
-      // Prima la fila in alto, così quella in basso le viene disegnata davanti
-      const riga = righe - 1 - Math.floor(i / colonne);
-      const colonna = i % colonne;
-      // Posizione un po' irregolare, ma sempre uguale per la stessa aiuola
-      const seme = `${aiuola.id}-${zona}-${i}`;
-      // le colonne restano agli estremi, con un po' di variazione dentro ciascuna
-      const x = (colonna + 0.3 * casuale(seme + 'x')) / (colonne - 1 + 0.3);
-      const y = (riga + 0.8 * casuale(seme + 'y')) / righe;
-      // Sottraendo la dimensione del disegno (--l) non esce mai a destra né in basso
-      pianta.style.left = `calc((100cqw - var(--l)) * ${x.toFixed(3)})`;
-      pianta.style.bottom = `calc(max(0px, 100cqh - var(--l)) * ${y.toFixed(3)})`;
+      const coltura = qui[i % qui.length];
+      const k = Math.floor(i / qui.length);   // quale disegnino di questa coltura, in questa aiuola
+      const pianta = icona(coltura.nome, 'piantina', 2.6);
+      const salvata = coltura.posizioni?.[aiuola.id]?.[k];
+      if (salvata) {
+        // Posizione scelta a mano: frazioni della sezione. Sottraendo --l non esce a destra né in basso
+        pianta.style.left = `calc((100cqw - var(--l)) * ${salvata.x})`;
+        pianta.style.bottom = `calc(max(0px, 100cqh - var(--l)) * ${salvata.y})`;
+      } else {
+        // Casella automatica: ogni ortaggio nella sua parte della sezione, con un po' di variazione dentro
+        // (prima la fila in alto, così quella in basso le viene disegnata davanti)
+        const riga = righe - 1 - Math.floor(i / colonne);
+        const colonna = i % colonne;
+        const seme = `${aiuola.id}-${zona}-${i}`;
+        const rx = casuale(seme + 'x').toFixed(3);
+        const ry = casuale(seme + 'y').toFixed(3);
+        pianta.style.left = `calc(${colonna / colonne} * 100cqw + max(0px, ${1 / colonne} * 100cqw - var(--l)) * ${rx})`;
+        pianta.style.bottom = `calc(${riga / righe} * 100cqh + max(0px, ${1 / righe} * 100cqh - var(--l)) * ${ry})`;
+      }
+      rendiSpostabile(pianta, spazio, { colturaId: coltura.id, aiuolaId: aiuola.id, k, sporgeInAlto: posto !== 'sotto' });
       spazio.append(pianta);
     }
     return spazio;
   });
+}
+
+const PRESSIONE = 1000;   // millisecondi di pressione per "sollevare" un ortaggio
+
+// Tenendo premuto 1 secondo l'ortaggio si solleva e si può trascinare dentro la sua sezione.
+// Verso il fondo (in alto) può sporgere al massimo per metà; mai oltre gli altri bordi
+function rendiSpostabile(pianta, spazio, { colturaId, aiuolaId, k, sporgeInAlto }) {
+  let timer = null;
+  let inizio = null;
+  let presa = null;   // dove il dito ha preso il disegno, rispetto al suo angolo in alto a sinistra
+
+  pianta.addEventListener('pointerdown', evento => {
+    inizio = { x: evento.clientX, y: evento.clientY };
+    timer = setTimeout(() => {
+      timer = null;
+      const r = pianta.getBoundingClientRect();
+      presa = { dx: inizio.x - r.left, dy: inizio.y - r.top };
+      pianta.setPointerCapture(evento.pointerId);
+      pianta.classList.add('sollevata');
+      navigator.vibrate?.(30);
+    }, PRESSIONE);
+  });
+
+  pianta.addEventListener('pointermove', evento => {
+    if (timer && Math.hypot(evento.clientX - inizio.x, evento.clientY - inizio.y) > 10) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    if (!presa) return;
+    const z = spazio.getBoundingClientRect();
+    const l = pianta.offsetWidth;
+    const maxBasso = Math.max(0, z.height - l) + (sporgeInAlto ? l / 2 : 0);
+    const sinistra = Math.min(Math.max(evento.clientX - z.left - presa.dx, 0), Math.max(0, z.width - l));
+    const basso = Math.min(Math.max(z.bottom - evento.clientY - (l - presa.dy), 0), maxBasso);
+    pianta.style.left = `${sinistra}px`;
+    pianta.style.bottom = `${basso}px`;
+  });
+
+  const fine = () => {
+    clearTimeout(timer);
+    timer = null;
+    if (!presa) return;
+    presa = null;
+    pianta.classList.remove('sollevata');
+    // Il "clic" che segue il rilascio non deve aprire la scheda dell'aiuola
+    const collegamento = pianta.closest('a');
+    const blocca = e => e.preventDefault();
+    collegamento.addEventListener('click', blocca, { capture: true, once: true });
+    setTimeout(() => collegamento.removeEventListener('click', blocca, { capture: true }), 400);
+
+    const z = spazio.getBoundingClientRect();
+    const l = pianta.offsetWidth;
+    const x = z.width > l ? parseFloat(pianta.style.left) / (z.width - l) : 0;
+    const y = z.height > l ? parseFloat(pianta.style.bottom) / (z.height - l) : 0;
+    salvaPosizione(colturaId, aiuolaId, k, x, y);
+  };
+  pianta.addEventListener('pointerup', fine);
+  pianta.addEventListener('pointercancel', fine);
+}
+
+function salvaPosizione(colturaId, aiuolaId, k, x, y) {
+  try {
+    const dati = carica();
+    const coltura = dati.colture.find(c => c.id === colturaId);
+    coltura.posizioni ??= {};
+    coltura.posizioni[aiuolaId] ??= [];
+    coltura.posizioni[aiuolaId][k] = { x: Number(x.toFixed(3)), y: Number(y.toFixed(3)) };
+    salva(dati);
+  } catch (errore) {
+    alert(errore.message);
+  }
 }
 
 // Numero tra 0 e 1 che sembra casuale ma è sempre uguale per lo stesso testo
@@ -243,8 +324,31 @@ export function infoAiuola(dati, aiuola) {
     riga('Divisione', asse === 'fondo-davanti' ? 'divisa a metà: fondo / davanti'
       : asse === 'vialetto-esterno' ? 'divisa a metà: vialetto / esterno' : 'non divisa'),
     modulo,
+    pulsanteRiposiziona(aiuola),
   );
   return sezione;
+}
+
+// Cancella le posizioni scelte a mano in questa aiuola: si torna alla disposizione automatica
+function pulsanteRiposiziona(aiuola) {
+  const contenitore = elemento('div');
+  const pulsante = elemento('button', 'Riposiziona gli ortaggi', 'pulsante secondario');
+  pulsante.type = 'button';
+  const conferma = elemento('p', 'Ortaggi riposizionati.', 'conferma');
+  conferma.hidden = true;
+  pulsante.addEventListener('click', () => {
+    if (!confirm(`Rimettere gli ortaggi di ${aiuola.id} nella disposizione automatica?`)) return;
+    try {
+      const dati = carica();
+      for (const c of dati.colture) delete c.posizioni?.[aiuola.id];
+      salva(dati);
+      conferma.hidden = false;
+    } catch (errore) {
+      alert(errore.message);
+    }
+  });
+  contenitore.append(pulsante, conferma);
+  return contenitore;
 }
 
 export function storicoAiuola(dati, aiuola) {

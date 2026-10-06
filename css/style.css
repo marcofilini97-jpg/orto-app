@@ -271,6 +271,10 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 /* La metà davanti non tocca il fondo: lì i disegni devono stare tutti dentro */
 .piantine-sotto .piantina { --l: min(38px, 100cqh); }
 .piantina svg { width: 100%; height: 100%; }
+.piantina { pointer-events: auto; touch-action: none; transition: transform 0.15s; }
+.piantina.sollevata { z-index: 5; transform: scale(1.25); filter: drop-shadow(0 6px 4px rgb(0 0 0 / 0.35)); }
+/* Sulla mappa il "tieni premuto" serve a spostare: niente menu o selezione del testo */
+.aiuola { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 
 .registro { margin: 0; padding-left: 20px; }
 .registro li { padding: 6px 0; }

@@ -113,7 +113,8 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Sulla mappa: tanti disegnini piccoli per aiuola (4 se intera, 2 per metà, 38px); più colture nello stesso spazio si alternano
 - Gruppo 2 aggiunto: verza, cavolo nero, cavolo cappuccio, spinacio, valerianella, rucola, ravanello, carciofo, radicchio, cicoria, porro, scalogno, fava, fagiolo rampicante, zucca, mais, melone, anguria, asparago, fragola
 - Disegnini sulla mappa: mai tagliati. Possono sporgere solo oltre il lato lungo verso il fondo (in alto); mai oltre il lato verso il davanti (nemmeno l'ombra), mai oltre i lati corti né oltre il confine della propria metà. La metà davanti quindi li contiene del tutto (si rimpiccioliscono se serve)
-- Posizioni "simil casuali" ma fisse (calcolate dal nome dell'aiuola): intera 2 file da 2; metà fondo/davanti 2 affiancati; metà vialetto/esterno 2 in colonna
+- Disposizione automatica a caselle (intera 2×2; metà fondo/davanti 2 affiancati; metà vialetto/esterno 2 in colonna), con variazione "casuale" ma fissa solo dentro la propria casella
+- Spostamento a mano: tenendo premuto 1 secondo un ortaggio si solleva e si trascina dentro la sua sezione (verso il fondo può sporgere al massimo per metà). La posizione si salva nel campo facoltativo `posizioni` della coltura: `{ "2A": [ { "x": 0.12, "y": 0.4 }, … ] }` (frazioni della sezione, una per disegnino). Pulsante "Riposiziona gli ortaggi" nella pagina info dell'aiuola per tornare alla disposizione automatica
 - Gruppo 3 aggiunto: basilico, prezzemolo, rosmarino, salvia, timo, origano, erba cipollina, menta, lavanda, santolina, calendula, alisso, facelia, borragine, favino, veccia, avena, orzo, grano saraceno, pesco, vite
 - Parole chiave: vince la prima trovata nell'ordine di `DISEGNI`, quindi i nomi più specifici vanno prima (es. "erba cipollina" prima di "cipoll", "cavolo nero" prima di "cavol"). Attenzione alle parole brevi come "timo" e "vite", che potrebbero comparire dentro altri nomi
 
@@ -124,7 +125,6 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - iPhone: l'app installata ha dati separati da Safari (spostarli con esporta/importa backup)
 
 ## Idee per il futuro
-- Spostare a mano un ortaggio sulla mappa tenendolo premuto, entro i limiti della sua aiuola/metà (richiede di salvare le posizioni nei dati)
 - Grafica più accattivante in stile cartone animato: disegni stilizzati delle colture sulla mappa e nelle aiuole (es. carote disegnate nell'aiuola dove sono piantate le carote)
 - Ordine concordato: prima pubblicazione su GitHub Pages (senza offline), poi grafica provata sul telefono, per ultimo offline e installazione
 
