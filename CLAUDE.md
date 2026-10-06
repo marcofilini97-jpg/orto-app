@@ -114,7 +114,8 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Gruppo 2 aggiunto: verza, cavolo nero, cavolo cappuccio, spinacio, valerianella, rucola, ravanello, carciofo, radicchio, cicoria, porro, scalogno, fava, fagiolo rampicante, zucca, mais, melone, anguria, asparago, fragola
 - Disegnini sulla mappa: mai tagliati. Possono sporgere solo oltre il lato lungo verso il fondo (in alto); mai oltre il lato verso il davanti (nemmeno l'ombra), mai oltre i lati corti né oltre il confine della propria metà. La metà davanti quindi li contiene del tutto (si rimpiccioliscono se serve)
 - Posizioni "simil casuali" ma fisse (calcolate dal nome dell'aiuola): intera 2 file da 2; metà fondo/davanti 2 affiancati; metà vialetto/esterno 2 in colonna
-- Da disegnare: gruppo 3 (aromatiche, fiori, sovesci, frutta)
+- Gruppo 3 aggiunto: basilico, prezzemolo, rosmarino, salvia, timo, origano, erba cipollina, menta, lavanda, santolina, calendula, alisso, facelia, borragine, favino, veccia, avena, orzo, grano saraceno, pesco, vite
+- Parole chiave: vince la prima trovata nell'ordine di `DISEGNI`, quindi i nomi più specifici vanno prima (es. "erba cipollina" prima di "cipoll", "cavolo nero" prima di "cavol"). Attenzione alle parole brevi come "timo" e "vite", che potrebbero comparire dentro altri nomi
 
 ## Idee per il futuro
 - Spostare a mano un ortaggio sulla mappa tenendolo premuto, entro i limiti della sua aiuola/metà (richiede di salvare le posizioni nei dati)
