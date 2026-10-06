@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Icona piccola (schermata Home): zappa sul prato -->
+  <defs>
+    <pattern id="prato" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect width="40" height="40" fill="#7fa653"/>
+      <circle cx="10" cy="10" r="4" fill="#6e9446"/><circle cx="30" cy="30" r="4" fill="#6e9446"/>
+    </pattern>
+  </defs>
+  <rect width="512" height="512" fill="url(#prato)"/>
+  <ellipse cx="300" cy="446" rx="130" ry="18" fill="#4f6e33" opacity="0.55"/>
+  <!-- manico in noce -->
+  <path d="M66 92 L380 256" stroke="#4a2e15" stroke-width="46" stroke-linecap="round"/>
+  <path d="M66 92 L380 256" stroke="#a8743f" stroke-width="32" stroke-linecap="round"/>
+  <path d="M84 94 L330 222" stroke="#d29a5e" stroke-width="8" stroke-linecap="round"/>
+  <!-- lama e anello -->
+  <g transform="translate(348 250) scale(0.84) translate(-348 -250)">
+    <path d="M294 300 C294 270 316 262 348 262 C380 262 402 270 402 300 L394 444 L258 444 Z" fill="#3d4348"/>
+    <path d="M263 404 L397 404 L394 444 L258 444 Z" fill="#c9cfd2"/>
+    <path d="M336 268 L350 352 L364 268 Z" fill="#646d73"/>
+    <path d="M306 298 L296 386" stroke="#6d767c" stroke-width="9" stroke-linecap="round"/>
+    <path d="M294 300 C294 270 316 262 348 262 C380 262 402 270 402 300 L394 444 L258 444 Z" fill="none" stroke="#1d1f21" stroke-width="11" stroke-linejoin="round"/>
+    <ellipse cx="348" cy="240" rx="40" ry="46" transform="rotate(28 348 240)" fill="#2f3438" stroke="#1d1f21" stroke-width="11"/>
+    <ellipse cx="390" cy="262" rx="15" ry="20" transform="rotate(28 390 262)" fill="#a8743f" stroke="#4a2e15" stroke-width="9"/>
+  </g>
+</svg>
