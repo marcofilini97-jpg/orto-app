@@ -132,7 +132,8 @@ function piantine(dati, aiuola) {
       const colonna = i % colonne;
       // Posizione un po' irregolare, ma sempre uguale per la stessa aiuola
       const seme = `${aiuola.id}-${zona}-${i}`;
-      const x = (colonna + 0.15 + 0.7 * casuale(seme + 'x')) / colonne;
+      // le colonne restano agli estremi, con un po' di variazione dentro ciascuna
+      const x = (colonna + 0.3 * casuale(seme + 'x')) / (colonne - 1 + 0.3);
       const y = (riga + 0.8 * casuale(seme + 'y')) / righe;
       // Sottraendo la dimensione del disegno (--l) non esce mai a destra né in basso
       pianta.style.left = `calc((100cqw - var(--l)) * ${x.toFixed(3)})`;

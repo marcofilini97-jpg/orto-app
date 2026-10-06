@@ -117,6 +117,7 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Da disegnare: gruppo 3 (aromatiche, fiori, sovesci, frutta)
 
 ## Idee per il futuro
+- Spostare a mano un ortaggio sulla mappa tenendolo premuto, entro i limiti della sua aiuola/metà (richiede di salvare le posizioni nei dati)
 - Grafica più accattivante in stile cartone animato: disegni stilizzati delle colture sulla mappa e nelle aiuole (es. carote disegnate nell'aiuola dove sono piantate le carote)
 - Ordine concordato: prima pubblicazione su GitHub Pages (senza offline), poi grafica provata sul telefono, per ultimo offline e installazione
 
