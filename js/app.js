@@ -1,6 +1,6 @@
 import { carica } from './dati.js';
 import {
-  mappa, schedaAiuola, storicoAiuola, impostazioni, nuovaColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
+  mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, nuovaColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask,
 } from './viste.js';
 
@@ -26,6 +26,7 @@ function schermata() {
   const aiuola = dati.aiuole.find(a => a.id === id);
   if (pagina === 'aiuola' && aiuola) {
     if (sotto === 'storico') return storicoAiuola(dati, aiuola);
+    if (sotto === 'info') return infoAiuola(dati, aiuola);
     if (sotto === 'nuova-coltura') return nuovaColtura(dati, aiuola);
     if (sotto === 'registro') return registro(dati, aiuola);
     if (sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: [aiuola.id] });

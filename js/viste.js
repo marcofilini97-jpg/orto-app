@@ -186,27 +186,63 @@ function etichetta(testo) {
 
 export function schedaAiuola(dati, aiuola) {
   const attive = colturePer(dati, aiuola.id).filter(c => c.stato === 'attiva');
+  const intestazione = elemento('div', '', 'intestazione');
+  intestazione.append(elemento('h2', `Aiuola ${aiuola.id}`), link('(info)', `#/aiuola/${aiuola.id}/info`, 'link-info'));
   const sezione = document.createElement('section');
   sezione.append(
     link('← Mappa', '#/', 'indietro'),
-    elemento('h2', `Aiuola ${aiuola.id}`),
+    intestazione,
     elemento('h3', 'Colture attive'),
     elencoColture(attive, 'Nessuna coltura attiva.'),
     link('Aggiungi coltura', `#/aiuola/${aiuola.id}/nuova-coltura`, 'pulsante'),
-    elemento('p', `Settore ${aiuola.settore} · a ${aiuola.lato} · ${aiuola.posizione}ª dal fondo`),
-    elemento('p', divisione(dati, aiuola.id) === 'fondo-davanti' ? 'Divisa a metà: fondo / davanti'
-      : divisione(dati, aiuola.id) === 'vialetto-esterno' ? 'Divisa a metà: vialetto / esterno'
-      : 'Non divisa'),
-    elemento('h3', 'Note'),
-    elemento('p', aiuola.note || 'Nessuna nota.'),
-    link('Mostra storico', `#/aiuola/${aiuola.id}/storico`, 'pulsante'),
     elemento('h3', 'Da fare'),
     elencoTask(dati, ordinaTask(dati.task.filter(t => !t.fatto && t.aiuoleIds.includes(aiuola.id))), 'Niente da fare.'),
     link('Aggiungi task', `#/aiuola/${aiuola.id}/nuovo-task`, 'pulsante secondario'),
+    link('Mostra storico', `#/aiuola/${aiuola.id}/storico`, 'pulsante'),
     elemento('h3', 'Registro'),
     elencoVoci(dati, ordinaVoci(dati.registro.filter(v => v.aiuoleIds.includes(aiuola.id))).slice(0, 5), 'Nessuna voce nel registro.'),
     link('Aggiungi al registro', `#/aiuola/${aiuola.id}/nuova-voce`, 'pulsante'),
     link(`Vedi tutto il registro di ${aiuola.id}`, `#/aiuola/${aiuola.id}/registro`, 'pulsante secondario'),
+  );
+  return sezione;
+}
+
+export function infoAiuola(dati, aiuola) {
+  const asse = divisione(dati, aiuola.id);
+
+  const modulo = document.createElement('form');
+  modulo.className = 'modulo';
+  modulo.innerHTML = `
+    <label>Note<textarea name="note" rows="4" placeholder="es. terreno argilloso, ristagna l'acqua"></textarea></label>
+    <p class="errore" role="alert" hidden></p>
+    <p class="conferma" role="status" hidden>Note salvate.</p>
+    <button type="submit" class="pulsante">Salva note</button>
+  `;
+  // Le note le scrive l'utente: si mettono con .value, mai dentro innerHTML
+  modulo.elements.note.value = aiuola.note;
+  modulo.addEventListener('submit', evento => {
+    evento.preventDefault();
+    try {
+      const dati = carica();
+      dati.aiuole.find(a => a.id === aiuola.id).note = modulo.elements.note.value.trim();
+      salva(dati);
+      modulo.querySelector('.conferma').hidden = false;
+    } catch (errore) {
+      const avviso = modulo.querySelector('.errore');
+      avviso.textContent = errore.message;
+      avviso.hidden = false;
+    }
+  });
+
+  const sezione = document.createElement('section');
+  sezione.append(
+    link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro'),
+    elemento('h2', `Info ${aiuola.id}`),
+    riga('Settore', String(aiuola.settore)),
+    riga('Posizione', `a ${aiuola.lato}, ${aiuola.posizione}ª dal fondo`),
+    riga('Divisione', asse === 'fondo-davanti' ? 'divisa a metà: fondo / davanti'
+      : asse === 'vialetto-esterno' ? 'divisa a metà: vialetto / esterno' : 'non divisa'),
+    modulo,
   );
   return sezione;
 }

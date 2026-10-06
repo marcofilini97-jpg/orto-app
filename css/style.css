@@ -193,6 +193,9 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 
 .titolo { color: inherit; text-decoration: none; }
 
+.intestazione { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.link-info { padding: 8px 0 8px 12px; font-weight: 700; color: var(--verde); text-decoration: underline; }
+
 .azioni { display: flex; gap: 24px; }
 
 .icona {
@@ -349,6 +352,8 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 .opzione input { width: 24px; height: 24px; margin: 0; accent-color: var(--verde); }
 
 .modulo .tutto-orto { margin-top: 12px; }
+
+.conferma { margin: 16px 0 0; color: var(--verde); font-weight: 700; }
 
 .errore { margin: 16px 0 0; color: #b00020; font-weight: 700; white-space: pre-line; }
 
