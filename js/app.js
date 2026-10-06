@@ -1,6 +1,6 @@
 import { carica } from './dati.js';
 import {
-  mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, nuovaColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
+  mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask,
 } from './viste.js';
 
@@ -27,7 +27,7 @@ function schermata() {
   if (pagina === 'aiuola' && aiuola) {
     if (sotto === 'storico') return storicoAiuola(dati, aiuola);
     if (sotto === 'info') return infoAiuola(dati, aiuola);
-    if (sotto === 'nuova-coltura') return nuovaColtura(dati, aiuola);
+    if (sotto === 'nuova-coltura') return moduloColtura(dati, { aiuola });
     if (sotto === 'registro') return registro(dati, aiuola);
     if (sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: [aiuola.id] });
     if (sotto === 'nuovo-task') return moduloTask(dati, { aiuoleIds: [aiuola.id] });
@@ -35,6 +35,7 @@ function schermata() {
   }
   if (pagina === 'coltura') {
     const coltura = dati.colture.find(c => c.id === id);
+    if (coltura?.stato === 'attiva' && sotto === 'modifica') return moduloColtura(dati, { coltura });
     if (coltura && sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: coltura.aiuoleIds, coltura });
     if (coltura && sotto === 'nuovo-task') return moduloTask(dati, { aiuoleIds: coltura.aiuoleIds, coltura });
     if (coltura) return schedaColtura(dati, coltura);

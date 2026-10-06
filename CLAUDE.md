@@ -80,6 +80,8 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 
 - `versione`: permette di riconoscere e convertire i backup vecchi se la struttura cambia
 - `aiuole`: fisse (8); l'id è il nome. `posizione` va da 1 (fondo) a 4 (davanti) sul proprio lato
+- `metodo` (colture): `semina`, `trapianto` oppure `altro`; con `altro` il testo libero sta in `metodoAltro` (es. "pianta perenne") e la voce automatica nel registro è una nota "Inizio coltura: …"
+- Le colture attive si modificano dalla scheda coltura, link "(modifica)": nome, varietà, aiuole/metà, data di inizio, metodo e note (le note si scrivono solo lì, non alla creazione). Modificando si aggiorna anche la voce automatica di inizio nel registro, e si cancellano le posizioni a mano delle aiuole tolte
 - `colture`: ogni record è una coltivazione (anche su più aiuole), non una specie in generale, così resta lo storico per la rotazione
 - `parti` (nelle colture): aiuole occupate solo a metà, con valore fondo, davanti, vialetto o esterno; le aiuole non elencate sono occupate per intero. In un'aiuola le colture attive usano un solo modo di dividere (fondo/davanti oppure vialetto/esterno). Anche voci di registro e task hanno `parti`, con le stesse regole; "tutto l'orto" = tutte e 8 le aiuole intere
 - Nei moduli le aiuole si scelgono da una mini-mappa: tocco = aiuola intera, tocco su una già scelta = pop-up con rotella per scegliere la metà o togliere l'aiuola

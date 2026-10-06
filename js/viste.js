@@ -462,40 +462,77 @@ async function caricaBackup(input) {
   }
 }
 
-export function nuovaColtura(dati, aiuola) {
+// Modulo per creare una coltura (da un'aiuola) o modificarne una attiva (coltura)
+export function moduloColtura(dati, { aiuola = null, coltura = null }) {
   const modulo = document.createElement('form');
   modulo.className = 'modulo';
   modulo.noValidate = true;
-  // Solo testo fisso e dati dell'app: nessun testo scritto dall'utente finisce qui dentro
+  // Solo testo fisso e dati dell'app: i testi scritti dall'utente si mettono sotto, con .value
   modulo.innerHTML = `
     <label>Nome<input type="text" name="nome" autocomplete="off" placeholder="es. Pomodoro"></label>
     <label>Varietà (facoltativa)<input type="text" name="varieta" autocomplete="off" placeholder="es. Cuore di bue"></label>
     <div class="posto-aiuole"></div>
-    <label>Data di inizio<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(oggi())}"></label>
+    <label>Data di inizio<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(coltura ? coltura.dataInizio : oggi())}"></label>
     <fieldset>
       <legend>Metodo</legend>
       <div class="due-colonne">
         <label class="opzione"><input type="radio" name="metodo" value="semina"> Semina</label>
         <label class="opzione"><input type="radio" name="metodo" value="trapianto"> Trapianto</label>
       </div>
+      <label>Altro:<input type="text" name="metodoAltro" autocomplete="off" placeholder="es. pianta perenne, talea, bulbo"></label>
     </fieldset>
-    <label>Note (facoltative)<textarea name="note" rows="3"></textarea></label>
+    ${coltura ? '<label>Note (facoltative)<textarea name="note" rows="3"></textarea></label>' : ''}
     <p class="errore" role="alert" hidden></p>
-    <button type="submit" class="pulsante">Salva coltura</button>
+    <button type="submit" class="pulsante">${coltura ? 'Salva modifiche' : 'Salva coltura'}</button>
   `;
-  modulo.querySelector('.posto-aiuole').replaceWith(selettoreAiuole(dati, { [aiuola.id]: '' }));
+  const campi = modulo.elements;
+  if (coltura) {
+    campi.nome.value = coltura.nome;
+    campi.varieta.value = coltura.varieta;
+    campi.note.value = coltura.note;
+    if (coltura.metodo === 'altro') campi.metodoAltro.value = coltura.metodoAltro ?? '';
+    else modulo.querySelector(`input[name="metodo"][value="${coltura.metodo}"]`).checked = true;
+  }
+  // "Altro" e i due pallini si escludono: scrivendo in Altro si toglie il pallino, e viceversa
+  campi.metodoAltro.addEventListener('input', () => {
+    if (campi.metodoAltro.value.trim()) modulo.querySelectorAll('input[name="metodo"]').forEach(r => { r.checked = false; });
+  });
+  modulo.querySelectorAll('input[name="metodo"]').forEach(r => r.addEventListener('change', () => { campi.metodoAltro.value = ''; }));
+
+  modulo.querySelector('.posto-aiuole').replaceWith(selettoreAiuole(dati,
+    coltura ? scelteDa(coltura.aiuoleIds, coltura.parti) : { [aiuola.id]: '' }));
   modulo.addEventListener('submit', evento => {
     evento.preventDefault();
-    salvaColtura(modulo);
+    salvaColtura(modulo, coltura?.id);
   });
 
   const sezione = document.createElement('section');
-  sezione.append(
-    link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro'),
-    elemento('h2', `Nuova coltura in ${aiuola.id}`),
-    modulo,
-  );
+  if (coltura) {
+    const indietro = elemento('button', '← Indietro', 'indietro');
+    indietro.type = 'button';
+    indietro.addEventListener('click', () => history.back());
+    sezione.append(indietro, elemento('h2', 'Modifica coltura'), modulo);
+  } else {
+    sezione.append(
+      link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro'),
+      elemento('h2', `Nuova coltura in ${aiuola.id}`),
+      modulo,
+    );
+  }
   return sezione;
+}
+
+// Testo del metodo per la scheda: "Semina", "Trapianto" o quello scritto in "Altro"
+function testoMetodo(c) {
+  if (c.metodo === 'semina') return 'Semina';
+  if (c.metodo === 'trapianto') return 'Trapianto';
+  return c.metodoAltro || 'Altro';
+}
+
+// La voce di registro creata in automatico all'inizio della coltura (semina, trapianto o "Inizio coltura")
+function voceIniziale(dati, coltura) {
+  return dati.registro.find(v => v.colturaId === coltura.id && !v.dal && v.data === coltura.dataInizio
+    && (v.tipo === coltura.metodo || (coltura.metodo === 'altro' && v.tipo === 'nota' && v.note.startsWith('Inizio coltura'))));
 }
 
 // Mini-mappa per scegliere aiuole e metà. Le scelte finiscono in campi nascosti del modulo:
@@ -664,18 +701,19 @@ function tuttoOrto(dati, x) {
   return x.aiuoleIds.length === dati.aiuole.length && Object.keys(x.parti ?? {}).length === 0;
 }
 
-function salvaColtura(modulo) {
+function salvaColtura(modulo, colturaId = null) {
   const campi = new FormData(modulo);
   const nome = campi.get('nome').trim();
   const aiuoleIds = campi.getAll('aiuole');
   const dataInizio = dataPerArchivio(campi.get('data'));
-  const metodo = campi.get('metodo');
+  const metodoAltro = campi.get('metodoAltro').trim();
+  const metodo = metodoAltro ? 'altro' : campi.get('metodo');
 
   const errori = [];
   if (!nome) errori.push('Scrivi il nome della coltura.');
   if (aiuoleIds.length === 0) errori.push('Scegli almeno un\'aiuola.');
   if (!dataInizio) errori.push('Scrivi la data come gg/mm/aaaa, es. 20/04/2026.');
-  if (!metodo) errori.push('Scegli semina o trapianto.');
+  if (!metodo) errori.push('Scegli semina o trapianto, oppure scrivi il metodo in "Altro".');
 
   const avviso = modulo.querySelector('.errore');
   if (errori.length > 0) {
@@ -687,16 +725,31 @@ function salvaColtura(modulo) {
   try {
     const parti = leggiParti(campi, aiuoleIds);
     const dati = carica();
-    const colturaId = nuovoId('c');
-    dati.colture.push({
-      id: colturaId, nome, varieta: campi.get('varieta').trim(), aiuoleIds, parti,
-      dataInizio, metodo, stato: 'attiva', dataFine: null, note: campi.get('note').trim(),
-    });
-    // La semina o il trapianto finiscono anche nel registro
-    dati.registro.push({
-      id: nuovoId('r'), data: dataInizio, tipo: metodo, aiuoleIds, parti, colturaId,
-      quantita: '', note: '',
-    });
+    // La voce automatica nel registro: semina o trapianto, oppure una nota "Inizio coltura: …"
+    const voce = {
+      data: dataInizio, tipo: metodo === 'altro' ? 'nota' : metodo, aiuoleIds, parti,
+      note: metodo === 'altro' ? `Inizio coltura: ${metodoAltro}` : '',
+    };
+    if (colturaId) {
+      const coltura = dati.colture.find(c => c.id === colturaId);
+      const vecchiaVoce = voceIniziale(dati, coltura);
+      Object.assign(coltura, {
+        nome, varieta: campi.get('varieta').trim(), aiuoleIds, parti, dataInizio, metodo, metodoAltro,
+        note: campi.get('note').trim(),
+      });
+      // Le posizioni scelte a mano nelle aiuole tolte non servono più
+      for (const id of Object.keys(coltura.posizioni ?? {})) {
+        if (!aiuoleIds.includes(id)) delete coltura.posizioni[id];
+      }
+      if (vecchiaVoce) Object.assign(vecchiaVoce, voce);
+    } else {
+      const nuovoColturaId = nuovoId('c');
+      dati.colture.push({
+        id: nuovoColturaId, nome, varieta: campi.get('varieta').trim(), aiuoleIds, parti,
+        dataInizio, metodo, metodoAltro, stato: 'attiva', dataFine: null, note: '',
+      });
+      dati.registro.push({ id: nuovoId('r'), ...voce, colturaId: nuovoColturaId, quantita: '' });
+    }
     salva(dati);
     history.back();
   } catch (errore) {
@@ -711,17 +764,20 @@ export function schedaColtura(dati, coltura) {
   indietro.addEventListener('click', () => history.back());
 
   const attiva = coltura.stato === 'attiva';
+  const intestazione = elemento('div', '', 'intestazione');
+  intestazione.append(elemento('h2', coltura.varieta ? `${coltura.nome} – ${coltura.varieta}` : coltura.nome));
+  if (attiva) intestazione.append(link('(modifica)', `#/coltura/${coltura.id}/modifica`, 'link-info'));
   const sezione = document.createElement('section');
   sezione.append(
     indietro,
-    elemento('h2', coltura.varieta ? `${coltura.nome} – ${coltura.varieta}` : coltura.nome),
+    intestazione,
     riga('Stato', attiva ? 'Attiva' : 'Terminata'),
     riga('Aiuole', doveColtura(coltura)),
     riga('Inizio', dataPerUtente(coltura.dataInizio)),
   );
   if (!attiva) sezione.append(riga('Fine', dataPerUtente(coltura.dataFine)));
   sezione.append(
-    riga('Metodo', coltura.metodo === 'semina' ? 'Semina' : 'Trapianto'),
+    riga('Metodo', testoMetodo(coltura)),
     riga('Note', coltura.note || 'Nessuna nota.'),
     elemento('h3', 'Da fare'),
     elencoTask(dati, ordinaTask(dati.task.filter(t => !t.fatto && t.colturaId === coltura.id)), 'Niente da fare.'),
