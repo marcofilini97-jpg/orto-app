@@ -121,10 +121,33 @@ function piantine(dati, aiuola) {
     const qui = attive.filter(c => !c.parti?.[aiuola.id] || c.parti[aiuola.id] === zona);
     const posto = zona === 'tutta' ? 'tutta' : latoDisegno(zona, aiuola.lato);
     const spazio = elemento('span', '', `piantine piantine-${posto}`);
-    const quante = zona === 'tutta' ? 4 : 2;
-    for (let i = 0; qui.length > 0 && i < quante; i++) spazio.append(icona(qui[i % qui.length].nome, 'piantina', 2.6));
+    // Intera: 2 file da 2. Metà fondo/davanti: 2 affiancati. Metà vialetto/esterno (strette): 2 in colonna
+    const verticale = posto === 'sinistra' || posto === 'destra';
+    const righe = zona === 'tutta' || verticale ? 2 : 1;
+    const colonne = verticale ? 1 : 2;
+    for (let i = 0; qui.length > 0 && i < righe * colonne; i++) {
+      const pianta = icona(qui[i % qui.length].nome, 'piantina', 2.6);
+      // Prima la fila in alto, così quella in basso le viene disegnata davanti
+      const riga = righe - 1 - Math.floor(i / colonne);
+      const colonna = i % colonne;
+      // Posizione un po' irregolare, ma sempre uguale per la stessa aiuola
+      const seme = `${aiuola.id}-${zona}-${i}`;
+      const x = (colonna + 0.15 + 0.7 * casuale(seme + 'x')) / colonne;
+      const y = (riga + 0.8 * casuale(seme + 'y')) / righe;
+      // Sottraendo la dimensione del disegno (--l) non esce mai a destra né in basso
+      pianta.style.left = `calc((100cqw - var(--l)) * ${x.toFixed(3)})`;
+      pianta.style.bottom = `calc(max(0px, 100cqh - var(--l)) * ${y.toFixed(3)})`;
+      spazio.append(pianta);
+    }
     return spazio;
   });
+}
+
+// Numero tra 0 e 1 che sembra casuale ma è sempre uguale per lo stesso testo
+function casuale(testo) {
+  let h = 2166136261;
+  for (const c of testo) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return (h >>> 0) / 4294967296;
 }
 
 // Disegno fisso scelto in base al nome; il nome scritto dall'utente non entra nell'HTML

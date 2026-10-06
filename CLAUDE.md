@@ -112,7 +112,8 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Il disegno si sceglie da parole chiave nel nome (minuscole, senza accenti, es. "pomodor"); senza corrispondenza: piantina generica
 - Sulla mappa: tanti disegnini piccoli per aiuola (4 se intera, 2 per metà, 38px); più colture nello stesso spazio si alternano
 - Gruppo 2 aggiunto: verza, cavolo nero, cavolo cappuccio, spinacio, valerianella, rucola, ravanello, carciofo, radicchio, cicoria, porro, scalogno, fava, fagiolo rampicante, zucca, mais, melone, anguria, asparago, fragola
-- I disegnini sulla mappa non vanno mai tagliati: meglio che sbordino un po' dall'aiuola
+- Disegnini sulla mappa: mai tagliati. Possono sporgere solo oltre il lato lungo verso il fondo (in alto); mai oltre il lato verso il davanti (nemmeno l'ombra), mai oltre i lati corti né oltre il confine della propria metà. La metà davanti quindi li contiene del tutto (si rimpiccioliscono se serve)
+- Posizioni "simil casuali" ma fisse (calcolate dal nome dell'aiuola): intera 2 file da 2; metà fondo/davanti 2 affiancati; metà vialetto/esterno 2 in colonna
 - Da disegnare: gruppo 3 (aromatiche, fiori, sovesci, frutta)
 
 ## Idee per il futuro
