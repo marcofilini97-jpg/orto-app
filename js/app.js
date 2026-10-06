@@ -63,3 +63,8 @@ window.addEventListener('hashchange', mostra);
 // Dopo una modifica che non cambia schermata (es. spuntare un task) si ridisegna restando dove si è
 document.addEventListener('dati-cambiati', disegna);
 mostra();
+
+// Offline e aggiornamenti: il service worker (sw.js) gestisce la copia dei file
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+}

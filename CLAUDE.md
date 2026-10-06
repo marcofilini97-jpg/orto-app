@@ -117,6 +117,12 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Gruppo 3 aggiunto: basilico, prezzemolo, rosmarino, salvia, timo, origano, erba cipollina, menta, lavanda, santolina, calendula, alisso, facelia, borragine, favino, veccia, avena, orzo, grano saraceno, pesco, vite
 - Parole chiave: vince la prima trovata nell'ordine di `DISEGNI`, quindi i nomi più specifici vanno prima (es. "erba cipollina" prima di "cipoll", "cavolo nero" prima di "cavol"). Attenzione alle parole brevi come "timo" e "vite", che potrebbero comparire dentro altri nomi
 
+## Offline e installazione
+- `manifest.webmanifest`: nome, colori e icone dell'app installata
+- Icone: `icone/icona-192.png` = solo la zappa (schermata Home), `icone/icona-512.png` = zappa e cesto (avvio). Sorgenti SVG in `icone/`, PNG creati con Edge headless tramite `icone/genera-png.html`
+- `sw.js`: strategia "prima la rete" (`fetch` con `cache: 'no-cache'`), copia salvata solo senza rete. Ogni nuovo file dell'app va aggiunto all'elenco `FILE` in `sw.js`
+- iPhone: l'app installata ha dati separati da Safari (spostarli con esporta/importa backup)
+
 ## Idee per il futuro
 - Spostare a mano un ortaggio sulla mappa tenendolo premuto, entro i limiti della sua aiuola/metà (richiede di salvare le posizioni nei dati)
 - Grafica più accattivante in stile cartone animato: disegni stilizzati delle colture sulla mappa e nelle aiuole (es. carote disegnate nell'aiuola dove sono piantate le carote)
