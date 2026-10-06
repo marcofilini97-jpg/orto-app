@@ -274,7 +274,7 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 .piantina { pointer-events: auto; touch-action: none; transition: transform 0.15s; }
 .piantina.sollevata { z-index: 5; transform: scale(1.25); filter: drop-shadow(0 6px 4px rgb(0 0 0 / 0.35)); }
 /* Sulla mappa il "tieni premuto" serve a spostare: niente menu o selezione del testo */
-.aiuola { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.aiuola { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
 
 .registro { margin: 0; padding-left: 20px; }
 .registro li { padding: 6px 0; }

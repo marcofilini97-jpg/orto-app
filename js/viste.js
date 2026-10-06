@@ -171,7 +171,7 @@ function rendiSpostabile(pianta, spazio, { colturaId, aiuolaId, k, sporgeInAlto 
       presa = { dx: inizio.x - r.left, dy: inizio.y - r.top };
       pianta.setPointerCapture(evento.pointerId);
       pianta.classList.add('sollevata');
-      navigator.vibrate?.(30);
+      navigator.vibrate?.(60);
     }, PRESSIONE);
   });
 
@@ -196,6 +196,7 @@ function rendiSpostabile(pianta, spazio, { colturaId, aiuolaId, k, sporgeInAlto 
     if (!presa) return;
     presa = null;
     pianta.classList.remove('sollevata');
+    navigator.vibrate?.(20);
     // Il "clic" che segue il rilascio non deve aprire la scheda dell'aiuola
     const collegamento = pianta.closest('a');
     const blocca = e => e.preventDefault();
