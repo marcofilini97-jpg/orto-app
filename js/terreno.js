@@ -91,38 +91,31 @@ const manoAperta = (dx = 0, dy = 0) => `<g transform="translate(${dx} ${dy})">
     C106 82 100 92 98 108 Z" fill="${PELLE}"/>
   <path d="M66 54 L66 60 M80 52 L80 58 M93 54 L93 60" fill="none" stroke="#C98F6A" stroke-width="1.5"/>
   <path d="M58 82 C68 86 84 86 98 78 M54 70 C60 76 64 82 62 92" fill="none" stroke="#C98F6A" stroke-width="1.5"/></g>`;
-// Pugno chiuso visto di lato: dita piegate davanti, pollice sopra
-const PUGNO = `<path d="M10 70 C24 66 34 64 44 62 L48 92 C36 92 22 92 10 94 Z" fill="${PELLE_2}"/>
-  <path d="M44 50 C58 40 92 38 112 44 C126 48 130 58 128 70 C126 84 118 94 104 96 L58 96 C48 96 42 88 42 76 Z" fill="${PELLE}"/>
-  <path d="M104 58 C116 58 122 64 120 70 C118 76 106 76 100 72 M100 72 C114 74 118 82 112 86 C106 90 96 88 92 84 M92 84 C102 90 100 96 92 96" fill="none"/>
-  <path d="M50 54 C64 46 86 44 102 48 C110 50 112 56 106 58 C92 60 70 60 52 64 Z" fill="${PELLE_2}"/>
-  <path d="M98 50 C104 51 106 55 102 56" fill="#F7DED0" stroke-width="1.4"/>`;
-// Mano di lato che pizzica: indice e pollice si toccano in punta, le altre dita piegate sotto
-const PIZZICO = `<path d="M8 50 C30 44 52 42 70 44 L74 86 C52 86 30 84 8 80 Z" fill="${PELLE_2}"/>
-  <path d="M62 40 C80 30 116 30 134 38 C142 42 142 52 134 54 C116 56 96 54 84 56 Z" fill="${PELLE}"/>
-  <path d="M126 39 C132 39 136 43 134 47 C132 50 126 49 124 46 Z" fill="#F7DED0" stroke-width="1.4"/>
-  <path d="M66 58 C88 54 110 54 130 58 C138 60 138 70 130 70 C110 70 90 70 70 74 Z" fill="${PELLE}"/>
-  <path d="M124 60 C130 60 133 63 132 66 C130 68 125 68 123 66 Z" fill="#F7DED0" stroke-width="1.4"/>
-  <path d="M60 46 C56 56 58 70 66 80 C74 88 88 86 90 78 C80 78 72 72 70 62 Z" fill="${PELLE}"/>
-  <path d="M70 62 C76 70 84 74 90 78" fill="none" stroke="#C98F6A" stroke-width="1.5"/>
-  <path d="M100 42 C100 46 100 50 98 54 M110 60 C110 63 110 66 108 69" fill="none" stroke="#C98F6A" stroke-width="1.5"/>`;
-
 const DISEGNI = {
   pugnoPrendi: svg(`${terreno(92)}<path d="M150 92 C152 78 178 74 198 82 L202 92 Z" fill="${TERRA_SCURA}"/>${etichetta(176, 106, 'a 10 cm')}
     ${manoAperta(0, -2)}<path d="M58 78 C60 66 90 64 96 76 C90 84 64 86 58 78 Z" fill="${TERRA}"/>
     <path d="M156 22 C156 30 166 30 166 22 C166 16 161 12 161 8 C161 12 156 16 156 22 Z" fill="${ACQUA}"/>
     <path d="M176 40 C176 46 184 46 184 40 C184 36 180 33 180 30 C180 33 176 36 176 40 Z" fill="${ACQUA}"/>${etichetta(170, 62, 'un po\' d\'acqua')}`),
-  pugnoPalla: svg(`<g transform="translate(-6 -8) scale(.9)">${PUGNO}</g>${etichetta(60, 106, 'stringi')}
-    <path d="M128 44 h18 M140 38 l6 6 -6 6 M128 76 h18 M140 70 l6 6 -6 6" fill="none" stroke-width="1.6"/>
-    <circle cx="172" cy="40" r="13" fill="${TERRA}"/><path d="M164 34 C167 31 172 30 175 31" fill="none" stroke="#C99460" stroke-width="2"/>${etichetta(172, 66, 'sta insieme')}
-    <path d="M156 84 l6 -4 l5 5 l-6 4 Z M172 88 l5 -3 l4 4 l-5 3 Z M186 82 l5 -3 l4 4 l-5 3 Z M178 96 l4 -3 l4 4 l-4 3 Z" fill="${TERRA}"/>${etichetta(172, 108, 'si sbriciola')}`),
-  pugnoDita: svg(`${PIZZICO}<circle cx="138" cy="56" r="2.2" fill="${TERRA}" stroke="none"/><circle cx="142" cy="60" r="1.8" fill="${TERRA_SCURA}" stroke="none"/><circle cx="137" cy="62" r="1.6" fill="${TERRA}" stroke="none"/>
-    <path d="M150 42 q8 -6 16 0 M150 76 q8 6 16 0" fill="none" stroke-width="1.6"/>
-    ${etichetta(110, 16, 'strofina tra pollice e indice:')}${etichetta(110, 100, 'granulosa, liscia o appiccicosa?')}`),
-  pugnoNastro: svg(`${PIZZICO}<path d="M136 54 C156 50 176 54 196 48 C202 47 204 54 198 56 C178 62 158 60 138 64 Z" fill="${TERRA}"/>
-    <path d="M146 56 L190 52" fill="none" stroke="#C99460" stroke-width="1.4"/>
-    <path d="M138 80 L198 80" stroke="#5C4A36" stroke-width="1.2" stroke-dasharray="3 3" fill="none"/><path d="M138 75 V85 M198 75 V85" stroke="#5C4A36" stroke-width="1.2"/>
-    ${etichetta(168, 100, 'quanto si allunga?')}`),
+  pugnoPalla: svg(`${manoAperta(-6, -2)}<circle cx="74" cy="70" r="15" fill="${TERRA}"/><path d="M66 63 C69 60 74 59 77 60" fill="none" stroke="#C99460" stroke-width="2"/>
+    ${etichetta(170, 30, 'sta insieme?')}<path d="M126 44 L104 60" fill="none" stroke-width="1.6"/><path d="M104 60 l3 -7 M104 60 l7 -2" fill="none" stroke-width="1.6"/>
+    <path d="M150 70 l6 -4 l5 5 l-6 4 Z M168 76 l5 -3 l4 4 l-5 3 Z M158 88 l6 -2 l3 5 l-6 2 Z M180 86 l4 -4 l5 3 l-4 4 Z M190 72 l5 -3 l4 4 l-5 3 Z" fill="${TERRA}"/>
+    ${etichetta(172, 106, 'o si sbriciola?')}`),
+  pugnoDita: svg(`
+    <circle cx="40" cy="48" r="26" fill="#C99460"/><circle cx="30" cy="40" r="3" fill="${TERRA_SCURA}"/><circle cx="44" cy="36" r="2.6" fill="${TERRA}"/><circle cx="50" cy="50" r="3.2" fill="${TERRA_SCURA}"/>
+    <circle cx="34" cy="56" r="2.8" fill="${TERRA}"/><circle cx="44" cy="62" r="2.2" fill="${TERRA_SCURA}"/><circle cx="26" cy="50" r="2" fill="${TERRA}"/><circle cx="56" cy="40" r="2" fill="${TERRA}"/>
+    <circle cx="110" cy="48" r="26" fill="#A87A55"/><path d="M92 40 C102 36 116 36 128 42 M92 54 C104 50 118 52 128 56" fill="none" stroke="#C99A72" stroke-width="2"/>
+    <circle cx="180" cy="48" r="26" fill="#7A4A2A"/><path d="M164 30 C170 46 168 56 166 70 M180 26 C184 42 184 56 180 72 M194 32 C192 46 194 56 196 66" fill="none" stroke="#A86F48" stroke-width="2.2"/>
+    <path d="M168 66 q2 6 -2 10 M182 70 q3 6 0 10" fill="none" stroke="#7A4A2A" stroke-width="3"/>
+    ${etichetta(40, 94, 'granulosa')}${etichetta(40, 107, 'sabbia')}${etichetta(110, 94, 'liscia')}${etichetta(110, 107, 'limo')}${etichetta(180, 94, 'appiccicosa')}${etichetta(180, 107, 'argilla')}`),
+  pugnoNastro: svg(`
+    <circle cx="26" cy="44" r="14" fill="${TERRA}"/><path d="M18 38 C21 35 26 34 29 35" fill="none" stroke="#C99460" stroke-width="2"/>
+    <path d="M44 44 h14 M52 38 l6 6 -6 6" fill="none" stroke-width="1.6"/>
+    <path d="M66 38 C96 34 128 40 160 36 C168 35 170 44 162 46 C130 50 98 46 68 50 C62 50 60 39 66 38 Z" fill="${TERRA}"/>
+    <path d="M76 42 L154 40" fill="none" stroke="#C99460" stroke-width="1.4"/>
+    <rect x="64" y="60" width="140" height="18" rx="2" fill="#F2C230"/>
+    ${Array.from({ length: 15 }, (_, i) => `<path d="M${68 + i * 9.3} 60 v${i % 5 === 0 ? 9 : 5}" stroke-width="1.2" fill="none"/>`).join('')}
+    <path d="M64 60 H87 V78 H64 Z" fill="#F7DC74" stroke="none"/><path d="M87 60 H110.5 V78 H87 Z" fill="#E9B83C" stroke="none"/><rect x="64" y="60" width="140" height="18" rx="2" fill="none"/><path d="M87 56 V82 M110.5 56 V82" stroke="#5C4A36" stroke-width="2" fill="none"/>
+    ${etichetta(72, 96, '< 2,5')}${etichetta(99, 108, '2,5–5')}${etichetta(158, 96, 'più di 5 cm')}`),
   acetoPiattino: svg(`<ellipse cx="110" cy="84" rx="70" ry="14" fill="#FFFFFF"/><ellipse cx="110" cy="80" rx="52" ry="8" fill="#F2EEE6" stroke-width="1.2"/>
     <path d="M86 80 C90 64 128 62 134 80 Z" fill="${TERRA}"/>${etichetta(110, 106, 'un cucchiaio di terra asciutta')}`),
   acetoGocce: svg(`<ellipse cx="80" cy="86" rx="60" ry="12" fill="#FFFFFF"/><path d="M56 84 C60 68 98 66 104 84 Z" fill="${TERRA}"/>
