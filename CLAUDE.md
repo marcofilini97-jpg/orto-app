@@ -38,6 +38,7 @@ orto-app/
 │   ├── server.js         ← login e richieste a Supabase
 │   ├── disegni.js        ← disegni SVG degli ortaggi, scelti dal nome della coltura
 │   ├── catalogo.js       ← catalogo delle colture (conoscenza generale), calcolo di piante e resa
+│   ├── terreno.js        ← terreno delle aiuole: prove guidate, stime, avvisi
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
 ```
@@ -150,6 +151,12 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 4. Arcade (simulatore)
 5. Impara (schede dal catalogo e guide brevi)
 6. Più orti e più utenti
+
+## Terreno
+- `js/terreno.js`: valori di partenza, le cinque prove guidate (pugno, aceto, barattolo, buca, lombrichi) con un disegnino SVG per ogni passo, regole degli avvisi. Le schermate stanno in viste.js
+- Il terreno sta dentro ogni aiuola, campo facoltativo `suolo` (così si sincronizza senza cambiare Supabase): `tessitura`, `ph`, `calcare`, `sostanzaOrganica`, `drenaggio`, `lombrichi`, ognuno `{ valore, fonte: 'stima'|'prova'|'analisi', da, data }` (tessitura anche `sabbia`, `limo`, `argilla` in %), più `analisi` con i valori del laboratorio. Senza valori si usa la stima della pianura bolognese (limoso-argilloso, calcareo, pH 7,5–8)
+- Pagine: riquadro "Terreno" nella pagina info dell'aiuola → `#/aiuola/<id>/terreno` (proprietà con etichetta stima/prova/analisi, consigli, "Usa questo terreno per tutto l'orto", elenco prove) → `#/aiuola/<id>/terreno/<prova>` (un passo alla volta, risultato spiegato, salva in questa aiuola o in tutte) e `#/aiuola/<id>/terreno/analisi` (valori facoltativi; calcare totale > 10% = molto, 1–10% = poco). Riepilogo "Il terreno dell'orto" nelle Impostazioni
+- Avvisi del terreno per le colture (modulo coltura, sempre, e scheda coltura): carote in terreno argilloso o limoso-argilloso; drenaggio lento (< 2,5 cm/ora) per le colture che soffrono i ristagni; terreno sabbioso per le colture esigenti. Consigli generali (terreno pesante, calcareo, drenaggio lento, pochi lombrichi) nella pagina del terreno
 
 ## Catalogo nell'app
 - Pulsante nella barra verde, a sinistra dell'ingranaggio (icona: libro aperto con una foglia e la lente) → `#/catalogo`: casella "Cerca", colture raggruppate per gruppo della rotazione con la barra dei 12 mesi (semina marrone, trapianto verde, raccolta arancio) e la lente di ogni gruppo (pop-up "cos'hanno in comune")

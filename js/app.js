@@ -1,15 +1,16 @@
 import { carica, salva, sincronizza, inProva } from './dati.js';
 import { CATALOGO } from './catalogo.js';
+import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
-  listaTask, moduloTask, schedaTask, paginaTest, paginaCatalogo, schedaCatalogo,
+  listaTask, moduloTask, schedaTask, paginaTest, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
 
 // Sceglie la schermata in base all'indirizzo, es. #/aiuola/2A/storico
 function schermata() {
-  const [, pagina, id, sotto] = location.hash.split('/');
+  const [, pagina, id, sotto, altro] = location.hash.split('/');
   // Impostazioni non legge i dati: così si può ripristinare un backup anche se sono danneggiati
   if (pagina === 'impostazioni') return impostazioni();
   // Il catalogo è conoscenza generale: non legge i dati dell'orto
@@ -34,6 +35,11 @@ function schermata() {
   if (pagina === 'aiuola' && aiuola) {
     if (sotto === 'storico') return storicoAiuola(dati, aiuola);
     if (sotto === 'info') return infoAiuola(dati, aiuola);
+    if (sotto === 'terreno') {
+      if (altro === 'analisi') return paginaAnalisi(dati, aiuola);
+      if (PROVE[altro]) return paginaProva(dati, aiuola, altro);
+      return paginaTerreno(dati, aiuola);
+    }
     if (sotto === 'nuova-coltura') return moduloColtura(dati, { aiuola });
     if (sotto === 'registro') return registro(dati, aiuola);
     if (sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: [aiuola.id] });

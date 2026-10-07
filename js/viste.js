@@ -7,6 +7,10 @@ import {
 } from './dati.js';
 import { iconaSvg } from './disegni.js';
 import { colturaDaNome, disposizione, resa, AIUOLA, TAPPE, CATALOGO, GLOSSARIO, ESIGENZA } from './catalogo.js';
+import {
+  PROVE, TESSITURE, NOMI_PROPRIETA, suoloDi, suoloDiPartenza, testoValore, giudizioDrenaggio, classeDaPercentuali,
+  spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
+} from './terreno.js';
 
 const TIPI = {
   semina: 'Semina', trapianto: 'Trapianto', irrigazione: 'Irrigazione',
@@ -369,6 +373,8 @@ export function infoAiuola(dati, aiuola) {
     riga('Posizione', `a ${aiuola.lato}, ${aiuola.posizione}ª dal fondo`),
     riga('Divisione', asse === 'fondo-davanti' ? 'divisa a metà: fondo / davanti'
       : asse === 'vialetto-esterno' ? 'divisa a metà: vialetto / esterno' : 'non divisa'),
+    elemento('h3', 'Terreno'),
+    cartaTerreno(aiuola),
     modulo,
     pulsanteRiposiziona(aiuola),
   );
@@ -471,6 +477,8 @@ export function impostazioni() {
     elemento('p', 'Importare un backup sostituisce tutti i dati attuali.'),
     importaBtn,
     sceltaFile,
+    elemento('h3', "Il terreno dell'orto"),
+    riepilogoTerreno(),
     elemento('h3', 'Sincronizzazione'),
     sezioneSincronizzazione(),
     elemento('h3', 'Modalità prova'),
@@ -734,7 +742,11 @@ function suggerimentiCatalogo(dati, modulo, colturaId) {
       }
     }
 
-    const avvisi = inizio && inizio > oggi() ? avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, colturaId }) : [];
+    const aiuoleScelte = aiuoleIds.map(id => dati.aiuole.find(a => a.id === id)).filter(Boolean);
+    const avvisi = [
+      ...avvisiTerrenoColtura(scheda, aiuoleScelte).map(([titolo, testo, ids]) => [titolo, `${testo} (${ids.join(', ')})`]),
+      ...(inizio && inizio > oggi() ? avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, colturaId }) : []),
+    ];
     boxAvvisi.hidden = avvisi.length === 0;
     boxAvvisi.replaceChildren(...avvisi.map(([titolo, testo]) => {
       const p = elemento('p', '', 'avviso-modulo');
@@ -1143,6 +1155,12 @@ export function schedaColtura(dati, coltura) {
   );
   if (!attiva) sezione.append(riga('Fine', dataPerUtente(coltura.dataFine)));
   const schedaCat = colturaDaNome(coltura.nome);
+  const aiuoleColtura = coltura.aiuoleIds.map(id => dati.aiuole.find(a => a.id === id)).filter(Boolean);
+  for (const [titolo, testo, ids] of avvisiTerrenoColtura(schedaCat, aiuoleColtura)) {
+    const p = elemento('p', '', 'avviso-modulo');
+    p.append(elemento('strong', titolo), `${testo} (${ids.join(', ')})`);
+    sezione.append(p);
+  }
   sezione.append(
     riga('Metodo', testoMetodo(coltura)),
     riga('Note', coltura.note || 'Nessuna nota.'),
@@ -1980,4 +1998,344 @@ export function schedaCatalogo(scheda) {
   sezione.querySelector('.capito').addEventListener('click', () => { fumetto.hidden = true; });
   attivaParole(sezione);
   return sezione;
+}
+
+// ---- Terreno delle aiuole: scheda, prove guidate, analisi ----
+
+const NOMI_FONTE = { stima: 'stima', prova: 'prova', analisi: 'analisi' };
+const DA_PROVA = { pugno: 'prova del pugno', aceto: "prova dell'aceto", barattolo: 'prova del barattolo', buca: 'prova della buca', lombrichi: 'conta dei lombrichi', analisi: 'analisi di laboratorio' };
+const numeroDa = testo => {
+  const n = parseFloat(String(testo ?? '').replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+};
+
+// Riassunto di una riga: "Limoso-argilloso, calcareo · pH 7,5–8 · drenaggio lento"
+function riassuntoTerreno(suolo) {
+  const t = TESSITURE[suolo.tessitura.valore] ?? 'Tessitura non nota';
+  const calc = ['molto', 'poco', 'probabile'].includes(suolo.calcare.valore) ? ', calcareo' : '';
+  const parti = [`${t}${calc}`, `pH ${testoValore('ph', suolo.ph)}`];
+  if (typeof suolo.drenaggio.valore === 'number') parti.push(`drenaggio ${giudizioDrenaggio(suolo.drenaggio.valore).toLowerCase()}`);
+  return parti.join(' · ');
+}
+const proveFatte = suolo => Object.keys(PROVE).filter(id => Object.values(suolo).some(v => v?.da === id));
+
+const ZOLLA = `<svg viewBox="0 0 48 48" stroke="#2b1d12" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M6 30 L12 18 L24 14 L38 17 L43 28 L37 37 L20 39 Z" fill="#a06a3c"/><path d="M6 30 L20 39 L37 37 L43 28 L43 32 L37 41 L20 43 L6 34 Z" fill="#6e4326"/><path d="M14 22 L22 19 M27 18 L34 20" fill="none" stroke="#e2b07a" stroke-width="1.6" stroke-linecap="round"/><circle cx="20" cy="28" r="1.6" fill="#5e3820" stroke="none"/><circle cx="30" cy="26" r="1.3" fill="#5e3820" stroke="none"/></svg>`;
+
+// Riquadro del terreno nella pagina info dell'aiuola
+function cartaTerreno(aiuola) {
+  const suolo = suoloDi(aiuola);
+  const carta = link('', `#/aiuola/${aiuola.id}/terreno`, 'carta-terreno');
+  const zolla = elemento('span', '', 'zolla');
+  zolla.innerHTML = ZOLLA;
+  const testo = elemento('span');
+  testo.append(elemento('strong', riassuntoTerreno(suolo)), elemento('br'),
+    elemento('small', `${proveFatte(suolo).length} prove fatte su ${Object.keys(PROVE).length} · tocca per aprire`));
+  carta.append(zolla, testo);
+  return carta;
+}
+
+// Salva nel terreno di un'aiuola (o di tutte) i valori nuovi, con la fonte
+function salvaTerreno(aiuolaId, valori, tutte = false) {
+  const dati = carica();
+  for (const a of dati.aiuole.filter(a => tutte || a.id === aiuolaId)) {
+    a.suolo = { ...(a.suolo ?? {}), ...structuredClone(valori) };
+  }
+  salva(dati);
+}
+
+export function paginaTerreno(dati, aiuola) {
+  const suolo = suoloDi(aiuola);
+  const sezione = document.createElement('section');
+  sezione.className = 'pagina-terreno';
+  sezione.append(link(`← Info ${aiuola.id}`, `#/aiuola/${aiuola.id}/info`, 'indietro'), elemento('h2', `Terreno della ${aiuola.id}`));
+
+  const elenco = elemento('div', '', 'proprieta');
+  for (const k of Object.keys(NOMI_PROPRIETA)) {
+    const v = suolo[k];
+    const riga = elemento('div', '', 'prop-terreno');
+    const nome = elemento('span', NOMI_PROPRIETA[k], 'nome-prop');
+    if (v.fonte !== 'stima' && v.da) nome.append(' · ', elemento('em', DA_PROVA[v.da] ?? v.da));
+    else if (v.valore !== null && v.valore !== undefined) nome.append(' · ', elemento('em', 'tipico della pianura bolognese'));
+    riga.append(nome, elemento('span', NOMI_FONTE[v.fonte] ?? 'stima', `fonte fonte-${v.fonte ?? 'stima'}`), elemento('span', testoValore(k, v), 'valore-prop'));
+    if (k === 'tessitura' && v.sabbia !== undefined) {
+      const barra = elemento('span', '', 'barra-tess');
+      for (const [parte, colore] of [['sabbia', '#e3c27a'], ['limo', '#b98a5a'], ['argilla', '#7a4a2a']]) {
+        const s = elemento('span');
+        s.style.width = `${v[parte]}%`;
+        s.style.background = colore;
+        barra.append(s);
+      }
+      riga.append(barra);
+    }
+    elenco.append(riga);
+  }
+  sezione.append(elenco);
+  if (suolo.analisi) {
+    const a = suolo.analisi;
+    const extra = [a.azoto !== null && `azoto ${String(a.azoto).replace('.', ',')} g/kg`, a.fosforo !== null && `fosforo ${a.fosforo} mg/kg`,
+      a.potassio !== null && `potassio ${a.potassio} mg/kg`, a.metalli && `metalli: ${a.metalli}`].filter(Boolean);
+    if (extra.length) sezione.append(elemento('p', `Analisi del ${dataPerUtente(a.data)}: ${extra.join(' · ')}.`, 'nota-terreno'));
+  }
+
+  const consigli = consigliTerreno(suolo);
+  if (consigli.length) {
+    sezione.append(elemento('h3', 'Consigli per questo terreno'));
+    const ul = elemento('ul', '', 'consigli-terreno');
+    for (const [titolo, testo] of consigli) {
+      const li = elemento('li');
+      li.append(elemento('strong', `${titolo}: `), testo);
+      ul.append(li);
+    }
+    sezione.append(ul);
+  }
+
+  const tutte = elemento('button', 'Usa questo terreno per tutto l\'orto', 'pulsante secondario');
+  tutte.type = 'button';
+  tutte.addEventListener('click', () => {
+    if (!confirm(`Copiare il terreno della ${aiuola.id} in tutte le altre aiuole? I loro valori verranno sostituiti.`)) return;
+    try {
+      salvaTerreno(aiuola.id, aiuola.suolo ?? suoloDiPartenza(), true);
+      alert('Fatto: tutte le aiuole hanno ora questo terreno.');
+    } catch (errore) {
+      alert(errore.message);
+    }
+  });
+  sezione.append(link('Scrivi i risultati dell\'analisi', `#/aiuola/${aiuola.id}/terreno/analisi`, 'pulsante secondario'), tutte);
+
+  sezione.append(elemento('h3', 'Prove da fare a mano'));
+  const fatte = proveFatte(suolo);
+  const prove = elemento('div', '', 'elenco-prove');
+  for (const [id, p] of Object.entries(PROVE)) {
+    const voce = link('', `#/aiuola/${aiuola.id}/terreno/${id}`, 'voce-prova');
+    const icona = elemento('span', '', 'icona-prova');
+    icona.innerHTML = ICONE_PROVE[id];
+    const testo = elemento('span');
+    testo.append(elemento('strong', p.breve), elemento('small', `${p.durata} · ${p.misura}`));
+    voce.append(icona, testo, elemento('span', fatte.includes(id) ? '✓ fatta' : '', 'stato-prova'));
+    prove.append(voce);
+  }
+  sezione.append(prove);
+  return sezione;
+}
+
+const icProva = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICONE_PROVE = {
+  pugno: icProva('<path d="M7 11V6a1.5 1.5 0 0 1 3 0v4M10 10V4.5a1.5 1.5 0 0 1 3 0V10M13 10V5.5a1.5 1.5 0 0 1 3 0V12M16 9.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-5.4-3.4L4.5 13a1.5 1.5 0 0 1 2.6-1.5L9 14"/>'),
+  aceto: icProva('<path d="M10 2h4M11 2v4l-4 6v8a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-8l-4-6V2"/><path d="M8 15h8"/>'),
+  barattolo: icProva('<path d="M7 3h10v2a2 2 0 0 1-1 1.7V20a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6.7A2 2 0 0 1 7 5z"/><path d="M8 17h8M8 13.5h8M8 10.5h8"/>'),
+  buca: icProva('<path d="M3 9h18"/><path d="M6 9v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V9"/><path d="M9 13c1 .8 2 .8 3 0s2-.8 3 0"/><path d="M12 3v3M10.5 4.5L12 6l1.5-1.5"/>'),
+  lombrichi: icProva('<path d="M4 15c2-4 4 2 6-2s4 2 6-2 3 1 4 0"/><circle cx="20.5" cy="11" r="1"/>'),
+};
+
+// Prova guidata: un passo alla volta, con il disegno; alla fine il risultato e il salvataggio
+export function paginaProva(dati, aiuola, idProva) {
+  const prova = PROVE[idProva];
+  const risposte = {};
+  let indice = 0;
+  const sezione = document.createElement('section');
+  sezione.className = 'pagina-prova';
+  const corpo = elemento('div');
+  sezione.append(link(`← Terreno della ${aiuola.id}`, `#/aiuola/${aiuola.id}/terreno`, 'indietro'), elemento('h2', prova.nome), corpo);
+  const passi = () => prova.passi.filter(p => !p.se || p.se(risposte));
+
+  function mostra() {
+    const elenco = passi();
+    if (indice >= elenco.length) return mostraEsito();
+    const passo = elenco[indice];
+    const titolo = elemento('p', '', 'titolo-passo');
+    titolo.append(elemento('span', String(indice + 1), 'numero-passo'), elemento('strong', passo.titolo));
+    const disegno = elemento('div', '', 'disegno-passo');
+    disegno.innerHTML = passo.disegno;
+    const parti = [titolo, disegno, elemento('p', passo.testo, 'testo-passo')];
+    const avanti = elemento('button', indice === elenco.length - 1 && !passo.scelte ? 'Vedi il risultato' : 'Avanti', 'pulsante');
+    avanti.type = 'button';
+    const errore = elemento('p', '', 'errore');
+    errore.hidden = true;
+
+    if (passo.scelte) {
+      const scelte = elemento('div', '', 'scelte-prova');
+      for (const [valore, testo] of passo.scelte) {
+        const b = elemento('button', testo, 'scelta-prova');
+        b.type = 'button';
+        b.setAttribute('aria-pressed', risposte[passo.chiave] === valore);
+        b.addEventListener('click', () => {
+          risposte[passo.chiave] = valore;
+          indice++;
+          mostra();
+        });
+        scelte.append(b);
+      }
+      parti.push(scelte);
+    } else if (passo.numeri) {
+      const campi = elemento('div', '', 'numeri-prova');
+      for (const [k, etichetta] of passo.numeri) {
+        const label = elemento('label', etichetta);
+        const input = elemento('input');
+        input.type = 'text';
+        input.inputMode = 'decimal';
+        input.name = k;
+        input.value = risposte[passo.chiave]?.[k] ?? '';
+        label.append(input);
+        campi.append(label);
+      }
+      parti.push(campi, errore, avanti);
+      avanti.addEventListener('click', () => {
+        const valori = {};
+        for (const [k] of passo.numeri) valori[k] = numeroDa(campi.querySelector(`[name="${k}"]`).value);
+        if (Object.values(valori).some(v => v === null || v < 0) || (passo.chiave === 'strati' && valori.sabbia + valori.limo + valori.argilla <= 0)) {
+          errore.textContent = 'Scrivi un numero in ogni casella (anche 0).';
+          errore.hidden = false;
+          return;
+        }
+        risposte[passo.chiave] = valori;
+        indice++;
+        mostra();
+      });
+    } else {
+      parti.push(avanti);
+      avanti.addEventListener('click', () => { indice++; mostra(); });
+    }
+    if (indice > 0) {
+      const indietro = elemento('button', '← Passo precedente', 'pulsante secondario');
+      indietro.type = 'button';
+      indietro.addEventListener('click', () => { indice--; mostra(); });
+      parti.push(indietro);
+    }
+    parti.push(puntiniPassi(indice, elenco.length));
+    corpo.replaceChildren(...parti);
+    window.scrollTo(0, 0);
+  }
+
+  function mostraEsito() {
+    const esito = prova.esito(risposte);
+    const valori = Object.fromEntries(Object.entries(esito).map(([k, v]) => [k, { ...v, fonte: 'prova', da: idProva, data: oggi() }]));
+    const box = elemento('div', '', 'esito-prova');
+    box.append(elemento('strong', 'Risultato: '), spiegaEsito(idProva, esito));
+    const qui = elemento('button', `Salva nel terreno della ${aiuola.id}`, 'pulsante');
+    const tutte = elemento('button', 'Salva per tutte le aiuole', 'pulsante secondario');
+    const rifai = elemento('button', 'Rifai la prova', 'pulsante secondario');
+    for (const b of [qui, tutte, rifai]) b.type = 'button';
+    const salvaE = tutteLe => {
+      try {
+        salvaTerreno(aiuola.id, valori, tutteLe);
+        location.hash = `#/aiuola/${aiuola.id}/terreno`;
+      } catch (errore) {
+        alert(errore.message);
+      }
+    };
+    qui.addEventListener('click', () => salvaE(false));
+    tutte.addEventListener('click', () => { if (confirm('Salvare questo risultato in tutte le 8 aiuole?')) salvaE(true); });
+    rifai.addEventListener('click', () => { indice = 0; for (const k of Object.keys(risposte)) delete risposte[k]; mostra(); });
+    corpo.replaceChildren(box, qui, tutte, rifai);
+  }
+
+  mostra();
+  return sezione;
+}
+
+function puntiniPassi(attuale, totale) {
+  const p = elemento('div', '', 'puntini-passi');
+  for (let i = 0; i < totale; i++) p.append(elemento('span', '', i === attuale ? 'ora' : ''));
+  return p;
+}
+
+// Risultati dell'analisi di laboratorio: ogni campo è facoltativo
+export function paginaAnalisi(dati, aiuola) {
+  const a = suoloDi(aiuola).analisi ?? {};
+  const modulo = document.createElement('form');
+  modulo.className = 'modulo';
+  modulo.noValidate = true;
+  const campo = (nome, etichetta, unita) => `<label>${etichetta}${unita ? ` <small>(${unita})</small>` : ''}<input type="text" inputmode="decimal" name="${nome}" autocomplete="off"></label>`;
+  modulo.innerHTML = `
+    <p>Copia i valori dal foglio del laboratorio: quelli che non ci sono lasciali vuoti.</p>
+    <label>Data dell'analisi<input type="text" name="data" placeholder="gg/mm/aaaa"></label>
+    ${campo('ph', 'pH')}
+    <fieldset><legend>Tessitura</legend><div class="tre-colonne">${campo('sabbia', 'Sabbia', '%')}${campo('limo', 'Limo', '%')}${campo('argilla', 'Argilla', '%')}</div></fieldset>
+    ${campo('calcareTotale', 'Calcare totale', '%')}
+    ${campo('sostanzaOrganica', 'Sostanza organica', '%')}
+    ${campo('azoto', 'Azoto totale', 'g/kg')}
+    ${campo('fosforo', 'Fosforo assimilabile', 'mg/kg')}
+    ${campo('potassio', 'Potassio scambiabile', 'mg/kg')}
+    <label>Metalli pesanti (facoltativo)<input type="text" name="metalli" autocomplete="off" placeholder="es. piombo e cadmio nella norma"></label>
+    <label class="opzione-tutte"><input type="checkbox" name="tutte"> Vale per tutte le aiuole (un campione unico per tutto l'orto)</label>
+    <p class="errore" role="alert" hidden></p>
+    <button type="submit" class="pulsante">Salva l'analisi</button>`;
+  const c = modulo.elements;
+  c.data.value = a.data ? dataPerUtente(a.data) : dataPerUtente(oggi());
+  for (const k of ['ph', 'calcareTotale', 'sostanzaOrganica', 'azoto', 'fosforo', 'potassio']) {
+    if (a[k] !== null && a[k] !== undefined) c[k].value = String(a[k]).replace('.', ',');
+  }
+  const t = suoloDi(aiuola).tessitura;
+  if (t.fonte === 'analisi') for (const k of ['sabbia', 'limo', 'argilla']) c[k].value = t[k] ?? '';
+  c.metalli.value = a.metalli ?? '';
+
+  modulo.addEventListener('submit', evento => {
+    evento.preventDefault();
+    const avviso = modulo.querySelector('.errore');
+    const data = dataPerArchivio(c.data.value);
+    const n = k => numeroDa(c[k].value);
+    const errori = [];
+    if (!data) errori.push('Scrivi la data come gg/mm/aaaa.');
+    const [s, l, ar] = [n('sabbia'), n('limo'), n('argilla')];
+    const conTessitura = s !== null || l !== null || ar !== null;
+    if (conTessitura && (s === null || l === null || ar === null)) errori.push('Per la tessitura servono tutte e tre le percentuali.');
+    if (errori.length) {
+      avviso.textContent = errori.join('\n');
+      avviso.hidden = false;
+      return;
+    }
+    const fonte = { fonte: 'analisi', da: 'analisi', data };
+    const valori = {
+      analisi: { data, ph: n('ph'), calcareTotale: n('calcareTotale'), sostanzaOrganica: n('sostanzaOrganica'),
+        azoto: n('azoto'), fosforo: n('fosforo'), potassio: n('potassio'), metalli: c.metalli.value.trim() },
+    };
+    if (n('ph') !== null) valori.ph = { valore: n('ph'), ...fonte };
+    if (n('sostanzaOrganica') !== null) valori.sostanzaOrganica = { valore: n('sostanzaOrganica'), ...fonte };
+    if (n('calcareTotale') !== null) {
+      const ct = n('calcareTotale');
+      valori.calcare = { valore: ct > 10 ? 'molto' : ct >= 1 ? 'poco' : 'no', ...fonte };
+    }
+    if (conTessitura) {
+      const tot = s + l + ar;
+      const [ps, pl] = [Math.round(s / tot * 100), Math.round(l / tot * 100)];
+      valori.tessitura = { valore: classeDaPercentuali(ps, pl, 100 - ps - pl), sabbia: ps, limo: pl, argilla: 100 - ps - pl, ...fonte };
+    }
+    try {
+      salvaTerreno(aiuola.id, valori, c.tutte.checked);
+      location.hash = `#/aiuola/${aiuola.id}/terreno`;
+    } catch (errore) {
+      avviso.textContent = errore.message;
+      avviso.hidden = false;
+    }
+  });
+
+  const sezione = document.createElement('section');
+  sezione.append(link(`← Terreno della ${aiuola.id}`, `#/aiuola/${aiuola.id}/terreno`, 'indietro'), elemento('h2', 'Analisi del terreno'), modulo);
+  return sezione;
+}
+
+// Riepilogo nelle Impostazioni: una riga per aiuola
+function riepilogoTerreno() {
+  let dati;
+  try {
+    dati = carica();
+  } catch {
+    return elemento('p', 'Dati non leggibili: ripristina un backup.');
+  }
+  const tabella = elemento('table', '', 'tabella-terreno');
+  tabella.innerHTML = '<tr><th></th><th>Tessitura</th><th>pH</th><th>Drenaggio</th></tr>';
+  for (const a of [...dati.aiuole].sort((x, y) => x.id.localeCompare(y.id))) {
+    const s = suoloDi(a);
+    const tr = elemento('tr');
+    const nome = elemento('td');
+    nome.append(link(a.id, `#/aiuola/${a.id}/terreno`, 'aiuola-terreno'));
+    const tess = elemento('td');
+    tess.append(elemento('span', '', `pallino-fonte fonte-${s.tessitura.fonte}`), TESSITURE[s.tessitura.valore] ?? 'Non so');
+    tr.append(nome, tess, elemento('td', testoValore('ph', s.ph)),
+      elemento('td', typeof s.drenaggio.valore === 'number' ? giudizioDrenaggio(s.drenaggio.valore).toLowerCase() : '—'));
+    tabella.append(tr);
+  }
+  const box = elemento('div');
+  box.append(tabella, elemento('p', "Tocca un'aiuola per aprire il suo terreno. Il pallino dice da dove viene la tessitura: grigio stima, blu prova, verde analisi.", 'nota-terreno'));
+  return box;
 }
