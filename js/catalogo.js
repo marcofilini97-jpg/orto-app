@@ -263,7 +263,7 @@ export const CATALOGO = [
   // ---- Aggiunte: altre colture dell'orto ----
   { id: 'porro', nome: 'Porro', parole: ['porr'], famiglia: 'Alliacee', tappa: 'A', esigenza: 'media',
     t: [['05-15','07-15']], r: [['10-01','03-31']],
-    sullaFila: '15', traLeFile: '30', kgP: [0.15, 0.25],
+    sullaFila: '10–15', traLeFile: '35', kgP: [0.15, 0.25],
     consigli: [
       "Compra le piantine o seminale in vaschetta a fine inverno; trapiantale da metà maggio a metà luglio, quando sono grosse come una matita.",
       "Mettile in un solco profondo 10–15 cm e, man mano che crescono, {rincalzare:rincalza}: la parte bianca, quella che si mangia, diventa più lunga.",
@@ -278,8 +278,8 @@ export const CATALOGO = [
       "Raccogli quando le foglie seccano, poi lascia asciugare all'ombra: si conserva per mesi.",
     ], problemi: ['moscacipolla'] },
   { id: 'sedano', nome: 'Sedano', parole: ['sedan'], famiglia: 'Apiacee', tappa: 'A', esigenza: 'alta',
-    t: [['05-01','06-30']], r: [['08-15','11-30']],
-    sullaFila: '30', traLeFile: '40', kgP: [0.4, 0.7],
+    t: [['05-01','06-30']], r: [['07-20','11-30']],
+    sullaFila: '40', traLeFile: '40', kgP: [0.4, 0.7],
     consigli: [
       "Compra le piantine: il seme è minuscolo e nasce molto lentamente.",
       "Vuole terreno ricco e acqua costante: con la terra secca le coste diventano dure e filose. Prima del trapianto metti del {compost:compost}.",
@@ -295,8 +295,8 @@ export const CATALOGO = [
       "A fine raccolta {tagliopiede:taglia al piede}: le radici lasciano azoto nel terreno.",
     ], problemi: ['ragnetto', 'cimice'] },
   { id: 'patata', nome: 'Patata', parole: ['patat'], famiglia: 'Solanacee', tappa: 'S', esigenza: 'alta', tLabel: 'Messa a dimora',
-    t: [['03-01','04-15']], r: [['07-01','08-31']], giorni: '90–120',
-    sullaFila: '30', traLeFile: '60', prof: '10 cm', kgP: [0.5, 1], unita: 'tuberi',
+    t: [['03-15','04-15']], r: [['07-01','08-31']], giorni: '90–120',
+    sullaFila: '25–30', traLeFile: '60–70', prof: '10 cm', kgP: [0.8, 1.5], unita: 'tuberi',
     avviso: "Sconsigliata in un orto piccolo: occupa molto spazio per mesi e, nei primi anni dopo un prato, attira i {ferretti:ferretti}.",
     consigli: [
       "Usa patate da seme certificate, non quelle da cucina: sono sane e germogliano bene.",
@@ -305,7 +305,7 @@ export const CATALOGO = [
     ], problemi: ['dorifora', 'peronospora', 'ferretti'] },
   { id: 'zucca', nome: 'Zucca', parole: ['zucca', 'zucche'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
     t: [['05-01','05-31']], r: [['09-01','10-31']],
-    sullaFila: '150', traLeFile: '150', kgP: [5, 10], unita: 'frutti',
+    sullaFila: '160–200', traLeFile: '160–200', kgP: [5, 10], unita: 'frutti',
     avviso: "Sconsigliata in un orto piccolo: ogni pianta occupa 3–4 m², più di un'aiuola intera.",
     consigli: [
       "Metti 3–5 litri di {compost:compost} nella buca e lascia correre i rami fuori dall'aiuola, oppure su una rete robusta.",
@@ -313,7 +313,7 @@ export const CATALOGO = [
     ], problemi: ['oidio'] },
   { id: 'melone', nome: 'Melone', parole: ['melon'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
     t: [['05-01','05-31']], r: [['07-15','09-15']],
-    sullaFila: '80', traLeFile: '100', kgP: [2, 4], unita: 'frutti',
+    sullaFila: '80–100', traLeFile: '100–150', kgP: [3, 6], unita: 'frutti',
     avviso: "Sconsigliato in un orto piccolo: occupa circa 1 m² a pianta e vuole molto caldo e acqua costante.",
     consigli: [
       "Quando la pianta ha 4–5 foglie, {cimare:cimala}: fa rami laterali, che sono quelli che portano i frutti.",
@@ -322,8 +322,8 @@ export const CATALOGO = [
     ], problemi: ['oidio'] },
   { id: 'anguria', nome: 'Anguria', parole: ['anguri', 'cocomer'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
     t: [['05-10','06-05']], r: [['08-01','09-15']],
-    sullaFila: '100', traLeFile: '150', kgP: [5, 10], unita: 'frutti',
-    avviso: "Sconsigliata in un orto piccolo: ogni pianta occupa più di un metro quadro e fa pochi frutti.",
+    sullaFila: '150', traLeFile: '150', kgP: [5, 10], unita: 'frutti',
+    avviso: "Sconsigliata in un orto piccolo: ogni pianta vuole almeno 2–3 m² e fa pochi frutti.",
     consigli: [
       "Bagna molto finché i frutti crescono, poi meno: maturano più dolci.",
       "È matura quando il viticcio più vicino al frutto è secco e la macchia sotto, dove poggia a terra, è diventata gialla.",
@@ -334,7 +334,7 @@ export const CATALOGO = [
     avviso: "Sconsigliato in un orto piccolo: ogni pianta dà 1–2 pannocchie, in uno spazio dove potresti raccogliere molto di più.",
     consigli: [
       "Semina a blocco, in più file vicine, non in una fila sola: il polline passa da pianta a pianta col vento, e le pannocchie vengono piene.",
-      "Bagna bene durante la fioritura, quando spuntano i \"capelli\" in cima alle pannocchie.",
+      "Semina quando la terra, a 5 cm di profondità, è almeno a 12 °C: in pratica da fine aprile. Bagna bene durante la fioritura, quando spuntano i \"capelli\" in cima alle pannocchie.",
       "Raccogli quando i capelli sono secchi e marroni e i chicchi, schiacciati con l'unghia, fanno un succo lattiginoso.",
       "Non è una cucurbitacea, ma nella rotazione lo puoi mettere con zucchine e cetrioli: anche lui è una coltura estiva affamata.",
     ], problemi: [] },
@@ -342,10 +342,10 @@ export const CATALOGO = [
   // ---- Perenni: restano nello stesso posto per anni ----
   { id: 'asparago', nome: 'Asparago', parole: ['asparag'], famiglia: 'Asparagacee', tappa: 'P', esigenza: 'alta', tLabel: 'Messa a dimora',
     t: [['03-01','04-15']], r: [['04-01','05-31']],
-    sullaFila: '35', traLeFile: '— (una fila sola)', prof: '20 cm', kgP: [0.3, 0.5],
+    sullaFila: '20–30', traLeFile: '— (una fila sola)', prof: '15–20 cm', kgP: [0.3, 0.5],
     avviso: "Sconsigliato in un orto piccolo: occupa lo stesso posto per 10–15 anni e si raccoglie solo dal terzo anno.",
     consigli: [
-      "Si pianta da {zampe:zampe} in un fosso profondo 20 cm, che si riempie di terra man mano che spuntano i getti.",
+      "Si pianta da {zampe:zampe} in un fosso profondo 15–20 cm, che si riempie di terra man mano che spuntano i getti.",
       "Non raccogliere nei primi due anni: la pianta deve fare radici forti.",
       "Dopo la raccolta lascia crescere le fronde fino all'autunno: nutrono le radici per l'anno dopo.",
     ], problemi: [] },
