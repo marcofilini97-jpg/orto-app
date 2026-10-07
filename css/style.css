@@ -526,8 +526,7 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 .legenda-cal span::before { content: ''; display: inline-block; width: 18px; height: 8px; margin-right: 6px; vertical-align: middle; border-radius: 3px; background: var(--c); }
 .l-s { --c: #8b5e3c; } .l-t { --c: #3f8a2e; } .l-r { --c: #e2861b; }
 .mesi-cal { display: grid; grid-template-columns: repeat(12, 1fr); font-size: .68rem; text-align: center; color: var(--marrone-scuro); }
-.mesi-gruppo { display: grid; grid-template-columns: 40% 1fr; gap: 4px; padding: 0 2px; }
-.mesi-gruppo .mesi-cal { font-weight: 700; }
+.catalogo .mesi-cal { margin-left: 40%; }
 .cal { position: relative; height: 22px; border-radius: 4px; background: repeating-linear-gradient(90deg, #efe2c4 0 calc(100% / 12 - 1px), var(--crema) calc(100% / 12 - 1px) calc(100% / 12)); }
 .cal i { position: absolute; height: 8px; border-radius: 3px; }
 .cal .cal-s { top: 2px; background: #8b5e3c; }
