@@ -1803,10 +1803,10 @@ export function paginaCatalogo() {
     <p class="intro-catalogo">${CATALOGO.length} colture, con i periodi a Bologna. Tocca una coltura per la sua scheda, o la lente accanto a un gruppo per sapere cos'hanno in comune.</p>
     <input type="search" class="cerca-catalogo" placeholder="Cerca una coltura" aria-label="Cerca una coltura" autocomplete="off">
     <div class="legenda-cal"><span class="l-s">semina</span><span class="l-t">trapianto</span><span class="l-r">raccolta</span></div>
-    <div class="mesi-cal">${MESI.map(m => `<span>${m[0].toUpperCase()}</span>`).join('')}</div>
     ${Object.keys(TAPPE).map(k => `
       <div class="gruppo-catalogo" data-gruppo="${k}">
         <h3><span class="pallino-gruppo" style="background:${TAPPE[k].c}"></span>${TAPPE[k].nome}${lenteGruppo(k)}</h3>
+        <div class="mesi-gruppo"><span></span><div class="mesi-cal">${MESI.map(m => `<span>${m[0].toUpperCase()}</span>`).join('')}</div></div>
         ${CATALOGO.filter(c => c.tappa === k).map(c => `
           <a class="riga-catalogo" href="#/catalogo/${c.id}" data-cerca="${semplice([c.nome, ...c.parole].join(' '))}">
             <span class="nome-catalogo">${iconaSvg(c.nome, 2)}${c.nome}</span>${barraMesi(c)}
