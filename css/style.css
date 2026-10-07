@@ -329,6 +329,9 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 
 .modulo label { display: block; margin-top: 16px; font-weight: 700; }
 .modulo label[hidden] { display: none; }
+.suggerimento { display: grid; gap: 2px; margin-top: 12px; padding: 10px 12px; font-size: .95rem; background: var(--etichetta); border: 2px solid var(--legno); border-radius: 10px; }
+.suggerimento[hidden] { display: none; }
+.avviso-catalogo { margin-top: 4px; color: #8a4b0f; font-weight: 700; }
 
 .modulo input[type="email"],
 .modulo input[type="password"],

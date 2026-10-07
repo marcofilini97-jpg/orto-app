@@ -153,7 +153,10 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 
 ## Pianificatore
 - Pulsante "Pianifica una coltura"; nella scheda aiuola la sezione "In programma"
-- Una coltura pianificata è una coltura normale con `stato: "pianificata"` e `finePrevista`; il pulsante "Inizia" la rende attiva (data modificabile) e aggiunge la voce automatica di semina/trapianto. Campo facoltativo `catalogoId` per legarla alla scheda del catalogo (per le colture vecchie si ricava dal nome)
+- Una coltura pianificata è una coltura normale con `stato: "pianificata"`, `dataInizio` = inizio previsto e `finePrevista` (facoltativa); il pulsante "Inizia la coltura" (scheda coltura) la rende attiva con la data vera e aggiunge la voce automatica di semina/trapianto. Si può modificare con "(modifica)" o togliere con "Togli dal programma". Lo storico mostra solo le colture `terminata`
+- `catalogoId` (tutte le colture, salvato a ogni salvataggio): id della scheda del catalogo ricavato dal nome con `colturaDaNome`, oppure null (per le colture vecchie si ricava dal nome)
+- Nei moduli delle colture (nuova, pianificata, modifica) un riquadro "Dal catalogo" mostra, se il nome è riconosciuto: periodi a Bologna, piante e resa stimata nelle aiuole/metà scelte (intera 180 × 120 cm, metà fondo/davanti 180 × 60, metà vialetto/esterno 90 × 120) e l'eventuale avviso. Pianificando, propone il metodo (se il catalogo ha solo semina o solo trapianto) e la fine prevista (prima fine di raccolta dopo l'inizio), finché non la si scrive a mano
+- Fatto (passo 1): pianificare, "In programma", "Inizia". Da fare: passo 2 avvisi e rotazione, passo 3 vista "Piano" e segnino sulla mappa
 - Nel modulo il catalogo suggerisce date tipiche a Bologna, fine prevista e resa stimata. Gli avvisi (rotazione, fuori stagione, aiuola occupata, aiuola vuota a lungo) non bloccano mai il salvataggio
 - Vista "Piano": un binario per aiuola, raggruppate per settore, da un mese fa a 12 mesi da oggi, frecce per spostarsi di 3 mesi; barre piene = attive, tratteggiate = pianificate, colore = tappa della rotazione
 - Sulla mappa: segnino sulle aiuole con qualcosa in programma nei prossimi 30 giorni
