@@ -1,7 +1,7 @@
 // Disegni degli ortaggi (SVG fisso, area 60×60) e riconoscimento dal nome della coltura.
 // Per aggiungere un ortaggio: una voce in DISEGNI con le parole chiave (minuscole, senza accenti).
 
-// L'ordine conta: vince la prima parola chiave trovata (es. "erba cipollina" prima di "cipolla")
+// Le parole chiave contano solo a inizio parola; se ne scattano più vince la più lunga (vedi scegliDisegno)
 const DISEGNI = [
   { parole: ['erba cipollina', 'cipollina'], svg: `
 <ellipse cx="30" cy="47" rx="12" ry="3" fill="#4E3220" stroke="none"></ellipse>
@@ -463,14 +463,26 @@ const GENERICA = `
 <path d="M30 36 C22 36 16 30 16 24 C24 24 29 29 30 36 Z" fill="#6FBF45"></path>
 <path d="M30 31 C38 31 44 25 44 19 C36 19 31 24 30 31 Z" fill="#5FA83C"></path>`;
 
-// Minuscole e senza accenti: "Pomodòro" → "pomodoro"
+// Minuscole, senza accenti e senza segni: "Pomodòro (cuore di bue)" → "pomodoro cuore di bue"
 function normalizza(testo) {
-  return testo.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return testo.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// Disegno adatto al nome: una parola chiave conta solo a inizio parola ("aglio" non scatta in
+// "bietola da taglio"); se ne scattano più vince la più lunga ("cavolo nero" batte "cavol")
+function scegliDisegno(nome) {
+  const testo = ' ' + normalizza(nome);
+  let trovato = null, lunghezza = 0;
+  for (const d of DISEGNI) {
+    for (const p of d.parole) {
+      if (p.length > lunghezza && testo.includes(' ' + p)) { trovato = d; lunghezza = p.length; }
+    }
+  }
+  return trovato?.svg ?? GENERICA;
 }
 
 // SVG completo del disegno adatto al nome della coltura. Il nome serve solo a scegliere: non finisce nell'SVG
 export function iconaSvg(nome, tratto = 1.6) {
-  const testo = normalizza(nome);
-  const disegno = DISEGNI.find(d => d.parole.some(p => testo.includes(p)))?.svg ?? GENERICA;
+  const disegno = scegliDisegno(nome);
   return `<svg viewBox="0 0 60 60" stroke="#2B1D12" stroke-width="${tratto}" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${disegno}</svg>`;
 }

@@ -123,7 +123,7 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Spostamento a mano: tenendo premuto mezzo secondo un ortaggio si solleva e si trascina dentro la sua sezione (verso il fondo può sporgere al massimo per metà). La posizione si salva nel campo facoltativo `posizioni` della coltura: `{ "2A": [ { "x": 0.12, "y": 0.4 }, … ] }` (frazioni della sezione, una per disegnino). Pulsante "Riposiziona gli ortaggi" nella pagina info dell'aiuola per tornare alla disposizione automatica
 - Aiuola scelta nei moduli (mini-mappa e pop-up della metà): la parte scelta diventa terra arata (`icone/terra-arata.svg`: zolle di misure diverse viste dall'alto un po' inclinate, con fianchi, ombre e riflessi; si ripete senza giunture, 60 × 28,8) con bordo verde #5c9e3a solo attorno alla parte scelta
 - Gruppo 3 aggiunto: basilico, prezzemolo, rosmarino, salvia, timo, origano, erba cipollina, menta, lavanda, santolina, calendula, alisso, facelia, borragine, favino, veccia, avena, orzo, grano saraceno, pesco, vite
-- Parole chiave: vince la prima trovata nell'ordine di `DISEGNI`, quindi i nomi più specifici vanno prima (es. "erba cipollina" prima di "cipoll", "cavolo nero" prima di "cavol"). Attenzione alle parole brevi come "timo" e "vite", che potrebbero comparire dentro altri nomi
+- Parole chiave (come in `colturaDaNome` del catalogo): contano solo a inizio parola, così "aglio" non scatta in "bietola da taglio"; se ne scattano più vince la più lunga ("erba cipollina" batte "cipoll", "cavolo nero" batte "cavol"), a parità la prima in `DISEGNI`
 
 ## Offline e installazione
 - `manifest.webmanifest`: nome, colori e icone dell'app installata
