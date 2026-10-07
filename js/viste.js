@@ -727,7 +727,7 @@ function campoNascosto(nome, valore) {
   return campo;
 }
 
-// Riquadro di un'aiuola con la parte scelta in verde scuro: parte = null (non scelta), 'intera' o una metà
+// Riquadro di un'aiuola con la parte scelta in terra arata: parte = null (non scelta), 'intera' o una metà
 function disegnoAiuola(aiuola, parte, tag = 'div') {
   const riquadro = elemento(tag, '', 'mini-aiuola');
   if (parte) riquadro.append(elemento('span', '', `riempimento riempimento-${latoDisegno(parte, aiuola.lato)}`));
