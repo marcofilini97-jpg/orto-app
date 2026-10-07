@@ -142,8 +142,15 @@ const DISEGNI = {
     <path d="M168 10 L186 40" stroke-width="3" fill="none"/><path d="M180 34 L196 30 L200 46 L184 50 Z" fill="#C9C9C9"/>
     <path d="M76 100 H144" stroke="#FFF8E7" stroke-width="1.4" fill="none"/>${etichetta(80, 16, '30 × 30 cm')}${etichetta(80, 30, 'profonda 30 cm')}`),
   bucaRiempi: svg(`${terreno(40)}<path d="M70 40 L76 96 H144 L150 40 Z" fill="${TERRA_SCURA}"/><path d="M73 52 L77 92 H143 L147 52 Z" fill="${ACQUA}"/>
-    <path d="M150 10 h30 l10 10 v16 h-40 Z" fill="#7FB65A"/><path d="M150 18 L120 30" stroke-width="4" fill="none"/><path d="M120 30 l-6 2" fill="none"/>
-    ${etichetta(60, 22, 'riempi due volte')}`),
+    <g transform="translate(-12 3) rotate(-22 175 22)">
+      <path d="M160 14 C160 2 192 2 192 14" fill="none" stroke-width="4"/>
+      <path d="M156 14 H196 L192 40 C192 43 189 45 186 45 H166 C163 45 160 43 160 40 Z" fill="#7FB65A"/>
+      <path d="M158 22 H194" fill="none" stroke="#B8DE8A" stroke-width="2"/>
+      <path d="M160 32 L124 22 L126 17 L160 26 Z" fill="#6AA34A"/>
+      <path d="M124 14 L120 26 L126 27 L130 15 Z" fill="#6AA34A"/>
+    </g>
+    <path d="M112 47 l-3 10 M117 48 l-2 10 M122 48 l-1 10" fill="none" stroke="${ACQUA}" stroke-width="2.4"/>
+    ${etichetta(52, 22, 'riempi due volte')}`),
   bucaMisura: svg(`${terreno(40)}<path d="M70 40 L76 96 H144 L150 40 Z" fill="${TERRA_SCURA}"/><path d="M75 66 L77 92 H143 L145 66 Z" fill="${ACQUA}"/>${righello(104, 30, 92)}
     <path d="M118 52 h34 M118 66 h34" stroke="#FFF8E7" stroke-width="1.4" stroke-dasharray="3 2" fill="none"/>
     <circle cx="188" cy="22" r="14" fill="#FFFFFF"/><path d="M188 22 V13 M188 22 h7" fill="none"/>${etichetta(186, 60, 'quanto è')}${etichetta(186, 74, 'sceso in')}${etichetta(186, 88, "un'ora?")}`),
