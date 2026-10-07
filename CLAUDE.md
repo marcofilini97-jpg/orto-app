@@ -91,6 +91,8 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 
 ## Registro
 - Tipi (`tipo`, nome breve → testo mostrato): semina, trapianto, irrigazione, concimazione, trattamento, diserbo (Diserbo/pulizia), lavorazione (Zappatura/lavorazione del terreno), raccolto, nota
+- Nel modulo l'attività si sceglie con una rotella (prima voce "Scegli l'attività…", obbligatorio sceglierne una). Il tipo `nota` nel modulo si chiama "Altro": scegliendolo compare il campo obbligatorio "Che attività è?", salvato in `attivita` (solo in queste voci). Nel registro queste voci si leggono "Nota personalizzata: …"; le note automatiche senza `attivita` restano "Nota"
+- Rotelle (attività e metà dell'aiuola): stessa funzione `creaRotella`, con frecce ▲ ▼ sopra e sotto per far capire che si scorre
 - `quantita`: testo libero facoltativo (es. "3 kg", "20 litri"), niente totali
 - Quando si crea una coltura, l'app aggiunge da sola la voce di registro "semina" o "trapianto"
 - Quando si termina una coltura, l'app aggiunge da sola una voce "raccolto" con `data` = fine e `dal` = inizio della coltura (campo `dal` presente solo in queste voci). Riattivando la coltura, quella voce viene tolta

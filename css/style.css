@@ -328,6 +328,7 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 .vialetto .puntino { top: 4px; right: auto; left: 50%; transform: translateX(-50%); }
 
 .modulo label { display: block; margin-top: 16px; font-weight: 700; }
+.modulo label[hidden] { display: none; }
 
 .modulo input[type="email"],
 .modulo input[type="password"],
@@ -433,8 +434,22 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
 .popup-corpo { display: flex; align-items: center; gap: 16px; }
 .anteprima .mini-aiuola { width: 110px; height: 150px; font-size: 1.4rem; cursor: default; }
 
+.scatola-rotella { flex: 1; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.popup .scatola-rotella { margin-top: 0; }
+.freccia-rotella {
+  height: 30px;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--crema);
+  background: var(--verde);
+  border: 0;
+  border-bottom: 3px solid var(--verde-bordo);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.freccia-rotella:disabled { color: var(--testo); background: var(--etichetta); border-bottom-color: var(--legno); opacity: .5; cursor: default; }
 .rotella {
-  flex: 1;
   height: 144px;
   padding: 48px 0;
   overflow-y: scroll;
@@ -450,7 +465,9 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
   width: 100%;
   height: 48px;
   scroll-snap-align: center;
+  padding: 0 8px;
   font: inherit;
+  line-height: 1.15;
   color: #767676;
   background: none;
   border: 0;

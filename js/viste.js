@@ -14,6 +14,11 @@ const TIPI = {
   raccolto: 'Raccolto', nota: 'Nota',
 };
 
+// Nome dell'attività mostrato nel registro: le voci "Altro" hanno il testo scritto in attivita
+function testoTipo(voce) {
+  return voce.tipo === 'nota' && voce.attivita ? `Nota personalizzata: ${voce.attivita}` : TIPI[voce.tipo];
+}
+
 // Icone di Feather Icons (licenza MIT)
 const ICONE = {
   registro: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
@@ -742,6 +747,54 @@ function latoDisegno(parte, lato) {
 
 const ALTEZZA_VOCE = 48;   // altezza di ogni voce della rotella, in pixel
 
+// Rotella a scorrimento con le frecce su e giù: la voce nella fascia centrale è quella scelta.
+// cambia(i) viene chiamata a ogni nuova scelta
+function creaRotella(etichette, iniziale, cambia) {
+  let indice = iniziale;
+  const rotella = elemento('div', '', 'rotella');
+  const voci = etichette.map((testo, i) => {
+    const voce = elemento('button', testo, 'voce-rotella');
+    voce.type = 'button';
+    voce.addEventListener('click', () => porta(i));
+    return voce;
+  });
+  rotella.append(...voci);
+
+  const freccia = (simbolo, passo, nome) => {
+    const b = elemento('button', simbolo, 'freccia-rotella');
+    b.type = 'button';
+    b.setAttribute('aria-label', nome);
+    b.addEventListener('click', () => porta(Math.min(etichette.length - 1, Math.max(0, indice + passo))));
+    return b;
+  };
+  const su = freccia('▲', -1, 'Voce precedente');
+  const giu = freccia('▼', 1, 'Voce successiva');
+
+  function segna() {
+    voci.forEach((voce, i) => voce.classList.toggle('attiva', i === indice));
+    su.disabled = indice === 0;
+    giu.disabled = indice === etichette.length - 1;
+  }
+  function porta(i) {
+    rotella.scrollTo({ top: i * ALTEZZA_VOCE, behavior: 'smooth' });
+  }
+  rotella.addEventListener('scroll', () => {
+    const nuovo = Math.min(etichette.length - 1, Math.max(0, Math.round(rotella.scrollTop / ALTEZZA_VOCE)));
+    if (nuovo !== indice) {
+      indice = nuovo;
+      segna();
+      cambia(indice);
+    }
+  });
+  segna();
+
+  const scatola = elemento('div', '', 'scatola-rotella');
+  scatola.append(su, rotella, giu);
+  // Da chiamare quando la rotella è già nella pagina, per mostrare la voce iniziale
+  const mostraIniziale = () => { rotella.scrollTop = indice * ALTEZZA_VOCE; };
+  return { elemento: scatola, mostraIniziale };
+}
+
 // Pop-up: disegno dell'aiuola a sinistra, rotella delle parti a destra.
 // scegli(parte) riceve la parte confermata, oppure null se l'aiuola va tolta
 function apriPopup(dati, aiuola, parteAttuale, scegli) {
@@ -750,25 +803,10 @@ function apriPopup(dati, aiuola, parteAttuale, scegli) {
   let indice = Math.max(0, opzioni.indexOf(parteAttuale));
 
   const anteprima = elemento('div', '', 'anteprima');
-  const rotella = elemento('div', '', 'rotella');
-  const voci = opzioni.map((parte, i) => {
-    const voce = elemento('button', parte ? `Metà ${parte}` : 'Intera', 'voce-rotella');
-    voce.type = 'button';
-    voce.addEventListener('click', () => rotella.scrollTo({ top: i * ALTEZZA_VOCE, behavior: 'smooth' }));
-    return voce;
-  });
-  rotella.append(...voci);
-
-  function mostraScelta() {
-    voci.forEach((voce, i) => voce.classList.toggle('attiva', i === indice));
-    anteprima.replaceChildren(disegnoAiuola(aiuola, opzioni[indice] || 'intera'));
-  }
-  rotella.addEventListener('scroll', () => {
-    const nuovo = Math.min(opzioni.length - 1, Math.max(0, Math.round(rotella.scrollTop / ALTEZZA_VOCE)));
-    if (nuovo !== indice) {
-      indice = nuovo;
-      mostraScelta();
-    }
+  const mostraScelta = () => anteprima.replaceChildren(disegnoAiuola(aiuola, opzioni[indice] || 'intera'));
+  const rotella = creaRotella(opzioni.map(parte => parte ? `Metà ${parte}` : 'Intera'), indice, i => {
+    indice = i;
+    mostraScelta();
   });
 
   const finestra = elemento('dialog', '', 'popup');
@@ -786,7 +824,7 @@ function apriPopup(dati, aiuola, parteAttuale, scegli) {
   });
 
   const corpo = elemento('div', '', 'popup-corpo');
-  corpo.append(anteprima, rotella);
+  corpo.append(anteprima, rotella.elemento);
   const azioni = elemento('div', '', 'popup-azioni');
   azioni.append(togli, conferma);
   const contenuto = elemento('div', '', 'popup-contenuto');
@@ -801,7 +839,7 @@ function apriPopup(dati, aiuola, parteAttuale, scegli) {
   document.body.append(finestra);
   finestra.showModal();
   mostraScelta();
-  rotella.scrollTop = indice * ALTEZZA_VOCE;
+  rotella.mostraIniziale();
 }
 
 function scelteDa(aiuoleIds, parti = {}) {
@@ -1016,7 +1054,7 @@ function elencoVoci(dati, voci, testoSeVuoto) {
     const periodo = v.dal ? `dal ${dataPerUtente(v.dal)} al ${dataPerUtente(v.data)}` : '';
     const dettagli = [coltura && nomeColtura(coltura), dove, periodo, v.quantita].filter(Boolean).join(' · ');
     const collegamento = link('', `#/voce/${v.id}`);
-    collegamento.append(elemento('strong', `${dataPerUtente(v.data)} · ${TIPI[v.tipo]}`), elemento('br'), dettagli);
+    collegamento.append(elemento('strong', `${dataPerUtente(v.data)} · ${testoTipo(v)}`), elemento('br'), dettagli);
     if (v.note) collegamento.append(elemento('br'), v.note);
     const voce = elemento('li');
     voce.append(collegamento);
@@ -1044,9 +1082,11 @@ export function nuovaVoce(dati, { aiuoleIds = [], coltura = null } = {}) {
   // Solo testo fisso e dati dell'app: i nomi delle colture si aggiungono sotto, con textContent
   modulo.innerHTML = `
     <fieldset>
-      <legend>Attività</legend>
-      <div class="due-colonne">${opzioniRadio('tipo', Object.entries(TIPI))}</div>
+      <legend>Attività (scorri la rotella)</legend>
+      <div class="posto-rotella"></div>
+      <input type="hidden" name="tipo" value="">
     </fieldset>
+    <label class="campo-altro" hidden>Che attività è?<input type="text" name="attivita" autocomplete="off" placeholder="es. Pacciamatura"></label>
     <label>Data<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(oggi())}"></label>
     <label>Coltura (facoltativa)<select name="coltura"><option value="">Nessuna</option></select></label>
     <div class="posto-aiuole"></div>
@@ -1055,6 +1095,16 @@ export function nuovaVoce(dati, { aiuoleIds = [], coltura = null } = {}) {
     <p class="errore" role="alert" hidden></p>
     <button type="submit" class="pulsante">Salva nel registro</button>
   `;
+
+  // Prima voce vuota, così non si salva per sbaglio un'attività mai scelta; "nota" si chiama "Altro"
+  const tipi = ['', ...Object.keys(TIPI)];
+  const etichette = tipi.map(k => !k ? 'Scegli l\'attività…' : k === 'nota' ? 'Altro' : TIPI[k]);
+  const campoAltro = modulo.querySelector('.campo-altro');
+  const rotella = creaRotella(etichette, 0, i => {
+    modulo.elements.tipo.value = tipi[i];
+    campoAltro.hidden = tipi[i] !== 'nota';
+  });
+  modulo.querySelector('.posto-rotella').replaceWith(rotella.elemento);
 
   riempiColture(modulo.querySelector('select[name="coltura"]'), dati, coltura);
   modulo.querySelector('.posto-aiuole').replaceWith(selettoreAiuole(dati, scelteDa(aiuoleIds, coltura?.parti)));
@@ -1082,19 +1132,16 @@ function riempiColture(scelta, dati, coltura) {
   }
 }
 
-function opzioniRadio(nome, opzioni, scelta) {
-  return opzioni
-    .map(([valore, testo]) => `<label class="opzione"><input type="radio" name="${nome}" value="${valore}"${valore === scelta ? ' checked' : ''}> ${testo}</label>`)
-    .join('');
-}
-
 function salvaVoce(modulo) {
   const campi = new FormData(modulo);
   const tipo = campi.get('tipo');
   const data = dataPerArchivio(campi.get('data'));
 
+  const attivita = (campi.get('attivita') ?? '').trim();
+
   const errori = [];
-  if (!tipo) errori.push('Scegli l\'attività.');
+  if (!tipo) errori.push('Scegli l\'attività con la rotella.');
+  if (tipo === 'nota' && !attivita) errori.push('Scrivi che attività è.');
   if (!data) errori.push('Scrivi la data come gg/mm/aaaa, es. 02/10/2026.');
 
   const avviso = modulo.querySelector('.errore');
@@ -1111,6 +1158,7 @@ function salvaVoce(modulo) {
       parti: leggiParti(campi, campi.getAll('aiuole')),
       colturaId: campi.get('coltura') || null,
       quantita: campi.get('quantita').trim(), note: campi.get('note').trim(),
+      ...(tipo === 'nota' && { attivita }),
     });
     salva(dati);
     history.back();
@@ -1131,7 +1179,7 @@ export function schedaVoce(dati, voce) {
   elimina.addEventListener('click', () => eliminaVoce(voce));
 
   const sezione = document.createElement('section');
-  sezione.append(indietro, elemento('h2', TIPI[voce.tipo]), riga('Data', dataPerUtente(voce.data)));
+  sezione.append(indietro, elemento('h2', testoTipo(voce)), riga('Data', dataPerUtente(voce.data)));
   if (voce.dal) sezione.append(riga('Periodo', `dal ${dataPerUtente(voce.dal)} al ${dataPerUtente(voce.data)}`));
   if (coltura) sezione.append(riga('Coltura', nomeColtura(coltura)));
   sezione.append(riga('Aiuole', doveVoce(dati, voce) || 'Nessuna'));
@@ -1141,7 +1189,7 @@ export function schedaVoce(dati, voce) {
 }
 
 function eliminaVoce(voce) {
-  if (!confirm(`Eliminare la voce "${TIPI[voce.tipo]} del ${dataPerUtente(voce.data)}"? Non si potrà recuperare.`)) return;
+  if (!confirm(`Eliminare la voce "${testoTipo(voce)} del ${dataPerUtente(voce.data)}"? Non si potrà recuperare.`)) return;
   try {
     const dati = carica();
     dati.registro = dati.registro.filter(v => v.id !== voce.id);
