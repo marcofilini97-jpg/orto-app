@@ -219,6 +219,19 @@ const DISEGNI = [
 <path d="M32 45 C30 38 34 30 41 29 C43 25 45 23 46 21 C46.5 24 46 27 46 30 C51 34 50 42 45 45 C41 47 35 47 32 45 Z" fill="#B5674A"></path>
 <path d="M22 27 C18 32 18 40 20 45 M41 30 C38 35 38 41 39 46" fill="none" stroke="#8E4A30" stroke-width="1"></path>` },
 
+  { parole: ['sedan'], svg: `
+<ellipse cx="30" cy="49" rx="12" ry="3" fill="#4E3220" stroke="none"></ellipse>
+<path d="M22 48 C20 38 19 28 18 18 L23 18 C24 28 26 38 27 48 Z" fill="#A8CF6A"></path>
+<path d="M38 48 C40 38 41 28 42 18 L37 18 C36 28 34 38 33 48 Z" fill="#A8CF6A"></path>
+<path d="M29 48 C30 38 32 26 34 15 L39 16 C37 27 35 38 34.5 48 Z" fill="#B5D67A"></path>
+<path d="M25 48 C24 38 24 26 25 14 L31 14 C31 26 31 38 31 48 Z" fill="#C6E08E"></path>
+<path d="M27.8 46 C27.5 36 27.5 26 28 16 M21.6 44 C20.6 36 20.2 28 20 20 M39.4 44 C40.2 36 40.4 28 40.2 20 M32.6 45 C33.4 36 34.8 26 36.4 18" fill="none" stroke="#86B44E" stroke-width="1"></path>
+<path d="M21.5 45.5 Q30 43.5 38.5 45.5 L38.2 48.6 Q30 47 21.8 48.6 Z" fill="#EEF4D6"></path>
+<path transform="translate(20.5 18.5) rotate(-28) scale(1.1)" d="M0 0 C-2 -2 -5 -2 -6 -5 L-4 -5 L-5 -8 L-2 -7 L-1 -10 L1 -7 L4 -8 L3 -5 L6 -5 C5 -2 2 -2 0 0 Z" fill="#5FA83C"></path>
+<path transform="translate(39.5 18.5) rotate(28) scale(1.1)" d="M0 0 C-2 -2 -5 -2 -6 -5 L-4 -5 L-5 -8 L-2 -7 L-1 -10 L1 -7 L4 -8 L3 -5 L6 -5 C5 -2 2 -2 0 0 Z" fill="#5FA83C"></path>
+<path transform="translate(36.5 16) rotate(12) scale(1.15)" d="M0 0 C-2 -2 -5 -2 -6 -5 L-4 -5 L-5 -8 L-2 -7 L-1 -10 L1 -7 L4 -8 L3 -5 L6 -5 C5 -2 2 -2 0 0 Z" fill="#4E9A34"></path>
+<path transform="translate(28 14.5) scale(1.3)" d="M0 0 C-2 -2 -5 -2 -6 -5 L-4 -5 L-5 -8 L-2 -7 L-1 -10 L1 -7 L4 -8 L3 -5 L6 -5 C5 -2 2 -2 0 0 Z" fill="#6FBF45"></path>` },
+
   { parole: ['fava', 'fave'], svg: `
 <ellipse cx="30" cy="46" rx="22" ry="3" fill="#4E3220" stroke="none"></ellipse>
 <path d="M8 38 C10 30 20 28 26 31 C30 27 36 27 40 31 C46 29 52 32 52 37 C52 42 46 44 40 42 C36 45 30 45 26 42 C20 45 10 44 8 38 Z" fill="#6FAE3A"></path>
