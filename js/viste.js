@@ -50,7 +50,7 @@ function iniziata(c) {
 function divisione(dati, aiuolaId) {
   for (const c of dati.colture) {
     const parte = c.parti?.[aiuolaId];
-    if (c.stato === 'attiva' && parte) return ASSI[parte];
+    if ((giornoMappa === null ? c.stato === 'attiva' : visibile(c)) && parte) return ASSI[parte];
   }
   return null;
 }
@@ -62,7 +62,7 @@ function doveColtura(c) {
 
 // Spazi dell'aiuola dove più colture attive si sovrappongono, es. [{ zona: 'fondo', n: 2 }]
 function bollini(dati, aiuola) {
-  const attive = dati.colture.filter(c => c.stato === 'attiva' && iniziata(c) && c.aiuoleIds.includes(aiuola.id));
+  const attive = dati.colture.filter(c => visibile(c) && c.aiuoleIds.includes(aiuola.id));
   const asse = divisione(dati, aiuola.id);
   const zone = !asse ? ['tutta'] : asse === 'fondo-davanti' ? ['fondo', 'davanti'] : ['vialetto', 'esterno'];
   return zone
@@ -128,12 +128,13 @@ function colonna(dati, lato) {
 }
 
 const GIORNO = 86400000;
-const giorniDaOggi = iso => Math.round((new Date(iso) - new Date(oggi())) / GIORNO);
+// Giorni da oggi (o dal giorno mostrato nella mappa nel tempo)
+const giorniDaOggi = iso => Math.round((new Date(iso) - new Date(giornoMappa ?? oggi())) / GIORNO);
 
 // La prima coltura in programma nell'aiuola che inizia entro 30 giorni, oppure null
 function prossimoArrivo(dati, aiuolaId) {
   return dati.colture
-    .filter(c => c.stato === 'attiva' && c.aiuoleIds.includes(aiuolaId) && !iniziata(c) && giorniDaOggi(c.dataInizio) <= 30)
+    .filter(c => c.stato === 'attiva' && c.aiuoleIds.includes(aiuolaId) && giorniDaOggi(c.dataInizio) > 0 && giorniDaOggi(c.dataInizio) <= 30)
     .sort((x, y) => x.dataInizio.localeCompare(y.dataInizio))[0] ?? null;
 }
 
@@ -160,7 +161,7 @@ function vialetto(dati) {
 // Disegnini delle colture attive: uno spazio per tutta l'aiuola, oppure uno per ogni metà.
 // Più colture nello stesso spazio si alternano
 function piantine(dati, aiuola) {
-  const attive = dati.colture.filter(c => c.stato === 'attiva' && iniziata(c) && c.aiuoleIds.includes(aiuola.id));
+  const attive = dati.colture.filter(c => visibile(c) && c.aiuoleIds.includes(aiuola.id));
   if (attive.length === 0) return [];
   const asse = divisione(dati, aiuola.id);
   const zone = !asse ? ['tutta'] : asse === 'fondo-davanti' ? ['fondo', 'davanti'] : ['vialetto', 'esterno'];
@@ -192,7 +193,7 @@ function piantine(dati, aiuola) {
         pianta.style.left = `calc(${colonna / colonne} * 100cqw + max(0px, ${1 / colonne} * 100cqw - var(--l)) * ${rx})`;
         pianta.style.bottom = `calc(${riga / righe} * 100cqh + max(0px, ${1 / righe} * 100cqh - var(--l)) * ${ry})`;
       }
-      rendiSpostabile(pianta, spazio, { colturaId: coltura.id, aiuolaId: aiuola.id, k, sporgeInAlto: posto !== 'sotto' });
+      if (giornoMappa === null) rendiSpostabile(pianta, spazio, { colturaId: coltura.id, aiuolaId: aiuola.id, k, sporgeInAlto: posto !== 'sotto' });
       spazio.append(pianta);
     }
     return spazio;
@@ -2338,4 +2339,186 @@ function riepilogoTerreno() {
   const box = elemento('div');
   box.append(tabella, elemento('p', "Tocca un'aiuola per aprire il suo terreno. Il pallino dice da dove viene la tessitura: grigio stima, blu prova, verde analisi.", 'nota-terreno'));
   return box;
+}
+
+// ---- Simulazioni (cartello Test): scelta, orto reale nel tempo ----
+
+export function paginaSimulazioni() {
+  const sezione = document.createElement('section');
+  sezione.className = 'simulazioni';
+  const scheda = (href, classe, icona, titolo, testo) => {
+    const a = link('', href, `scheda-sim ${classe}`);
+    const ico = elemento('span', '', 'ico-sim');
+    ico.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icona}</svg>`;
+    const t = elemento('span');
+    t.append(elemento('strong', titolo), elemento('small', testo));
+    a.append(ico, t);
+    return a;
+  };
+  sezione.append(
+    link('← Mappa', '#/', 'indietro'),
+    elemento('h2', 'Simulazioni'),
+    scheda('#/test/reale', 'sim-reale', ICONE.test, 'Orto reale nel tempo',
+      'La tua mappa con le colture vere: vai avanti e indietro nel tempo e vedi cosa c\'era e cosa ci sarà, con le stime del catalogo. Solo da guardare.'),
+    scheda('#/test', 'sim-arcade in-arrivo', '<rect x="2" y="7" width="20" height="12" rx="5"/><path d="M7 11v4M5 13h4"/><circle cx="16" cy="12" r="1.2"/><circle cx="18.5" cy="14.5" r="1.2"/>',
+      'Arcade · in arrivo', 'Un orto inventato, da zero o copiato dal tuo: prova colture e rotazioni e guarda come va negli anni.'),
+    link('Calendario delle colture (binari per aiuola)', '#/test/calendario', 'pulsante secondario'),
+  );
+  return sezione;
+}
+
+let giornoMappa = null;   // se impostato, la mappa mostra l'orto in quel giorno (solo da guardare)
+
+// La coltura è nell'orto il giorno g? Le colture senza fine spariscono a fine raccolta stimata
+function presenteIl(c, g) {
+  if (c.stato === 'pianificata' || c.dataInizio > g) return false;
+  if (c.dataFine) return g < c.dataFine;
+  const scheda = colturaDaNome(c.nome);
+  if (!scheda || scheda.tappa === 'P' || g <= oggi()) return true;
+  const stima = fineSuggerita(scheda, c.dataInizio);
+  return Boolean(stima) && g < stima;
+}
+
+// Colture da disegnare sulla mappa: quelle attive oggi, oppure (nel tempo) quelle presenti quel giorno
+function visibile(c) {
+  return giornoMappa === null ? c.stato === 'attiva' && iniziata(c) : presenteIl(c, giornoMappa);
+}
+
+// Tappa della rotazione che toccherebbe al settore nell'anno dell'orto del giorno g (dall'ultima avuta)
+const GIRO = ['L', 'C', 'A', 'S'];
+function tappaAttesa(dati, settore, g) {
+  const anno = annoOrto(g);
+  let ultima = null;
+  for (const c of dati.colture) {
+    const s = colturaDaNome(c.nome);
+    if (!s || !GIRO.includes(s.tappa) || c.stato === 'pianificata') continue;
+    if (!c.aiuoleIds.some(id => dati.aiuole.find(a => a.id === id)?.settore === settore)) continue;
+    const a = annoOrto(c.dataInizio);
+    if (a <= anno && (!ultima || a > ultima.anno)) ultima = { anno: a, tappa: s.tappa };
+  }
+  if (!ultima) return null;
+  return GIRO[(GIRO.indexOf(ultima.tappa) + anno - ultima.anno) % 4];
+}
+
+const MESI_LUNGHI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+const dataLunga = iso => { const [a, m, g] = iso.split('-').map(Number); return `${g} ${MESI_LUNGHI[m - 1]} ${a}`; };
+const isoDi = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const piuGiorni = (iso, n) => { const d = new Date(iso); d.setDate(d.getDate() + n); return isoDi(d); };
+
+function stagioneDi(iso) {
+  const md = iso.slice(5);
+  if (md >= '03-21' && md < '06-21') return 'primavera';
+  if (md >= '06-21' && md < '09-23') return 'estate';
+  if (md >= '09-23' && md < '12-21') return 'autunno';
+  return 'inverno';
+}
+
+// Colore del prato nel giorno: sfuma tra i colori di metà stagione
+const COLORI_STAGIONE = [[20, [159, 176, 168]], [120, [140, 191, 90]], [217, [169, 184, 78]], [309, [184, 154, 78]], [385, [159, 176, 168]]];
+function coloriPrato(iso) {
+  const d = new Date(iso);
+  let giorno = Math.round((d - new Date(d.getFullYear(), 0, 1)) / GIORNO);
+  if (giorno < COLORI_STAGIONE[0][0]) giorno += 365;
+  let i = 0;
+  while (giorno > COLORI_STAGIONE[i + 1][0]) i++;
+  const [g1, c1] = COLORI_STAGIONE[i], [g2, c2] = COLORI_STAGIONE[i + 1];
+  const t = (giorno - g1) / (g2 - g1);
+  const c = c1.map((v, k) => Math.round(v + (c2[k] - v) * t));
+  return { prato: `rgb(${c.join(' ')})`, punti: `rgb(${c.map(v => Math.round(v * 0.86)).join(' ')})` };
+}
+
+function coloraPrato(iso) {
+  const { prato, punti } = coloriPrato(iso);
+  document.body.style.setProperty('--prato', prato);
+  document.body.style.setProperty('--prato-punti', punti);
+  document.body.dataset.stagione = stagioneDi(iso);
+}
+
+// La mappa del giorno g, solo da guardare: niente spostamenti, niente segni dei task, aiuole non cliccabili
+function mappaDelGiorno(dati, g) {
+  giornoMappa = g;
+  try {
+    const m = elemento('div', '', 'mappa-tempo');
+    m.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(dati), colonna(dati, 'destra'), staccionata(), etichetta('Davanti'));
+    for (const a of m.querySelectorAll('a.aiuola')) {
+      a.removeAttribute('href');
+      const aiuola = dati.aiuole.find(x => x.id === a.querySelector('.nome').textContent);
+      if (g > oggi() && !a.querySelector('.piantina')) {
+        const tappa = tappaAttesa(dati, aiuola.settore, g);
+        if (tappa) {
+          const segno = elemento('span', `tocca a: ${TAPPE[tappa].breve}`, 'tocca-a');
+          segno.style.borderColor = TAPPE[tappa].c;
+          a.append(segno);
+        }
+      }
+    }
+    for (const p of m.querySelectorAll('.puntino')) p.remove();
+    return m;
+  } finally {
+    giornoMappa = null;
+  }
+}
+
+export function ortoNelTempo(dati) {
+  const sezione = document.createElement('section');
+  sezione.className = 'mappa orto-tempo';
+  // Da quando c'è l'orto (prima coltura o voce) a 4 anni da oggi, a passi di una settimana
+  const date = [...dati.colture.map(c => c.dataInizio), ...dati.registro.map(v => v.data)].filter(Boolean).sort();
+  const inizio = date[0] && date[0] < oggi() ? date[0] : piuGiorni(oggi(), -30);
+  const passi = Math.ceil((new Date(piuGiorni(oggi(), 4 * 365)) - new Date(inizio)) / (7 * GIORNO));
+  let indice = Math.round((new Date(oggi()) - new Date(inizio)) / (7 * GIORNO));
+  const giornoDi = i => (i === Math.round((new Date(oggi()) - new Date(inizio)) / (7 * GIORNO)) ? oggi() : piuGiorni(inizio, i * 7));
+
+  const testa = elemento('div', '', 'testa-tempo');
+  testa.append(link('← Simulazioni', '#/test', 'indietro-tempo'), elemento('span', 'Orto reale nel tempo · solo da guardare', 'titolo-tempo'));
+  const posto = elemento('div');
+  const barra = elemento('div', '', 'barra-tempo');
+  const data = elemento('div', '', 'data-tempo');
+  const stagione = elemento('span', '', 'stagione-tempo');
+  const cursore = elemento('input', '', 'cursore-tempo');
+  cursore.type = 'range';
+  cursore.min = '0';
+  cursore.max = String(passi);
+  cursore.value = String(indice);
+  cursore.setAttribute('aria-label', 'Giorno mostrato sulla mappa');
+  const comandi = elemento('div', '', 'comandi-tempo');
+  const pulsante = (testo, nome) => {
+    const b = elemento('button', testo, 'comando-tempo');
+    b.type = 'button';
+    b.setAttribute('aria-label', nome);
+    return b;
+  };
+  const prima = pulsante('◀ settimana', 'Una settimana prima');
+  const scorri = pulsante('▶▶ scorri', 'Fai scorrere il tempo');
+  const dopo = pulsante('settimana ▶', 'Una settimana dopo');
+  const vaiOggi = pulsante('oggi', 'Torna a oggi');
+  comandi.append(prima, scorri, vaiOggi, dopo);
+  barra.append(data, stagione, cursore, comandi);
+  sezione.append(testa, posto, barra);
+
+  function mostraGiorno() {
+    const g = giornoDi(indice);
+    cursore.value = String(indice);
+    data.textContent = dataLunga(g) + (g === oggi() ? ' · oggi' : '');
+    stagione.textContent = stagioneDi(g);
+    posto.replaceChildren(mappaDelGiorno(dati, g));
+    coloraPrato(g);
+  }
+  const vai = i => { indice = Math.max(0, Math.min(passi, i)); mostraGiorno(); };
+  cursore.addEventListener('input', () => vai(Number(cursore.value)));
+  prima.addEventListener('click', () => vai(indice - 1));
+  dopo.addEventListener('click', () => vai(indice + 1));
+  vaiOggi.addEventListener('click', () => vai(Math.round((new Date(oggi()) - new Date(inizio)) / (7 * GIORNO))));
+  let timer = null;
+  const ferma = () => { clearInterval(timer); timer = null; scorri.textContent = '▶▶ scorri'; };
+  scorri.addEventListener('click', () => {
+    if (timer) return ferma();
+    scorri.textContent = '❚❚ ferma';
+    timer = setInterval(() => {
+      if (!sezione.isConnected || indice >= passi) return ferma();
+      vai(indice + 1);
+    }, 450);
+  });
+  mostraGiorno();
+  return sezione;
 }

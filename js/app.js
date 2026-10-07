@@ -3,7 +3,7 @@ import { CATALOGO } from './catalogo.js';
 import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
-  listaTask, moduloTask, schedaTask, paginaTest, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -27,7 +27,11 @@ function schermata() {
     if (task) return schedaTask(dati, task);
     return listaTask(dati);
   }
-  if (pagina === 'test') return paginaTest(dati);
+  if (pagina === 'test') {
+    if (id === 'reale') return ortoNelTempo(dati);
+    if (id === 'calendario') return paginaTest(dati);
+    return paginaSimulazioni();
+  }
   if (pagina === 'registro') {
     return id === 'nuova-voce' ? nuovaVoce(dati) : registro(dati);
   }
@@ -61,6 +65,10 @@ function schermata() {
 }
 
 function disegna() {
+  // Il prato delle stagioni lo colora solo la mappa nel tempo
+  document.body.style.removeProperty('--prato');
+  document.body.style.removeProperty('--prato-punti');
+  delete document.body.dataset.stagione;
   document.body.classList.toggle('prova', inProva());
   try {
     contenuto.replaceChildren(schermata());
