@@ -1,7 +1,7 @@
-import { carica, sincronizza, inProva } from './dati.js';
+import { carica, salva, sincronizza, inProva } from './dati.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
-  listaTask, moduloTask, schedaTask,
+  listaTask, moduloTask, schedaTask, paginaTest,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -20,6 +20,7 @@ function schermata() {
     if (task) return schedaTask(dati, task);
     return listaTask(dati);
   }
+  if (pagina === 'test') return paginaTest(dati);
   if (pagina === 'registro') {
     return id === 'nuova-voce' ? nuovaVoce(dati) : registro(dati);
   }
@@ -28,7 +29,6 @@ function schermata() {
     if (sotto === 'storico') return storicoAiuola(dati, aiuola);
     if (sotto === 'info') return infoAiuola(dati, aiuola);
     if (sotto === 'nuova-coltura') return moduloColtura(dati, { aiuola });
-    if (sotto === 'pianifica') return moduloColtura(dati, { aiuola, pianifica: true });
     if (sotto === 'registro') return registro(dati, aiuola);
     if (sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: [aiuola.id] });
     if (sotto === 'nuovo-task') return moduloTask(dati, { aiuoleIds: [aiuola.id] });
@@ -36,7 +36,7 @@ function schermata() {
   }
   if (pagina === 'coltura') {
     const coltura = dati.colture.find(c => c.id === id);
-    if ((coltura?.stato === 'attiva' || coltura?.stato === 'pianificata') && sotto === 'modifica') return moduloColtura(dati, { coltura });
+    if (coltura?.stato === 'attiva' && sotto === 'modifica') return moduloColtura(dati, { coltura });
     if (coltura && sotto === 'nuova-voce') return nuovaVoce(dati, { aiuoleIds: coltura.aiuoleIds, coltura });
     if (coltura && sotto === 'nuovo-task') return moduloTask(dati, { aiuoleIds: coltura.aiuoleIds, coltura });
     if (coltura) return schedaColtura(dati, coltura);
@@ -60,6 +60,22 @@ function disegna() {
 function mostra() {
   disegna();
   window.scrollTo(0, 0);
+}
+
+// Le colture "pianificata" di una versione di prova del pianificatore diventano colture attive
+// con l'inizio nel futuro, cioè "in programma"
+try {
+  const dati = carica();
+  const vecchie = dati.colture.filter(c => c.stato === 'pianificata');
+  if (vecchie.length > 0) {
+    for (const c of vecchie) {
+      c.stato = 'attiva';
+      delete c.finePrevista;
+    }
+    salva(dati);
+  }
+} catch {
+  // dati danneggiati: se ne occupa la schermata (messaggio di errore)
 }
 
 window.addEventListener('hashchange', mostra);

@@ -6,7 +6,7 @@ import {
   sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione, cancellaDatiTelefono,
 } from './dati.js';
 import { iconaSvg } from './disegni.js';
-import { colturaDaNome, disposizione, resa, AIUOLA } from './catalogo.js';
+import { colturaDaNome, disposizione, resa, AIUOLA, TAPPE } from './catalogo.js';
 
 const TIPI = {
   semina: 'Semina', trapianto: 'Trapianto', irrigazione: 'Irrigazione',
@@ -24,6 +24,10 @@ function testoTipo(voce) {
 const ICONE = {
   registro: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
   task: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  // Cronometro con le tacche delle ore
+  test: '<circle cx="12" cy="13.5" r="8"/><path d="M12 5.5V3.5M10 2.5h4M17.7 7.8l1.4-1.4"/>'
+    + '<path stroke-width="1.1" d="M12.00 8.10L12.00 6.50M15.05 8.22L15.50 7.44M17.28 10.45L18.06 10.00M17.40 13.50L19.00 13.50M17.28 16.55L18.06 17.00M15.05 18.78L15.50 19.56M12.00 18.90L12.00 20.50M8.95 18.78L8.50 19.56M6.72 16.55L5.94 17.00M6.60 13.50L5.00 13.50M6.72 10.45L5.94 10.00M8.95 8.22L8.50 7.44"/>'
+    + '<path d="M12 13.5V9.8M12 13.5l2.4 1.4"/>',
 };
 
 // Ogni metà appartiene a uno dei due modi di dividere un'aiuola
@@ -33,6 +37,11 @@ const ASSI = {
 };
 
 // Come è divisa un'aiuola dalle colture attive: 'fondo-davanti', 'vialetto-esterno' o null
+// Una coltura attiva con la data di inizio nel futuro è "in programma": non si vede ancora sulla mappa
+function iniziata(c) {
+  return c.dataInizio <= oggi();
+}
+
 function divisione(dati, aiuolaId) {
   for (const c of dati.colture) {
     const parte = c.parti?.[aiuolaId];
@@ -48,7 +57,7 @@ function doveColtura(c) {
 
 // Spazi dell'aiuola dove più colture attive si sovrappongono, es. [{ zona: 'fondo', n: 2 }]
 function bollini(dati, aiuola) {
-  const attive = dati.colture.filter(c => c.stato === 'attiva' && c.aiuoleIds.includes(aiuola.id));
+  const attive = dati.colture.filter(c => c.stato === 'attiva' && iniziata(c) && c.aiuoleIds.includes(aiuola.id));
   const asse = divisione(dati, aiuola.id);
   const zone = !asse ? ['tutta'] : asse === 'fondo-davanti' ? ['fondo', 'davanti'] : ['vialetto', 'esterno'];
   return zone
@@ -74,7 +83,7 @@ export function mappa(dati) {
   const daFare = scorciatoia('Da fare', '#/task', 'task');
   const segnoSenzaAiuole = segnoTask(dati.task.filter(t => t.aiuoleIds.length === 0));
   if (segnoSenzaAiuole) daFare.append(puntino(segnoSenzaAiuole));
-  scorciatoie.append(scorciatoia('Registro', '#/registro', 'registro'), daFare);
+  scorciatoie.append(scorciatoia('Registro', '#/registro', 'registro'), daFare, scorciatoia('Test', '#/test', 'test'));
   mappa.append(scorciatoie);
   return mappa;
 }
@@ -123,7 +132,7 @@ function vialetto(dati) {
 // Disegnini delle colture attive: uno spazio per tutta l'aiuola, oppure uno per ogni metà.
 // Più colture nello stesso spazio si alternano
 function piantine(dati, aiuola) {
-  const attive = dati.colture.filter(c => c.stato === 'attiva' && c.aiuoleIds.includes(aiuola.id));
+  const attive = dati.colture.filter(c => c.stato === 'attiva' && iniziata(c) && c.aiuoleIds.includes(aiuola.id));
   if (attive.length === 0) return [];
   const asse = divisione(dati, aiuola.id);
   const zone = !asse ? ['tutta'] : asse === 'fondo-davanti' ? ['fondo', 'davanti'] : ['vialetto', 'esterno'];
@@ -275,7 +284,9 @@ function etichetta(testo) {
 }
 
 export function schedaAiuola(dati, aiuola) {
-  const attive = colturePer(dati, aiuola.id).filter(c => c.stato === 'attiva');
+  const attive = colturePer(dati, aiuola.id).filter(c => c.stato === 'attiva' && iniziata(c));
+  const inProgramma = colturePer(dati, aiuola.id).filter(c => c.stato === 'attiva' && !iniziata(c))
+    .sort((x, y) => x.dataInizio.localeCompare(y.dataInizio));
   const intestazione = elemento('div', '', 'intestazione');
   intestazione.append(elemento('h2', `Aiuola ${aiuola.id}`), link('(info)', `#/aiuola/${aiuola.id}/info`, 'link-info'));
   const sezione = document.createElement('section');
@@ -284,11 +295,9 @@ export function schedaAiuola(dati, aiuola) {
     intestazione,
     elemento('h3', 'Colture attive'),
     elencoColture(attive, 'Nessuna coltura attiva.'),
-    link('Aggiungi coltura', `#/aiuola/${aiuola.id}/nuova-coltura`, 'pulsante'),
     elemento('h3', 'In programma'),
-    elencoColture(colturePer(dati, aiuola.id).filter(c => c.stato === 'pianificata')
-      .sort((x, y) => x.dataInizio.localeCompare(y.dataInizio)), 'Niente in programma.'),
-    link('Pianifica una coltura', `#/aiuola/${aiuola.id}/pianifica`, 'pulsante secondario'),
+    elencoColture(inProgramma, 'Niente in programma.'),
+    link('Aggiungi coltura', `#/aiuola/${aiuola.id}/nuova-coltura`, 'pulsante'),
     elemento('h3', 'Da fare'),
     elencoTask(dati, ordinaTask(dati.task.filter(t => !t.fatto && t.aiuoleIds.includes(aiuola.id))), 'Niente da fare.'),
     link('Aggiungi task', `#/aiuola/${aiuola.id}/nuovo-task`, 'pulsante secondario'),
@@ -386,11 +395,9 @@ function elencoColture(colture, testoSeVuoto) {
   const ul = elemento('ul', '', 'colture');
   for (const c of colture) {
     const nome = c.varieta ? `${c.nome} – ${c.varieta}` : c.nome;
-    const periodo = c.stato === 'pianificata'
-      ? `previsto dal ${dataPerUtente(c.dataInizio)}${c.finePrevista ? ` al ${dataPerUtente(c.finePrevista)}` : ''}`
-      : c.dataFine
-        ? `${dataPerUtente(c.dataInizio)} – ${dataPerUtente(c.dataFine)}`
-        : `dal ${dataPerUtente(c.dataInizio)}`;
+    const periodo = c.dataFine
+      ? `${dataPerUtente(c.dataInizio)} – ${dataPerUtente(c.dataFine)}`
+      : `dal ${dataPerUtente(c.dataInizio)}`;
     const mostraDove = c.aiuoleIds.length > 1 || c.aiuoleIds.some(id => c.parti?.[id]);
     const dove = mostraDove ? ` (${doveColtura(c)})` : '';
     const voce = elemento('li');
@@ -596,8 +603,8 @@ async function caricaBackup(input) {
 }
 
 // Modulo per creare una coltura (da un'aiuola) o modificarne una attiva (coltura).
-// pianifica = true: coltura in programma (date previste, nessuna voce nel registro finché non inizia)
-export function moduloColtura(dati, { aiuola = null, coltura = null, pianifica = coltura?.stato === 'pianificata' }) {
+// Con una data di inizio futura la coltura è "in programma": in fondo compaiono gli avvisi
+export function moduloColtura(dati, { aiuola = null, coltura = null }) {
   const modulo = document.createElement('form');
   modulo.className = 'modulo';
   modulo.noValidate = true;
@@ -607,8 +614,7 @@ export function moduloColtura(dati, { aiuola = null, coltura = null, pianifica =
     <label>Varietà (facoltativa)<input type="text" name="varieta" autocomplete="off" placeholder="es. Cuore di bue"></label>
     <div class="suggerimento" hidden></div>
     <div class="posto-aiuole"></div>
-    <label>${pianifica ? 'Inizio previsto' : 'Data di inizio'}<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(coltura ? coltura.dataInizio : oggi())}"></label>
-    ${pianifica ? '<label>Fine prevista (facoltativa)<input type="text" name="finePrevista" placeholder="gg/mm/aaaa"></label>' : ''}
+    <label>Data di inizio<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(coltura ? coltura.dataInizio : oggi())}"></label>
     <fieldset>
       <legend>Metodo</legend>
       <div class="due-colonne">
@@ -618,11 +624,11 @@ export function moduloColtura(dati, { aiuola = null, coltura = null, pianifica =
       <label>Altro:<input type="text" name="metodoAltro" autocomplete="off" placeholder="es. pianta perenne, talea, bulbo"></label>
     </fieldset>
     ${coltura ? '<label>Note (facoltative)<textarea name="note" rows="3"></textarea></label>' : ''}
+    <div class="avvisi" role="status" hidden></div>
     <p class="errore" role="alert" hidden></p>
-    <button type="submit" class="pulsante">${coltura ? 'Salva modifiche' : pianifica ? 'Salva nel programma' : 'Salva coltura'}</button>
+    <button type="submit" class="pulsante">${coltura ? 'Salva modifiche' : 'Salva coltura'}</button>
   `;
   const campi = modulo.elements;
-  if (pianifica && coltura?.finePrevista) campi.finePrevista.value = dataPerUtente(coltura.finePrevista);
   if (coltura) {
     campi.nome.value = coltura.nome;
     campi.varieta.value = coltura.varieta;
@@ -638,10 +644,10 @@ export function moduloColtura(dati, { aiuola = null, coltura = null, pianifica =
 
   modulo.querySelector('.posto-aiuole').replaceWith(selettoreAiuole(dati,
     coltura ? scelteDa(coltura.aiuoleIds, coltura.parti) : { [aiuola.id]: '' }));
-  suggerimentiCatalogo(modulo, pianifica, !coltura);
+  suggerimentiCatalogo(dati, modulo, coltura?.id ?? null);
   modulo.addEventListener('submit', evento => {
     evento.preventDefault();
-    salvaColtura(modulo, coltura?.id, pianifica);
+    salvaColtura(modulo, coltura?.id);
   });
 
   const sezione = document.createElement('section');
@@ -649,11 +655,11 @@ export function moduloColtura(dati, { aiuola = null, coltura = null, pianifica =
     const indietro = elemento('button', '← Indietro', 'indietro');
     indietro.type = 'button';
     indietro.addEventListener('click', () => history.back());
-    sezione.append(indietro, elemento('h2', pianifica ? 'Modifica coltura in programma' : 'Modifica coltura'), modulo);
+    sezione.append(indietro, elemento('h2', 'Modifica coltura'), modulo);
   } else {
     sezione.append(
       link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro'),
-      elemento('h2', pianifica ? `Pianifica una coltura in ${aiuola.id}` : `Nuova coltura in ${aiuola.id}`),
+      elemento('h2', `Nuova coltura in ${aiuola.id}`),
       modulo,
     );
   }
@@ -682,16 +688,36 @@ function misuraParte(parte) {
 
 const kgTesto = v => (v < 10 ? v.toFixed(1) : String(Math.round(v))).replace('.', ',');
 
-// Riquadro con i consigli del catalogo, aggiornato mentre si scrive il nome o si scelgono le aiuole.
-// Se si pianifica, propone anche il metodo (se non scelto) e la fine prevista (finché non la si scrive a mano)
-function suggerimentiCatalogo(modulo, pianifica, proponiMetodo) {
+// Riquadro "Dal catalogo" (aggiornato mentre si scrive il nome o si scelgono le aiuole) e,
+// se la data è nel futuro, gli avvisi in fondo al modulo. Per una coltura nuova propone il metodo
+function suggerimentiCatalogo(dati, modulo, colturaId) {
   const box = modulo.querySelector('.suggerimento');
+  const boxAvvisi = modulo.querySelector('.avvisi');
   const campi = modulo.elements;
-  let fineAMano = Boolean(campi.finePrevista?.value);
-  campi.finePrevista?.addEventListener('input', () => { fineAMano = Boolean(campi.finePrevista.value.trim()); });
 
   function aggiorna() {
     const scheda = colturaDaNome(campi.nome.value);
+    const scelte = new FormData(modulo);
+    const aiuoleIds = scelte.getAll('aiuole');
+    const parti = Object.fromEntries(aiuoleIds.map(id => [id, scelte.get(`parte-${id}`) ?? '']));
+    const inizio = dataPerArchivio(campi.data.value);
+    let metodo = campi.metodoAltro.value.trim() ? 'altro' : scelte.get('metodo');
+    if (scheda && !colturaId && !metodo) {
+      const proposto = scheda.t && !scheda.s ? 'trapianto' : scheda.s && !scheda.t ? 'semina' : null;
+      if (proposto) {
+        modulo.querySelector(`input[name="metodo"][value="${proposto}"]`).checked = true;
+        metodo = proposto;
+      }
+    }
+
+    const avvisi = inizio && inizio > oggi() ? avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, colturaId }) : [];
+    boxAvvisi.hidden = avvisi.length === 0;
+    boxAvvisi.replaceChildren(...avvisi.map(([titolo, testo]) => {
+      const p = elemento('p', '', 'avviso-modulo');
+      p.append(elemento('strong', titolo), testo);
+      return p;
+    }));
+
     box.hidden = !scheda;
     if (!scheda) return;
     const righe = [];
@@ -700,10 +726,9 @@ function suggerimentiCatalogo(modulo, pianifica, proponiMetodo) {
     righe.push(`${scheda.rLabel ?? 'Raccolta'}: ${scheda.r.map(periodoCatalogo).join(' · ')}`);
 
     // Piante e resa nelle aiuole (o metà) scelte
-    const dati = new FormData(modulo);
     let piante = 0, min = 0, max = 0, conResa = true;
-    for (const id of dati.getAll('aiuole')) {
-      const m = misuraParte(dati.get(`parte-${id}`));
+    for (const id of aiuoleIds) {
+      const m = misuraParte(parti[id]);
       const d = disposizione(scheda, m.L, m.W);
       piante += d.piante ?? 0;
       const r = resa(scheda, d);
@@ -715,20 +740,92 @@ function suggerimentiCatalogo(modulo, pianifica, proponiMetodo) {
     box.replaceChildren(elemento('strong', `Dal catalogo: ${scheda.nome}`), ...righe.map(r => elemento('span', r)));
     if (scheda.avviso) box.append(elemento('span', scheda.avviso.replace(/\{\w+:([^}]+)\}/g, '$1'), 'avviso-catalogo'));
 
-    if (pianifica && proponiMetodo && !campi.metodoAltro.value.trim() && !modulo.querySelector('input[name="metodo"]:checked')) {
-      const metodo = scheda.t && !scheda.s ? 'trapianto' : scheda.s && !scheda.t ? 'semina' : null;
-      if (metodo) modulo.querySelector(`input[name="metodo"][value="${metodo}"]`).checked = true;
-    }
-    const inizio = dataPerArchivio(campi.data.value);
-    if (pianifica && !fineAMano && inizio) {
-      const fine = fineSuggerita(scheda, inizio);
-      campi.finePrevista.value = fine ? dataPerUtente(fine) : '';
-    }
   }
-  modulo.addEventListener('input', evento => { if (evento.target.name !== 'finePrevista') aggiorna(); });
+  modulo.addEventListener('input', aggiorna);
   // Le aiuole scelte cambiano i campi nascosti del modulo: si ricalcola anche allora
   new MutationObserver(aggiorna).observe(modulo.querySelector('.mini-mappa').parentElement, { childList: true, subtree: true });
   aggiorna();
+}
+
+// ---- Avvisi per una coltura in programma: non bloccano mai il salvataggio ----
+
+// Anno dell'orto (da ottobre a settembre): 2026-11-15 → 2026, 2027-05-01 → 2026
+function annoOrto(iso) {
+  const [a, m] = iso.split('-').map(Number);
+  return m >= 10 ? a : a - 1;
+}
+// Due parti della stessa aiuola si toccano? ('' = intera)
+function siToccano(p1, p2) {
+  return !p1 || !p2 || ASSI[p1] !== ASSI[p2] || p1 === p2;
+}
+// Fine di una coltura: quella vera, oppure la stima dal catalogo, oppure null (non si sa).
+// Le perenni non hanno fine; una coltura ancora attiva oltre la fine stimata non si sa quando finirà
+function fineDi(c) {
+  if (c.dataFine) return c.dataFine;
+  const scheda = colturaDaNome(c.nome);
+  if (!scheda || scheda.tappa === 'P') return null;
+  const stima = fineSuggerita(scheda, c.dataInizio);
+  return stima && stima < oggi() ? null : stima;
+}
+const meseGiorno = iso => iso.slice(5);
+function dentro(mg, [dal, al]) {
+  return dal <= al ? mg >= dal && mg <= al : mg >= dal || mg <= al;
+}
+
+function avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, colturaId }) {
+  const avvisi = [];
+  const altre = dati.colture.filter(c => c.id !== colturaId);
+
+  // Fuori stagione
+  if (scheda) {
+    const periodi = (metodo === 'semina' ? scheda.s : metodo === 'trapianto' ? scheda.t : null)
+      ?? [...(scheda.s ?? []), ...(scheda.t ?? [])];
+    if (periodi.length && !periodi.some(p => dentro(meseGiorno(inizio), p))) {
+      const cosa = metodo === 'semina' ? 'la semina' : metodo === 'trapianto' ? 'il trapianto' : "l'inizio";
+      avvisi.push(['Fuori stagione. ', `A Bologna per ${scheda.nome.toLowerCase()} ${cosa} di solito va fatto ${periodi.map(periodoCatalogo).join(' oppure ')}. Puoi salvare lo stesso.`]);
+    }
+  }
+
+  // Rotazione (regola base): la stessa famiglia non torna nello stesso settore prima di 4 anni
+  if (scheda && !['J', 'P', 'F', 'V'].includes(scheda.tappa)) {
+    const anno = annoOrto(inizio);
+    const settori = [...new Set(aiuoleIds.map(id => dati.aiuole.find(a => a.id === id).settore))];
+    for (const settore of settori) {
+      const stesse = altre.filter(c => {
+        const s = colturaDaNome(c.nome);
+        const a = annoOrto(c.dataInizio);
+        return s && s.famiglia === scheda.famiglia && !['J', 'P', 'F', 'V'].includes(s.tappa)
+          && a >= anno - 3 && a < anno
+          && c.aiuoleIds.some(id => dati.aiuole.find(x => x.id === id).settore === settore);
+      });
+      if (stesse.length) {
+        const ultimo = Math.max(...stesse.map(c => annoOrto(c.dataInizio)));
+        const nomi = [...new Set(stesse.map(c => c.nome))].join(', ');
+        avvisi.push(['Rotazione. ', `Nel settore ${settore} ci sono già state ${scheda.famiglia.toLowerCase()} (${nomi}, anno dell'orto ${ultimo}–${ultimo + 1}). La stessa famiglia non dovrebbe tornare prima di 4 anni: meglio dall'autunno ${ultimo + 4}, oppure in un altro settore.`]);
+      }
+    }
+  }
+
+  // Aiuola occupata il giorno dell'inizio, oppure vuota a lungo prima
+  for (const id of aiuoleIds) {
+    const vicine = altre.filter(c => c.aiuoleIds.includes(id) && siToccano(c.parti?.[id] ?? '', parti[id] ?? ''));
+    const occupante = vicine.find(c => c.dataInizio <= inizio && (fineDi(c) ?? '9999-12-31') > inizio);
+    if (occupante) {
+      const fine = fineDi(occupante);
+      avvisi.push([`Aiuola ${id} occupata. `, fine
+        ? `C'è ${occupante.nome} fino al ${dataPerUtente(fine)}${occupante.dataFine ? '' : ' (stima dal catalogo)'}, e la nuova coltura inizia il ${dataPerUtente(inizio)}.`
+        : `C'è ${occupante.nome}, che non ha ancora una data di fine. Ricordati di terminarla quando la togli.`]);
+      continue;
+    }
+    const prima = vicine.map(fineDi).filter(f => f && f <= inizio).sort().at(-1);
+    if (prima) {
+      const settimane = Math.round((new Date(inizio) - new Date(prima)) / (7 * 86400000));
+      if (settimane >= 8) {
+        avvisi.push([`Aiuola ${id} vuota a lungo. `, `Resta libera per circa ${settimane} settimane (dal ${dataPerUtente(prima)}): puoi riempire il vuoto con un'insalata veloce o un sovescio, oppure coprire la terra con la pacciamatura.`]);
+      }
+    }
+  }
+  return avvisi;
 }
 
 // Testo del metodo per la scheda: "Semina", "Trapianto" o quello scritto in "Altro"
@@ -943,23 +1040,19 @@ function tuttoOrto(dati, x) {
   return x.aiuoleIds.length === dati.aiuole.length && Object.keys(x.parti ?? {}).length === 0;
 }
 
-function salvaColtura(modulo, colturaId = null, pianifica = false) {
+function salvaColtura(modulo, colturaId = null) {
   const campi = new FormData(modulo);
   const nome = campi.get('nome').trim();
   const aiuoleIds = campi.getAll('aiuole');
   const dataInizio = dataPerArchivio(campi.get('data'));
   const metodoAltro = campi.get('metodoAltro').trim();
   const metodo = metodoAltro ? 'altro' : campi.get('metodo');
-  const testoFine = pianifica ? campi.get('finePrevista').trim() : '';
-  const finePrevista = testoFine ? dataPerArchivio(testoFine) : null;
 
   const errori = [];
   if (!nome) errori.push('Scrivi il nome della coltura.');
   if (aiuoleIds.length === 0) errori.push('Scegli almeno un\'aiuola.');
   if (!dataInizio) errori.push('Scrivi la data come gg/mm/aaaa, es. 20/04/2026.');
   if (!metodo) errori.push('Scegli semina o trapianto, oppure scrivi il metodo in "Altro".');
-  if (testoFine && !finePrevista) errori.push('Scrivi la fine prevista come gg/mm/aaaa, oppure lasciala vuota.');
-  else if (finePrevista && dataInizio && finePrevista < dataInizio) errori.push('La fine prevista non può essere prima dell\'inizio.');
 
   const avviso = modulo.querySelector('.errore');
   if (errori.length > 0) {
@@ -984,7 +1077,6 @@ function salvaColtura(modulo, colturaId = null, pianifica = false) {
         nome, varieta: campi.get('varieta').trim(), aiuoleIds, parti, dataInizio, metodo, metodoAltro,
         note: campi.get('note').trim(), catalogoId,
       });
-      if (pianifica) coltura.finePrevista = finePrevista;
       // Le posizioni scelte a mano nelle aiuole tolte non servono più
       for (const id of Object.keys(coltura.posizioni ?? {})) {
         if (!aiuoleIds.includes(id)) delete coltura.posizioni[id];
@@ -994,11 +1086,10 @@ function salvaColtura(modulo, colturaId = null, pianifica = false) {
       const nuovoColturaId = nuovoId('c');
       dati.colture.push({
         id: nuovoColturaId, nome, varieta: campi.get('varieta').trim(), aiuoleIds, parti,
-        dataInizio, metodo, metodoAltro, stato: pianifica ? 'pianificata' : 'attiva', dataFine: null, note: '', catalogoId,
-        ...(pianifica && { finePrevista }),
+        dataInizio, metodo, metodoAltro, stato: 'attiva', dataFine: null, note: '', catalogoId,
       });
-      // Le colture in programma entrano nel registro solo quando iniziano
-      if (!pianifica) dati.registro.push({ id: nuovoId('r'), ...voce, colturaId: nuovoColturaId, quantita: '' });
+      // Se la data è nel futuro, la voce si vede nel registro solo da quel giorno (vedi ordinaVoci)
+      dati.registro.push({ id: nuovoId('r'), ...voce, colturaId: nuovoColturaId, quantita: '' });
     }
     salva(dati);
     history.back();
@@ -1014,20 +1105,19 @@ export function schedaColtura(dati, coltura) {
   indietro.addEventListener('click', () => history.back());
 
   const attiva = coltura.stato === 'attiva';
-  const inProgramma = coltura.stato === 'pianificata';
+  const inProgramma = attiva && !iniziata(coltura);
   const intestazione = elemento('div', '', 'intestazione');
   intestazione.append(elemento('h2', coltura.varieta ? `${coltura.nome} – ${coltura.varieta}` : coltura.nome));
-  if (attiva || inProgramma) intestazione.append(link('(modifica)', `#/coltura/${coltura.id}/modifica`, 'link-info'));
+  if (attiva) intestazione.append(link('(modifica)', `#/coltura/${coltura.id}/modifica`, 'link-info'));
   const sezione = document.createElement('section');
   sezione.append(
     indietro,
     intestazione,
-    riga('Stato', attiva ? 'Attiva' : inProgramma ? 'In programma' : 'Terminata'),
+    riga('Stato', inProgramma ? 'In programma' : attiva ? 'Attiva' : 'Terminata'),
     riga('Aiuole', doveColtura(coltura)),
-    riga(inProgramma ? 'Inizio previsto' : 'Inizio', dataPerUtente(coltura.dataInizio)),
+    riga('Inizio', dataPerUtente(coltura.dataInizio)),
   );
-  if (inProgramma) sezione.append(riga('Fine prevista', coltura.finePrevista ? dataPerUtente(coltura.finePrevista) : 'non indicata'));
-  else if (!attiva) sezione.append(riga('Fine', dataPerUtente(coltura.dataFine)));
+  if (!attiva) sezione.append(riga('Fine', dataPerUtente(coltura.dataFine)));
   sezione.append(
     riga('Metodo', testoMetodo(coltura)),
     riga('Note', coltura.note || 'Nessuna nota.'),
@@ -1037,66 +1127,23 @@ export function schedaColtura(dati, coltura) {
     elemento('h3', 'Registro'),
     elencoVoci(dati, ordinaVoci(dati.registro.filter(v => v.colturaId === coltura.id)), 'Nessuna voce nel registro.'),
     link('Aggiungi al registro', `#/coltura/${coltura.id}/nuova-voce`, 'pulsante secondario'),
-    attiva ? moduloTermina(coltura) : inProgramma ? moduloInizia(dati, coltura) : pulsanteRiattiva(dati, coltura),
+    inProgramma ? pulsanteEliminaProgramma(dati, coltura) : attiva ? moduloTermina(coltura) : pulsanteRiattiva(dati, coltura),
   );
-  if (inProgramma) sezione.append(pulsanteEliminaProgramma(coltura));
   return sezione;
 }
 
-// Una coltura in programma diventa attiva: data vera di inizio e voce automatica nel registro
-function moduloInizia(dati, coltura) {
-  const modulo = document.createElement('form');
-  modulo.className = 'modulo';
-  modulo.noValidate = true;
-  modulo.innerHTML = `
-    <label>Data di inizio<input type="text" name="data" placeholder="gg/mm/aaaa" value="${dataPerUtente(oggi())}"></label>
-    <p class="errore" role="alert" hidden></p>
-    <button type="submit" class="pulsante">Inizia la coltura</button>
-  `;
-  modulo.addEventListener('submit', evento => {
-    evento.preventDefault();
-    const dataInizio = dataPerArchivio(new FormData(modulo).get('data'));
-    const avviso = modulo.querySelector('.errore');
-    const conflitti = coltura.aiuoleIds.filter(id => {
-      const parte = coltura.parti?.[id];
-      const asse = divisione(dati, id);
-      return parte && asse && ASSI[parte] !== asse;
-    });
-    let errore = '';
-    if (!dataInizio) errore = 'Scrivi la data come gg/mm/aaaa, es. 25/04/2027.';
-    else if (conflitti.length > 0) errore = `Non si può iniziare: in ${conflitti.join(', ')} le colture attive dividono l'aiuola in un altro modo. Cambia le metà con "(modifica)".`;
-    if (errore) {
-      avviso.textContent = errore;
-      avviso.hidden = false;
-      return;
-    }
-    try {
-      const tutti = carica();
-      const c = tutti.colture.find(x => x.id === coltura.id);
-      Object.assign(c, { stato: 'attiva', dataInizio });
-      tutti.registro.push({
-        id: nuovoId('r'), data: dataInizio, tipo: c.metodo === 'altro' ? 'nota' : c.metodo,
-        aiuoleIds: c.aiuoleIds, parti: c.parti ?? {}, colturaId: c.id, quantita: '',
-        note: c.metodo === 'altro' ? `Inizio coltura: ${c.metodoAltro}` : '',
-      });
-      salva(tutti);
-      document.dispatchEvent(new Event('dati-cambiati'));
-    } catch (e) {
-      avviso.textContent = e.message;
-      avviso.hidden = false;
-    }
-  });
-  return modulo;
-}
-
-function pulsanteEliminaProgramma(coltura) {
+// Toglie una coltura in programma (non ancora iniziata) insieme alla sua voce automatica nel registro
+function pulsanteEliminaProgramma(dati, coltura) {
   const pulsante = elemento('button', 'Togli dal programma', 'pulsante pericolo');
   pulsante.type = 'button';
   pulsante.addEventListener('click', () => {
     if (!confirm(`Togliere "${coltura.nome}" dal programma?`)) return;
     try {
-      const dati = carica();
+      dati = carica();
+      coltura = dati.colture.find(c => c.id === coltura.id);
+      const voce = voceIniziale(dati, coltura);
       dati.colture = dati.colture.filter(c => c.id !== coltura.id);
+      dati.registro = dati.registro.filter(x => x !== voce);
       dati.task = dati.task.map(t => (t.colturaId === coltura.id ? { ...t, colturaId: null } : t));
       salva(dati);
       history.back();
@@ -1196,7 +1243,7 @@ function nomeColtura(c) {
 
 // Dalla più recente; a parità di data, prima l'ultima inserita
 function ordinaVoci(voci) {
-  return [...voci].reverse().sort((x, y) => y.data.localeCompare(x.data));
+  return voci.filter(v => v.data <= oggi()).reverse().sort((x, y) => y.data.localeCompare(x.data));
 }
 
 function doveVoce(dati, v) {
@@ -1552,4 +1599,81 @@ function eliminaTask(task) {
   } catch (errore) {
     alert(errore.message);
   }
+}
+
+// ---- Pagina Test: le colture nel tempo, un binario per aiuola, raggruppate per settore ----
+
+let spostamentoTest = 0;   // di quanti mesi è spostata la vista (le frecce spostano di 3)
+const INIZIALI_MESI = ['G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S', 'O', 'N', 'D'];
+const COLORE_SENZA_TAPPA = '#8b7d6b';
+
+export function paginaTest(dati) {
+  const sezione = document.createElement('section');
+  sezione.className = 'pagina-test';
+  const corpo = elemento('div');
+  sezione.append(link('← Mappa', '#/', 'indietro'), elemento('h2', 'Test'), corpo);
+  disegnaTest(dati, corpo);
+  return sezione;
+}
+
+function disegnaTest(dati, corpo) {
+  // 13 mesi: da un mese fa (più lo spostamento) a 12 mesi avanti
+  const oggiData = new Date(oggi());
+  const inizio = new Date(oggiData.getFullYear(), oggiData.getMonth() - 1 + spostamentoTest, 1);
+  const fine = new Date(inizio.getFullYear(), inizio.getMonth() + 13, 1);
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const daIni = iso(inizio), aFin = iso(fine);
+  const durata = fine - inizio;
+  const pos = d => Math.min(1, Math.max(0, (new Date(d) - inizio) / durata)) * 100;
+
+  const frecce = elemento('div', '', 'test-frecce');
+  const indietro = elemento('button', '◀', 'freccia-test');
+  const avanti = elemento('button', '▶', 'freccia-test');
+  indietro.type = avanti.type = 'button';
+  indietro.setAttribute('aria-label', '3 mesi prima');
+  avanti.setAttribute('aria-label', '3 mesi dopo');
+  indietro.addEventListener('click', () => { spostamentoTest -= 3; disegnaTest(dati, corpo); });
+  avanti.addEventListener('click', () => { spostamentoTest += 3; disegnaTest(dati, corpo); });
+  const ultimo = new Date(fine.getFullYear(), fine.getMonth() - 1, 1);
+  frecce.append(indietro, elemento('span', `${MESI[inizio.getMonth()]} ${inizio.getFullYear()} – ${MESI[ultimo.getMonth()]} ${ultimo.getFullYear()}`, 'test-periodo'), avanti);
+
+  const mesi = elemento('div', '', 'test-mesi');
+  mesi.append(elemento('span'));
+  for (let i = 0; i < 13; i++) mesi.append(elemento('span', INIZIALI_MESI[(inizio.getMonth() + i) % 12]));
+
+  const settori = elemento('div');
+  for (const settore of [1, 2, 3, 4]) {
+    const aiuole = dati.aiuole.filter(a => a.settore === settore).sort((x, y) => x.posizione - y.posizione);
+    const testa = elemento('div', '', 'test-settore');
+    testa.append(elemento('span', `Settore ${settore}`));
+    settori.append(testa);
+    for (const a of aiuole) {
+      const fila = elemento('div', '', 'test-fila');
+      const binario = elemento('div', '', 'test-binario');
+      for (const c of dati.colture.filter(c => c.aiuoleIds.includes(a.id) && c.stato !== 'pianificata')) {
+        const fineC = fineDi(c) ?? aFin;
+        if (fineC < daIni || c.dataInizio >= aFin) continue;
+        const scheda = colturaDaNome(c.nome);
+        const parte = c.parti?.[a.id];
+        const posto = !parte ? 'pieno' : parte === 'fondo' || parte === 'vialetto' ? 'alto' : 'basso';
+        const barra = link('', `#/coltura/${c.id}`, `test-barra ${posto}${iniziata(c) ? '' : ' futura'}`);
+        barra.style.left = `${pos(c.dataInizio)}%`;
+        barra.style.width = `${Math.max(1.5, pos(fineC) - pos(c.dataInizio))}%`;
+        barra.style.backgroundColor = scheda ? TAPPE[scheda.tappa].c : COLORE_SENZA_TAPPA;
+        barra.title = `${nomeColtura(c)} · dal ${dataPerUtente(c.dataInizio)}`;
+        barra.append(icona(c.nome, 'icona-barra', 2.2), elemento('span', c.nome));
+        binario.append(barra);
+      }
+      const riga = elemento('span', '', 'test-oggi');
+      riga.style.left = `${pos(oggi())}%`;
+      if (oggi() >= daIni && oggi() < aFin) binario.append(riga);
+      fila.append(elemento('b', a.id), binario);
+      settori.append(fila);
+    }
+  }
+
+  const legenda = elemento('div', '', 'test-legenda');
+  legenda.innerHTML = '<span><i></i>nell\'orto</span><span><i class="fut"></i>in programma</span><span><i class="og"></i>oggi</span>';
+  const aiuto = elemento('p', 'Tocca una barra per aprire la coltura. Il colore è il gruppo della rotazione; senza data di fine, la barra arriva alla fine della raccolta indicata dal catalogo.', 'test-aiuto');
+  corpo.replaceChildren(frecce, mesi, settori, legenda, aiuto);
 }

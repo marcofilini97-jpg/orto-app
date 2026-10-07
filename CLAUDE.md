@@ -152,15 +152,14 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 6. Più orti e più utenti
 
 ## Pianificatore
-- Pulsante "Pianifica una coltura"; nella scheda aiuola la sezione "In programma"
-- Una coltura pianificata è una coltura normale con `stato: "pianificata"`, `dataInizio` = inizio previsto e `finePrevista` (facoltativa); il pulsante "Inizia la coltura" (scheda coltura) la rende attiva con la data vera e aggiunge la voce automatica di semina/trapianto. Si può modificare con "(modifica)" o togliere con "Togli dal programma". Lo storico mostra solo le colture `terminata`
-- `catalogoId` (tutte le colture, salvato a ogni salvataggio): id della scheda del catalogo ricavato dal nome con `colturaDaNome`, oppure null (per le colture vecchie si ricava dal nome)
-- Nei moduli delle colture (nuova, pianificata, modifica) un riquadro "Dal catalogo" mostra, se il nome è riconosciuto: periodi a Bologna, piante e resa stimata nelle aiuole/metà scelte (intera 180 × 120 cm, metà fondo/davanti 180 × 60, metà vialetto/esterno 90 × 120) e l'eventuale avviso. Pianificando, propone il metodo (se il catalogo ha solo semina o solo trapianto) e la fine prevista (prima fine di raccolta dopo l'inizio), finché non la si scrive a mano
-- Fatto (passo 1): pianificare, "In programma", "Inizia". Da fare: passo 2 avvisi e rotazione, passo 3 vista "Piano" e segnino sulla mappa
-- Nel modulo il catalogo suggerisce date tipiche a Bologna, fine prevista e resa stimata. Gli avvisi (rotazione, fuori stagione, aiuola occupata, aiuola vuota a lungo) non bloccano mai il salvataggio
-- Vista "Piano": un binario per aiuola, raggruppate per settore, da un mese fa a 12 mesi da oggi, frecce per spostarsi di 3 mesi; barre piene = attive, tratteggiate = pianificate, colore = tappa della rotazione
-- Sulla mappa: segnino sulle aiuole con qualcosa in programma nei prossimi 30 giorni
-- Rotazione, scelta nelle Impostazioni: regola base (la stessa famiglia non torna nello stesso settore prima di 4 anni; rucola e ravanelli contano come cavoli; perenni e colture "jolly" esclusi), personalizzata (anni da 2 a 5 e famiglie da controllare), nessun controllo
+- Si pianifica con il normale "Aggiungi coltura": una coltura `attiva` con `dataInizio` nel futuro è "in programma" (nessuno stato a parte). Non compare sulla mappa finché non arriva quel giorno; nella scheda aiuola sta sotto "In programma" (stesso formato di "Colture attive"). Nella scheda coltura: stato "In programma", "(modifica)" e "Togli dal programma" (cancella la coltura e la sua voce automatica). Lo storico mostra solo le colture `terminata`
+- La voce automatica di semina/trapianto si crea subito, con la data futura, ma il registro mostra solo le voci con data fino a oggi (`ordinaVoci`)
+- `catalogoId` (salvato a ogni salvataggio): id della scheda del catalogo ricavato dal nome con `colturaDaNome`, oppure null
+- Nei moduli delle colture un riquadro "Dal catalogo" mostra, se il nome è riconosciuto: periodi a Bologna, piante e resa stimata nelle aiuole/metà scelte (intera 180 × 120 cm, metà fondo/davanti 180 × 60, metà vialetto/esterno 90 × 120) e l'eventuale avviso. Per una coltura nuova propone il metodo se il catalogo ha solo semina o solo trapianto
+- Se la data di inizio è nel futuro, prima di "Salva" compaiono gli avvisi (non bloccano mai): fuori stagione (data fuori dai periodi del catalogo per quel metodo), rotazione (regola base: stessa famiglia nello stesso settore negli ultimi 3 anni dell'orto, ottobre–settembre; esclusi jolly, perenni, fiori, sovesci), aiuola occupata quel giorno (fine vera o stimata dal catalogo; perenni e colture ancora attive oltre la stima = senza fine), aiuola vuota 8 settimane o più
+- Pagina "Test" (cartello con il cronometro sotto la mappa, accanto a Registro e Da fare; `#/test`): un binario per aiuola raggruppate per settore, da un mese fa a 12 mesi avanti, frecce ◀ ▶ di 3 mesi; barre piene = già iniziate, tratteggiate = in programma, colore = gruppo della rotazione (`TAPPE`), riga rossa = oggi; senza data di fine la barra arriva alla fine stimata. Le barre aprono la coltura
+- Le colture `stato: "pianificata"` di una versione di prova vengono convertite all'avvio (app.js) in attive con inizio futuro
+- Da fare: scelta della regola di rotazione nelle Impostazioni (base, personalizzata con anni da 2 a 5 e famiglie, nessuna); segnino sulla mappa per le aiuole con qualcosa in programma nei prossimi 30 giorni; il tasto per accelerare il tempo (Arcade)
 
 ## Arcade (simulatore)
 - Diverso dalla modalità prova: PROVA serve solo allo sviluppatore per collaudare l'app; Arcade è per tutti gli utenti
