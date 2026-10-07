@@ -13,6 +13,7 @@ import {
   PROVE, TESSITURE, NOMI_PROPRIETA, suoloDi, suoloDiPartenza, testoValore, giudizioDrenaggio, classeDaPercentuali,
   spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
 } from './terreno.js';
+import { pianoAutomatico } from './arcade.js';
 
 const TIPI = {
   semina: 'Semina', trapianto: 'Trapianto', irrigazione: 'Irrigazione',
@@ -814,6 +815,9 @@ function dentro(mg, [dal, al]) {
 
 function avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, colturaId }) {
   const avvisi = [];
+  if (scheda && simulazioneAttiva()?.parametri.preferenze?.escluse?.includes(scheda.id)) {
+    avvisi.push(['Non la volevi. ', 'Nelle preferenze di questa simulazione hai escluso questa coltura.']);
+  }
   const altre = dati.colture.filter(c => c.id !== colturaId);
 
   // Fuori stagione
@@ -2622,6 +2626,13 @@ export function paginaArcade(id) {
     <fieldset><legend>Partenza</legend>${scelte('partenza', [['vuoto', 'Orto vuoto'], ['reale', "Dall'orto reale"]])}</fieldset>
     <label class="campo-dal" hidden>Com'era l'orto reale il<input type="text" name="dal" placeholder="gg/mm/aaaa"></label>
     <fieldset><legend>Terreno</legend>${scelte('terreno', [['reale', 'Quello reale'], ['stima', 'Stima di Bologna']])}</fieldset>
+    <fieldset class="preferenze"><legend>Preferenze</legend>
+      <p class="aiuto-pref">Tocca una coltura: una volta <b class="pref-si">♥ mi piace</b>, due volte <b class="pref-no">✕ non la voglio</b>, tre volte torna normale.</p>
+      <div class="posto-preferenze"></div>
+      <p class="aiuto-pref">Quando riempie l'orto in automatico:</p>
+      ${scelte('obiettivo', [['varieta', 'Un po\' di tutto'], ['preferite', 'Più preferite possibile']])}
+    </fieldset>
+    <label class="opzione-tutte"><input type="checkbox" name="riempi"> ${sim ? 'Riempi in automatico gli spazi vuoti, da oggi per 4 anni' : "Riempi l'orto in automatico per 4 anni"}</label>
     <p class="errore" role="alert" hidden></p>
     <button type="submit" class="pulsante pulsante-arcade">${sim ? 'Riprendi simulazione' : 'Inizia simulazione'}</button>`;
   const c = modulo.elements;
@@ -2631,6 +2642,29 @@ export function paginaArcade(id) {
   c.anni.value = String(p.anni ?? 4);
   c.dal.value = dataPerUtente(p.dal);
   for (const k of ['rotazione', 'partenza', 'terreno']) modulo.querySelector(`[name="${k}"][value="${p[k]}"]`).checked = true;
+  const pref = { preferite: [], escluse: [], obiettivo: 'varieta', ...(p.preferenze ?? {}) };
+  modulo.querySelector(`[name="obiettivo"][value="${pref.obiettivo}"]`).checked = true;
+  c.riempi.checked = !sim;
+  // Preferenze: un pulsante per coltura dell'orto, che gira tra normale → mi piace → non la voglio
+  const statoPref = new Map(CATALOGO.map(s => [s.id, pref.preferite.includes(s.id) ? 'si' : pref.escluse.includes(s.id) ? 'no' : '']));
+  const griglia = elemento('div', '', 'griglia-preferenze');
+  for (const s of CATALOGO.filter(s => ['L', 'C', 'A', 'S', 'J'].includes(s.tappa))) {
+    const b = elemento('button', '', 'preferenza');
+    b.type = 'button';
+    const segna = () => {
+      b.dataset.stato = statoPref.get(s.id);
+      b.setAttribute('aria-label', `${s.nome}: ${{ si: 'mi piace', no: 'non la voglio', '': 'normale' }[statoPref.get(s.id)]}`);
+    };
+    b.innerHTML = iconaSvg(s.nome, 2);
+    b.append(elemento('span', s.nome));
+    b.addEventListener('click', () => {
+      statoPref.set(s.id, { '': 'si', si: 'no', no: '' }[statoPref.get(s.id)]);
+      segna();
+    });
+    segna();
+    griglia.append(b);
+  }
+  modulo.querySelector('.posto-preferenze').replaceWith(griglia);
   const mostraCampi = () => {
     modulo.querySelector('.campo-anni').hidden = modulo.querySelector('[name="rotazione"]:checked').value !== 'personalizzata';
     modulo.querySelector('.campo-dal').hidden = modulo.querySelector('[name="partenza"]:checked').value !== 'reale';
@@ -2646,6 +2680,11 @@ export function paginaArcade(id) {
     const nuovi = {
       inizio: `${anno}-${c.mese.value}`, rotazione: scelto('rotazione'), anni: Number(c.anni.value),
       partenza: scelto('partenza'), dal: dataPerArchivio(c.dal.value) ?? '', terreno: scelto('terreno'),
+      preferenze: {
+        preferite: [...statoPref].filter(([, v]) => v === 'si').map(([k]) => k),
+        escluse: [...statoPref].filter(([, v]) => v === 'no').map(([k]) => k),
+        obiettivo: scelto('obiettivo'),
+      },
     };
     const errori = [];
     if (!c.nome.value.trim()) errori.push('Scrivi un nome per la simulazione.');
@@ -2668,6 +2707,11 @@ export function paginaArcade(id) {
     const nuova = sim ?? { id: nuovoId('s'), creata: oggiVero() };
     Object.assign(nuova, { nome: c.nome.value.trim(), parametri: nuovi });
     if (ricomincia) Object.assign(nuova, { dati: datiPerSimulazione(nuovi), giorno: `${nuovi.inizio}-01` });
+    if (c.riempi.checked) {
+      const piano = pianoAutomatico(nuova.dati, { dal: nuova.giorno, anni: 4, preferenze: nuovi.preferenze, nuovoId });
+      nuova.dati.colture.push(...piano.colture);
+      nuova.dati.registro.push(...piano.registro);
+    }
     salvaSimulazione(nuova);
     entraArcade(nuova.id);
     location.hash = '#/';

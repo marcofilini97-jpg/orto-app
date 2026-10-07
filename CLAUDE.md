@@ -39,6 +39,7 @@ orto-app/
 │   ├── disegni.js        ← disegni SVG degli ortaggi, scelti dal nome della coltura
 │   ├── catalogo.js       ← catalogo delle colture (conoscenza generale), calcolo di piante e resa
 │   ├── terreno.js        ← terreno delle aiuole: prove guidate, stime, avvisi
+│   ├── arcade.js         ← Arcade: riempimento automatico secondo rotazione e preferenze
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
 ```
@@ -183,7 +184,10 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Fatto: pagina Simulazioni (`#/test`) con "Arcade", le simulazioni salvate e "+ Nuova simulazione Arcade". Parametri (`#/test/arcade/nuova` o `#/test/arcade/<id>`): nome (predefinito "Simulazione del gg/mm/aaaa"), mese e anno di partenza, rotazione (base, personalizzata con 2–5 anni, nessuna), partenza (orto vuoto o dall'orto reale a una data: errore se prima della prima coltura/voce dell'orto reale o nel futuro), terreno (quello reale delle aiuole o la stima). Cambiando partenza, data o terreno di una simulazione salvata, ricomincia da capo (con conferma)
 - Dati in `js/dati.js`: localStorage `orto-arcade` (elenco `{ id, nome, creata, parametri, dati, giorno }`) e `orto-arcade-attiva` (id della simulazione in corso). Dentro Arcade `carica()`/`salva()` usano i dati della simulazione (mai sincronizzati) e `oggi()` è il giorno della simulazione (`oggiVero()` = data vera); `caricaReali()`, `datiPerSimulazione()`, `inizioOrtoReale()`
 - Dentro Arcade l'app funziona come quella vera (aiuole, colture, registro, task, avvisi), con barra in alto rosso scuro (#8e3b30) ed etichetta "ARCADE", uscita (`#/arcade/esci`, torna ai parametri) al posto dell'ingranaggio, nome della simulazione sopra la mappa e, al posto dei cartelli, la barra del tempo (da un mese prima della partenza a 4 anni dopo; pulsante "partenza"). Le colture spariscono dalla mappa a fine raccolta stimata. Il prato cambia con le stagioni come nell'orto nel tempo. La regola di rotazione scelta vale per gli avvisi
-- Da fare: preferenze ("niente aglio", "massimizza i pomodori"), resa raccolta nel tempo, scelta delle famiglie nella rotazione personalizzata
+- Preferenze (nei parametri, salvate in `parametri.preferenze = { preferite, escluse, obiettivo }`): un pulsante per coltura del giro di rotazione che gira tra normale → ♥ mi piace → ✕ non la voglio; obiettivo "Un po' di tutto" (`varieta`) o "Più preferite possibile" (`preferite`). Casella "Riempi l'orto in automatico per 4 anni" (spuntata per le nuove simulazioni)
+- `js/arcade.js`: `pianoAutomatico(dati, { dal, anni, preferenze, nuovoId })` restituisce colture e voci di registro da aggiungere. Per ogni settore e anno dell'orto (ottobre–settembre) segue la tappa della rotazione (dall'ultima coltura nota, altrimenti 1 = L, 2 = A, 3 = C, 4 = S), con due momenti per tappa (es. L: leguminose in autunno, cavoli d'estate; S: solo primavera), il primo giorno utile dal catalogo (preferendo il trapianto) e solo se l'aiuola è libera. Mai le escluse; le colture con avviso solo se preferite. Le colture aggiunte hanno la nota "Aggiunta in automatico da Arcade"
+- In Arcade una coltura esclusa dà l'avviso "Non la volevi." (non blocca)
+- Da fare: resa raccolta nel tempo, scelta delle famiglie nella rotazione personalizzata
 - Diverso dalla modalità prova: PROVA serve solo allo sviluppatore per collaudare l'app; Arcade è per tutti gli utenti
 - Si parte dal piano vero (copia) o da zero; si accelera il tempo e si vede cosa cresce, quando e quanto si raccoglie, cosa piantare dopo
 - Non tocca mai i dati veri e non si sincronizza: resta nella sezione Arcade del singolo telefono
