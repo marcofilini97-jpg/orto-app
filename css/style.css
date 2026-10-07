@@ -327,6 +327,11 @@ h3 { margin: 20px 0 4px; font-size: 1.1rem; font-weight: 700; }
   color: #fff;
   background: #b00020;
 }
+/* Paletto delle colture in arrivo nei prossimi 30 giorni */
+.paletto { position: absolute; z-index: 3; left: 5px; bottom: 3px; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+.paletto .tavola { display: flex; align-items: center; gap: 1px; padding: 0 5px 0 1px; font-family: 'Fredoka', 'Baloo 2', sans-serif; font-size: .78rem; font-weight: 600; line-height: 1.25; color: var(--testo); background: var(--legno); border: 2px solid var(--legno-scuro); border-radius: 5px; box-shadow: 0 2px 0 #5a3a1d; }
+.paletto .icona-paletto { width: 20px; height: 20px; }
+.paletto .asta { width: 4px; height: 8px; background: var(--legno-scuro); border-radius: 0 0 2px 2px; }
 .vialetto .puntino { top: 4px; right: auto; left: 50%; transform: translateX(-50%); }
 
 .modulo label { display: block; margin-top: 16px; font-weight: 700; }

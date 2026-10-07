@@ -115,9 +115,32 @@ function colonna(dati, lato) {
     }
     const segno = segnoTask(taskAiuola(dati, a.id));
     if (segno) link.append(puntino(segno));
+    const arrivo = prossimoArrivo(dati, a.id);
+    if (arrivo) link.append(paletto(arrivo));
     colonna.append(link);
   }
   return colonna;
+}
+
+const GIORNO = 86400000;
+const giorniDaOggi = iso => Math.round((new Date(iso) - new Date(oggi())) / GIORNO);
+
+// La prima coltura in programma nell'aiuola che inizia entro 30 giorni, oppure null
+function prossimoArrivo(dati, aiuolaId) {
+  return dati.colture
+    .filter(c => c.stato === 'attiva' && c.aiuoleIds.includes(aiuolaId) && !iniziata(c) && giorniDaOggi(c.dataInizio) <= 30)
+    .sort((x, y) => x.dataInizio.localeCompare(y.dataInizio))[0] ?? null;
+}
+
+// Paletto di legno in basso a sinistra: disegnino della coltura in arrivo e giorni che mancano
+function paletto(coltura) {
+  const giorni = giorniDaOggi(coltura.dataInizio);
+  const segno = elemento('span', '', 'paletto');
+  segno.title = `${coltura.nome}: inizia tra ${giorni} ${giorni === 1 ? 'giorno' : 'giorni'}`;
+  const tavola = elemento('span', '', 'tavola');
+  tavola.append(icona(coltura.nome, 'icona-paletto', 2.4), `${giorni} g`);
+  segno.append(tavola, elemento('span', '', 'asta'));
+  return segno;
 }
 
 function vialetto(dati) {

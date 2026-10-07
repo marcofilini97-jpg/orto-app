@@ -159,7 +159,8 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Se la data di inizio è nel futuro, prima di "Salva" compaiono gli avvisi (non bloccano mai): fuori stagione (data fuori dai periodi del catalogo per quel metodo), rotazione (regola base: stessa famiglia nello stesso settore negli ultimi 3 anni dell'orto, ottobre–settembre; esclusi jolly, perenni, fiori, sovesci), aiuola occupata quel giorno (fine vera o stimata dal catalogo; perenni e colture ancora attive oltre la stima = senza fine), aiuola vuota 8 settimane o più
 - Pagina "Test" (cartello con il cronometro sotto la mappa, accanto a Registro e Da fare; `#/test`): un binario per aiuola raggruppate per settore, da un mese fa a 12 mesi avanti, frecce ◀ ▶ di 3 mesi; barre piene = già iniziate, tratteggiate = in programma, colore = gruppo della rotazione (`TAPPE`), riga rossa = oggi; senza data di fine la barra arriva alla fine stimata. Le barre aprono la coltura
 - Le colture `stato: "pianificata"` di una versione di prova vengono convertite all'avvio (app.js) in attive con inizio futuro
-- Da fare: scelta della regola di rotazione nelle Impostazioni (base, personalizzata con anni da 2 a 5 e famiglie, nessuna); segnino sulla mappa per le aiuole con qualcosa in programma nei prossimi 30 giorni; il tasto per accelerare il tempo (Arcade)
+- Sulla mappa, le aiuole con una coltura in programma nei prossimi 30 giorni hanno in basso a sinistra un paletto di legno con il disegnino della coltura e i giorni che mancano ("12 g"); se sono più d'una, la prima che inizia
+- Da fare: scelta della regola di rotazione nelle Impostazioni (base, personalizzata con anni da 2 a 5 e famiglie, nessuna); il tasto per accelerare il tempo (Arcade)
 
 ## Arcade (simulatore)
 - Diverso dalla modalità prova: PROVA serve solo allo sviluppatore per collaudare l'app; Arcade è per tutti gli utenti
