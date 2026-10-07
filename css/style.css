@@ -661,7 +661,7 @@ button.termine { margin: 0; padding: 0; font: inherit; font-weight: inherit; col
 .testa-tempo { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .indietro-tempo { padding: 2px 10px; font-weight: 700; color: var(--testo); text-decoration: none; background: var(--crema); border: 2px solid var(--legno); border-radius: 10px; }
 .titolo-tempo { font-size: .8rem; font-weight: 800; color: var(--crema); text-shadow: 0 1px 0 rgb(0 0 0 / .4); }
-.orto-tempo > div:nth-child(2), .mappa-tempo { display: contents; }
+.orto-tempo > div:nth-child(2), .posto-mappa, .mappa-tempo { display: contents; }
 .mappa-tempo .aiuola { cursor: default; }
 .tocca-a { position: absolute; z-index: 2; left: 50%; bottom: 8px; transform: translateX(-50%); padding: 0 8px; font-size: .75rem; font-weight: 700; white-space: nowrap; color: var(--testo); background: rgb(255 248 231 / .85); border: 2px dashed; border-radius: 999px; }
 .barra-tempo { grid-column: 1 / -1; margin-top: 8px; padding: 8px 12px 10px; background: var(--crema); border: 3px solid var(--legno); border-radius: 12px; box-shadow: 0 3px 0 #5a3a1d; }
@@ -680,7 +680,6 @@ body[data-stagione="inverno"] { background-image: radial-gradient(#ffffff 1.8px,
 .arcade .impostazioni-icona { display: none; }
 .arcade header { background: #8e3b30; border-bottom-color: #62261f; }
 .arcade header h1::after { content: 'ARCADE'; margin-left: 10px; padding: 0 8px; font-size: .75rem; font-weight: 800; letter-spacing: .08em; vertical-align: middle; color: #3a1a12; background: #f2c230; border-radius: 6px; }
-.nome-simulazione { grid-column: 1 / -1; margin: 0 0 4px; font-family: 'Fredoka', 'Baloo 2', sans-serif; text-align: center; color: var(--crema); text-shadow: 0 1px 0 rgb(0 0 0 / .45); }
 .mappa-arcade .cursore-tempo { accent-color: #8e3b30; }
 .simulazioni-salvate { display: grid; gap: 6px; }
 .salvata { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; color: var(--testo); text-decoration: none; background: #fff; border: 2px solid var(--legno); border-radius: 10px; }
@@ -708,3 +707,42 @@ body[data-stagione="inverno"] { background-image: radial-gradient(#ffffff 1.8px,
 .preferenza[data-stato="si"]::after, .preferenza[data-stato="no"]::after { position: absolute; top: 2px; right: 5px; font-size: .85rem; }
 .preferenza[data-stato="si"]::after { content: '♥'; color: #3f8a2e; }
 .preferenza[data-stato="no"]::after { content: '✕'; color: #b00020; }
+
+/* Arcade: nome della simulazione nella barra rossa */
+.nome-arcade { display: none; }
+.arcade .nome-arcade { display: block; flex: 1; min-width: 0; margin: 0 8px 0 10px; overflow: hidden; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+
+/* Raccolto in Arcade: cestino accanto al nome dell'aiuola, cesto sopra la barra del tempo, pagina Il raccolto */
+.aiuola .nome .cestino { display: inline-block; width: 20px; height: 20px; margin: -3px -4px 0 4px; vertical-align: middle; }
+.cestino svg, .cesto-raccolto > svg, .totale-raccolto > svg { display: block; width: 100%; height: 100%; }
+.cesto-raccolto { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 3px 12px; color: var(--testo); text-decoration: none; background: var(--crema); border: 3px solid var(--legno); border-radius: 12px; box-shadow: 0 3px 0 #5a3a1d; }
+.cesto-raccolto > svg { flex: none; width: 32px; height: 32px; }
+.testo-cesto small { font-size: .85rem; color: var(--marrone-scuro); }
+.testo-cesto strong { font-family: 'Fredoka', 'Baloo 2', sans-serif; font-size: 1.1rem; font-weight: 600; }
+.freccia-cesto { margin-left: auto; font-size: 1.4rem; font-weight: 800; }
+.totale-raccolto { display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 8px 10px; background: #fff; border: 2px solid #e5d3b0; border-radius: 10px; }
+.totale-raccolto > svg { flex: none; width: 52px; height: 52px; }
+.totale-raccolto strong { font-family: 'Fredoka', 'Baloo 2', sans-serif; font-size: 1.6rem; font-weight: 600; }
+.totale-raccolto small { display: block; font-size: .85rem; line-height: 1.3; color: var(--marrone-scuro); }
+.anni-raccolto { display: flex; gap: 6px; margin: 10px 0 6px; overflow-x: auto; }
+.anni-raccolto button { padding: 3px 12px; font: inherit; font-size: .9rem; font-weight: 700; white-space: nowrap; color: var(--testo); background: #fff; border: 2px solid var(--legno); border-radius: 999px; cursor: pointer; }
+.anni-raccolto button[aria-pressed="true"] { color: var(--crema); background: #8e3b30; border-color: #62261f; }
+.grafico-raccolto { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; align-items: end; height: 110px; padding: 0 2px; border-bottom: 2px solid var(--marrone-scuro); }
+.mese-raccolto { display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.mese-raccolto span { display: block; border: 2px solid #8a4a14; }
+.mese-raccolto span:first-child { border-radius: 4px 4px 0 0; }
+.mese-raccolto .previsto { background: repeating-linear-gradient(45deg, #f6d3ac 0 4px, #fff 4px 7px); border-style: dashed; }
+.mese-raccolto .fatto { background: #e9933a; }
+.mese-raccolto .fatto:not(:first-child) { border-top: 0; border-radius: 0; }
+.mesi-raccolto { display: grid; grid-template-columns: repeat(12, 1fr); font-size: .78rem; font-weight: 700; text-align: center; }
+.legenda-raccolto { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0 10px; font-size: .82rem; }
+.legenda-raccolto i { display: inline-block; width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; border: 2px solid #8a4a14; border-radius: 3px; }
+.voce-raccolto { display: grid; grid-template-columns: 36px 1fr auto; gap: 0 10px; align-items: center; padding: 7px 0; color: var(--testo); text-decoration: none; border-top: 1px solid #ead9b6; }
+.voce-raccolto .icona-raccolto { grid-row: span 2; width: 34px; height: 34px; }
+.voce-raccolto .icona-raccolto svg { width: 100%; height: 100%; }
+.voce-raccolto em { font-style: normal; font-weight: 800; text-align: right; }
+.voce-raccolto small { grid-column: 2 / 4; font-size: .82rem; color: var(--marrone-scuro); }
+.stato-raccolto { display: inline-block; margin-left: 4px; padding: 0 6px; font-size: .72rem; font-weight: 800; border-radius: 5px; }
+.stato-in { color: #fff; background: #c46a1c; }
+.stato-finita { color: #2b4a1f; background: #dbe9cc; }
+.stato-dopo { color: var(--marrone-scuro); background: #efe2c6; }

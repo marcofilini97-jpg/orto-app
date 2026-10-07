@@ -39,7 +39,7 @@ orto-app/
 │   ├── disegni.js        ← disegni SVG degli ortaggi, scelti dal nome della coltura
 │   ├── catalogo.js       ← catalogo delle colture (conoscenza generale), calcolo di piante e resa
 │   ├── terreno.js        ← terreno delle aiuole: prove guidate, stime, avvisi
-│   ├── arcade.js         ← Arcade: riempimento automatico secondo rotazione e preferenze
+│   ├── arcade.js         ← Arcade: riempimento automatico secondo rotazione e preferenze, calcolo del raccolto
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
 ```
@@ -187,7 +187,12 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Preferenze (nei parametri, salvate in `parametri.preferenze = { preferite, escluse, obiettivo }`): un pulsante per coltura del giro di rotazione che gira tra normale → ♥ mi piace → ✕ non la voglio; obiettivo "Un po' di tutto" (`varieta`) o "Più preferite possibile" (`preferite`). Casella "Riempi l'orto in automatico per 4 anni" (spuntata per le nuove simulazioni)
 - `js/arcade.js`: `pianoAutomatico(dati, { dal, anni, preferenze, nuovoId })` restituisce colture e voci di registro da aggiungere. Per ogni settore e anno dell'orto (ottobre–settembre) segue la tappa della rotazione (dall'ultima coltura nota, altrimenti 1 = L, 2 = A, 3 = C, 4 = S), con due momenti per tappa (es. L: leguminose in autunno, cavoli d'estate; S: solo primavera), il primo giorno utile dal catalogo (preferendo il trapianto) e solo se l'aiuola è libera. Mai le escluse; le colture con avviso solo se preferite. Le colture aggiunte hanno la nota "Aggiunta in automatico da Arcade"
 - In Arcade una coltura esclusa dà l'avviso "Non la volevi." (non blocca)
-- Da fare: resa raccolta nel tempo, scelta delle famiglie nella rotazione personalizzata
+- Riempimento automatico, dopo le colture principali: sovesci e fiori utili nei vuoti dove l'aiuola resta libera abbastanza (con 2 settimane di margine prima della coltura dopo): in autunno favino/veccia/avena, in primavera facelia/calendula/borragine/alisso, d'estate grano saraceno/facelia. Anche fiori e sovesci stanno nella griglia delle preferenze
+- Sovesci (tappa V): la fine stimata è l'inizio del periodo di taglio, ma almeno 6 settimane dopo la semina (`fineSovescio` in arcade.js, usata anche da `fineSuggerita` in viste.js)
+- Raccolto (solo Arcade): kg stimati dal catalogo (`resa` per lo spazio occupato, aiuola intera o metà), raccolti un po' alla volta lungo il periodo di raccolta (il primo dopo l'inizio; le perenni ogni anno; se la coltura è terminata prima, si ferma alla fine). In arcade.js `resaColtura`, `kgTra`, `inRaccolta`. Fiori, sovesci e colture senza resa non contano
+- Sulla mappa di Arcade: cestino accanto al nome delle aiuole dove quel giorno si raccoglie; sopra la barra del tempo la barra "Raccolto finora circa N kg" (dalla partenza al giorno della simulazione) → `#/raccolto`, pagina "Il raccolto": totale con la forbice da… a…, anni dell'orto (ottobre–settembre), grafico per mese (pieno = raccolto, tratteggiato = ancora da raccogliere), colture con stato in raccolta / finita / da venire
+- Il nome della simulazione sta nella barra rossa, accanto a "Orto ARCADE" (`.nome-arcade` in index.html, riempito da app.js)
+- Da fare: scelta delle famiglie nella rotazione personalizzata
 - Diverso dalla modalità prova: PROVA serve solo allo sviluppatore per collaudare l'app; Arcade è per tutti gli utenti
 - Si parte dal piano vero (copia) o da zero; si accelera il tempo e si vede cosa cresce, quando e quanto si raccoglie, cosa piantare dopo
 - Non tocca mai i dati veri e non si sincronizza: resta nella sezione Arcade del singolo telefono

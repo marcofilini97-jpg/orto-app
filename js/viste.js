@@ -13,7 +13,7 @@ import {
   PROVE, TESSITURE, NOMI_PROPRIETA, suoloDi, suoloDiPartenza, testoValore, giudizioDrenaggio, classeDaPercentuali,
   spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
 } from './terreno.js';
-import { pianoAutomatico } from './arcade.js';
+import { pianoAutomatico, resaColtura, kgTra, inRaccolta, fineSovescio } from './arcade.js';
 
 const TIPI = {
   semina: 'Semina', trapianto: 'Trapianto', irrigazione: 'Irrigazione',
@@ -118,7 +118,15 @@ function colonna(dati, lato) {
     link.href = `#/aiuola/${a.id}`;
     // Il "tieni premuto" serve a spostare gli ortaggi: niente menu del browser sul link
     link.addEventListener('contextmenu', evento => evento.preventDefault());
-    link.append(elemento('span', a.id, 'nome'), ...piantine(dati, a));
+    const nome = elemento('span', a.id, 'nome');
+    // In Arcade: cestino accanto al nome se in quel giorno si raccoglie qualcosa
+    if (modoArcade && dati.colture.some(c => c.aiuoleIds.includes(a.id) && inRaccoltaIl(c, oggi()))) {
+      const cestino = elemento('span', '', 'cestino');
+      cestino.innerHTML = CESTO;
+      cestino.title = 'Si raccoglie';
+      nome.append(cestino);
+    }
+    link.append(nome, ...piantine(dati, a));
     for (const { zona, n } of bollini(dati, a)) {
       link.append(elemento('span', `× ${n}`, `bollino bollino-${posizioneBollino(zona, a.lato)}`));
     }
@@ -714,7 +722,7 @@ function periodoCatalogo([dal, al]) {
 function fineSuggerita(scheda, inizio) {
   const anno = Number(inizio.slice(0, 4));
   const date = scheda.r.flatMap(([, al]) => [`${anno}-${al}`, `${anno + 1}-${al}`]).filter(d => d > inizio).sort();
-  return date[0] ?? null;
+  return scheda.tappa === 'V' && date[0] ? fineSovescio(scheda, inizio, date[0]) : date[0] ?? null;
 }
 
 // Misure (cm) della parte di aiuola usata: intera 180 × 120; metà fondo/davanti 180 × 60; metà vialetto/esterno 90 × 120
@@ -2564,7 +2572,7 @@ function mappaArcade(dati) {
   const sim = simulazioneAttiva();
   const sezione = document.createElement('section');
   sezione.className = 'mappa orto-tempo mappa-arcade';
-  const posto = elemento('div');
+  const posto = elemento('div', '', 'posto-mappa');
   const partenza = `${sim.parametri.inizio}-01`;
   const disegnaMappa = () => {
     modoArcade = true;
@@ -2577,14 +2585,155 @@ function mappaArcade(dati) {
     }
     coloraPrato(oggi());
   };
+  const cesto = link('', '#/raccolto', 'cesto-raccolto');
+  const contaCesto = () => {
+    const kg = totaleRaccolto(dati, partenza, piuGiorni(oggi(), 1));
+    const circa = `circa ${testoKg((kg[0] + kg[1]) / 2)}`;
+    const testo = elemento('span', '', 'testo-cesto');
+    testo.append(elemento('small', 'Raccolto finora'), ' ', elemento('strong', circa));
+    cesto.innerHTML = CESTO;
+    cesto.append(testo, elemento('span', '›', 'freccia-cesto'));
+    cesto.setAttribute('aria-label', `Raccolto finora: ${circa}. Apri il raccolto`);
+  };
   const barra = barraDelTempo(piuGiorni(partenza, -30), piuGiorni(partenza, 4 * 365), sim.giorno, g => {
     impostaGiornoArcade(g);
     disegnaMappa();
+    contaCesto();
   }, ['partenza', partenza]);
-  const nome = elemento('p', sim.nome, 'nome-simulazione');
-  sezione.append(nome, posto, barra);
+  contaCesto();
+  sezione.append(posto, cesto, barra);
   disegnaMappa();
   return sezione;
+}
+
+// ---- Raccolto in Arcade ----
+
+// Cesto con pomodoro, carota e cavolo (anche cestino sulle aiuole)
+const CESTO = `<svg viewBox="0 0 48 48" aria-hidden="true">
+  <path d="M10 20c0-10 28-10 28 0" fill="none" stroke="#5c3d22" stroke-width="3.5"/>
+  <circle cx="17" cy="19" r="6" fill="#e2412b" stroke="#2a1e12" stroke-width="2"/>
+  <path d="M26 21l9-8" stroke="#e86f1c" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="29" cy="20" r="5" fill="#6aa83a" stroke="#2a1e12" stroke-width="2"/>
+  <path d="M6 21h36l-4 19a3 3 0 0 1-3 2H13a3 3 0 0 1-3-2z" fill="#d9a86c" stroke="#2a1e12" stroke-width="2.2"/>
+  <path d="M9 28h30M10 34h28M17 22l2 19M24 22v19M31 22l-2 19" stroke="#7a4f2a" stroke-width="1.6"/>
+</svg>`;
+
+// es. "38 kg", "2,5 kg", "0,3 kg"
+function testoKg(n) {
+  return `${n >= 10 ? Math.round(n) : String(Math.round(n * 10) / 10).replace('.', ',')} kg`;
+}
+
+function inRaccoltaIl(c, g) {
+  const info = resaColtura(c);
+  return !!info && inRaccolta(info, g);
+}
+
+// kg [min, max] di tutte le colture tra da (compreso) e a (escluso)
+function totaleRaccolto(dati, da, a) {
+  return dati.colture.map(resaColtura).filter(Boolean)
+    .map(info => kgTra(info, da, a))
+    .reduce((t, kg) => [t[0] + kg[0], t[1] + kg[1]], [0, 0]);
+}
+
+const MESI_ANNO_ORTO = ['O', 'N', 'D', 'G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S'];
+
+// Pagina "Il raccolto": totale fino al giorno della simulazione, grafico per mese e colture di un anno dell'orto
+export function paginaRaccolto(dati) {
+  const sim = simulazioneAttiva();
+  const partenza = `${sim.parametri.inizio}-01`;
+  const g = oggi();
+  const fino = piuGiorni(g, 1);
+  const sezione = document.createElement('section');
+  sezione.append(link('← Mappa', '#/', 'indietro'), elemento('h2', 'Il raccolto'));
+
+  const kg = totaleRaccolto(dati, partenza, fino);
+  const totale = elemento('div', '', 'totale-raccolto');
+  totale.innerHTML = CESTO;
+  const testo = elemento('span');
+  const dettaglio = elemento('small', `dalla partenza al ${dataPerUtente(g)}`);
+  dettaglio.append(elemento('br'), `stima indicativa: da ${testoKg(kg[0])} a ${testoKg(kg[1])}`);
+  testo.append(elemento('strong', `circa ${testoKg((kg[0] + kg[1]) / 2)}`), dettaglio);
+  totale.append(testo);
+
+  const primo = annoOrto(partenza);
+  const anni = elemento('div', '', 'anni-raccolto');
+  const posto = elemento('div');
+  const mostraAnno = y => {
+    for (const b of anni.children) b.setAttribute('aria-pressed', String(Number(b.dataset.anno) === y));
+    posto.replaceChildren(...annoDiRaccolto(dati, y, g, fino));
+  };
+  for (let y = primo; y <= primo + 4; y++) {
+    const b = elemento('button', `${y}–${String(y + 1).slice(2)}`);
+    b.type = 'button';
+    b.dataset.anno = String(y);
+    b.addEventListener('click', () => mostraAnno(y));
+    anni.append(b);
+  }
+  sezione.append(totale, anni, posto);
+  mostraAnno(Math.min(primo + 4, Math.max(primo, annoOrto(g))));
+  return sezione;
+}
+
+// Grafico dei 12 mesi (ottobre–settembre) e colture con raccolta nell'anno dell'orto y
+function annoDiRaccolto(dati, y, g, fino) {
+  const infos = dati.colture.map(resaColtura).filter(Boolean);
+  const mezzo = kg => (kg[0] + kg[1]) / 2;
+  const mesi = MESI_ANNO_ORTO.map((_, i) => {
+    const m = (i + 9) % 12 + 1;
+    const anno = i < 3 ? y : y + 1;
+    const da = `${anno}-${String(m).padStart(2, '0')}-01`;
+    const a = m === 12 ? `${anno + 1}-01-01` : `${anno}-${String(m + 1).padStart(2, '0')}-01`;
+    let fatto = 0, previsto = 0;
+    for (const info of infos) {
+      if (da < fino) fatto += mezzo(kgTra(info, da, a < fino ? a : fino));
+      if (a > fino) previsto += mezzo(kgTra(info, da > fino ? da : fino, a));
+    }
+    return { fatto, previsto };
+  });
+  const massimo = Math.max(1, ...mesi.map(x => x.fatto + x.previsto));
+  const grafico = elemento('div', '', 'grafico-raccolto');
+  mesi.forEach(({ fatto, previsto }, i) => {
+    const colonna = elemento('div', '', 'mese-raccolto');
+    colonna.title = `${MESI_LUNGHI[(i + 9) % 12]}: ${testoKg(fatto + previsto)}`;
+    if (previsto > 0.05) colonna.append(Object.assign(elemento('span', '', 'previsto'), { style: `height:${previsto / massimo * 100}%` }));
+    if (fatto > 0.05) colonna.append(Object.assign(elemento('span', '', 'fatto'), { style: `height:${fatto / massimo * 100}%` }));
+    grafico.append(colonna);
+  });
+  const lettere = elemento('div', '', 'mesi-raccolto');
+  for (const l of MESI_ANNO_ORTO) lettere.append(elemento('span', l));
+  const legenda = elemento('div', '', 'legenda-raccolto');
+  const pezzo = (testo, stile) => {
+    const s = elemento('span');
+    s.append(Object.assign(elemento('i'), { style: stile }), testo);
+    return s;
+  };
+  legenda.append(pezzo('raccolto', 'background:#e9933a'), pezzo('ancora da raccogliere', 'background:#fff;border-style:dashed'));
+
+  // Colture con raccolta in quest'anno dell'orto
+  const inizioAnno = `${y}-10-01`, fineAnno = `${y + 1}-10-01`;
+  const voci = infos
+    .filter(info => info.periodi.some(p => p.dal < fineAnno && p.stop > inizioAnno))
+    .sort((x, z) => x.periodi[0].dal.localeCompare(z.periodi[0].dal))
+    .map(info => {
+      const c = info.coltura;
+      const kgAnno = kgTra(info, inizioAnno, fineAnno);
+      const finora = mezzo(kgTra(info, inizioAnno, fino < fineAnno ? fino : fineAnno));
+      const periodi = info.periodi.filter(p => p.dal < fineAnno && p.stop > inizioAnno);
+      const stato = periodi.some(p => p.dal <= g && g < p.stop) ? 'in' : periodi.every(p => p.stop <= g) ? 'finita' : 'dopo';
+      const forbice = `${testoKg(kgAnno[0]).replace(' kg', '')}–${testoKg(kgAnno[1])}`;
+      const voce = link('', `#/coltura/${c.id}`, 'voce-raccolto');
+      const nome = elemento('b', c.nome);
+      nome.append(elemento('span', { in: 'in raccolta', finita: 'finita', dopo: 'da venire' }[stato], `stato-raccolto stato-${stato}`));
+      const dove = doveColtura(c);
+      const nota = stato === 'in' ? `${dove} · finora, su ${forbice} previsti`
+        : stato === 'finita' ? `${dove} · ${forbice}`
+        : `${dove} · ${forbice} da ${MESI_LUNGHI[Number(periodi[0].dal.slice(5, 7)) - 1]}`;
+      voce.append(icona(c.nome, 'icona-raccolto', 2), nome, elemento('em', stato === 'dopo' ? '—' : testoKg(finora)), elemento('small', nota));
+      return voce;
+    });
+  if (voci.length === 0) voci.push(elemento('p', 'Nessun raccolto in quest\'anno.', 'nota-terreno'));
+  return [grafico, lettere, legenda, ...voci,
+    elemento('p', 'Stime indicative dal catalogo. Fiori, sovesci e colture senza resa nel catalogo non contano.', 'nota-terreno')];
 }
 
 export function paginaSimulazioniArcade() {
@@ -2648,7 +2797,7 @@ export function paginaArcade(id) {
   // Preferenze: un pulsante per coltura dell'orto, che gira tra normale → mi piace → non la voglio
   const statoPref = new Map(CATALOGO.map(s => [s.id, pref.preferite.includes(s.id) ? 'si' : pref.escluse.includes(s.id) ? 'no' : '']));
   const griglia = elemento('div', '', 'griglia-preferenze');
-  for (const s of CATALOGO.filter(s => ['L', 'C', 'A', 'S', 'J'].includes(s.tappa))) {
+  for (const s of CATALOGO.filter(s => ['L', 'C', 'A', 'S', 'J', 'F', 'V'].includes(s.tappa))) {
     const b = elemento('button', '', 'preferenza');
     b.type = 'button';
     const segna = () => {
