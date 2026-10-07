@@ -37,6 +37,7 @@ orto-app/
 │   ├── dati.js           ← lettura/scrittura dati, esporta/importa, sincronizzazione, modalità prova
 │   ├── server.js         ← login e richieste a Supabase
 │   ├── disegni.js        ← disegni SVG degli ortaggi, scelti dal nome della coltura
+│   ├── catalogo.js       ← catalogo delle colture (conoscenza generale), calcolo di piante e resa
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
 ```
@@ -143,7 +144,7 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Il codice SQL va eseguito in un editor vuoto: se un blocco dà errore, Supabase annulla tutto il blocco
 
 ## Prossimi passi (decisi, da costruire in quest'ordine)
-1. Catalogo delle colture in `js/catalogo.js`: conoscenza generale, uguale per tutti gli orti di Bologna (periodi in `MM-GG`, distanze, piante per aiuola da 1,2 × 1,8 m, resa in kg sempre "stima indicativa", famiglia, tappa della rotazione, consigli). Nel codice va solo conoscenza generale: mai il piano o dati personali di un orto
+1. Catalogo delle colture in `js/catalogo.js`: conoscenza generale, uguale per tutti gli orti di Bologna (periodi in `MM-GG`, distanze, piante per aiuola da 1,2 × 1,8 m, resa in kg sempre "stima indicativa", famiglia, tappa della rotazione, consigli). Nel codice va solo conoscenza generale: mai il piano o dati personali di un orto. **Fatto**: esporta `CATALOGO` (53 colture, con `parole` per riconoscere il nome), `TAPPE`, `ESIGENZA`, `GLOSSARIO`, `AIUOLA`, `numero()`, `disposizione()`, `resa()`, `colturaDaNome()` (parola chiave a inizio parola, vince la più lunga). Nessuna schermata lo usa ancora
 2. Pianificatore
 3. Suolo (proprietà del terreno, con stima guidata se non note)
 4. Arcade (simulatore)
