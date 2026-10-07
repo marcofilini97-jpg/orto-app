@@ -1,7 +1,8 @@
 import { carica, salva, sincronizza, inProva } from './dati.js';
+import { CATALOGO } from './catalogo.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
-  listaTask, moduloTask, schedaTask, paginaTest,
+  listaTask, moduloTask, schedaTask, paginaTest, paginaCatalogo, schedaCatalogo,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -11,6 +12,11 @@ function schermata() {
   const [, pagina, id, sotto] = location.hash.split('/');
   // Impostazioni non legge i dati: così si può ripristinare un backup anche se sono danneggiati
   if (pagina === 'impostazioni') return impostazioni();
+  // Il catalogo è conoscenza generale: non legge i dati dell'orto
+  if (pagina === 'catalogo') {
+    const scheda = CATALOGO.find(c => c.id === id);
+    return scheda ? schedaCatalogo(scheda) : paginaCatalogo();
+  }
   const dati = carica();
   if (pagina === 'task') {
     if (id === 'nuovo') return moduloTask(dati);

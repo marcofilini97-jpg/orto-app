@@ -151,6 +151,13 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 5. Impara (schede dal catalogo e guide brevi)
 6. Più orti e più utenti
 
+## Catalogo nell'app
+- Pulsante nella barra verde, a sinistra dell'ingranaggio (icona: libro aperto con una foglia e la lente) → `#/catalogo`: casella "Cerca", colture raggruppate per gruppo della rotazione con la barra dei 12 mesi (semina marrone, trapianto verde, raccolta arancio) e la lente di ogni gruppo (pop-up "cos'hanno in comune")
+- `#/catalogo/<id>`: scheda della coltura come nell'anteprima approvata: lente in alto a destra (spenta = lente di legno; accesa = germoglio nel vetro con i raggi, fumetto di spiegazione) che evidenzia le parole del `GLOSSARIO` (tocco = pop-up), avviso, calendario, distanze, "Quanto spazio usi?" (aiuola intera, metà, misure a mano; lo spazio resta cambiando coltura) con disegno e resa, consigli, "Da tenere d'occhio"
+- Dalla scheda di una coltura dell'orto, se il nome è riconosciuto: pulsante "Scheda … nel catalogo"
+- Le pagine del catalogo non leggono i dati dell'orto (conoscenza generale)
+- Icona del cartello Registro: quaderno ad anelli con il segnalibro che spunta di lato
+
 ## Pianificatore
 - Si pianifica con il normale "Aggiungi coltura": una coltura `attiva` con `dataInizio` nel futuro è "in programma" (nessuno stato a parte). Non compare sulla mappa finché non arriva quel giorno; nella scheda aiuola sta sotto "In programma" (stesso formato di "Colture attive"). Nella scheda coltura: stato "In programma", "(modifica)" e "Togli dal programma" (cancella la coltura e la sua voce automatica). Lo storico mostra solo le colture `terminata`
 - La voce automatica di semina/trapianto si crea subito, con la data futura, ma il registro mostra solo le voci con data fino a oggi (`ordinaVoci`)

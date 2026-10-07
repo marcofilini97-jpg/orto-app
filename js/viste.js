@@ -6,7 +6,7 @@ import {
   sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione, cancellaDatiTelefono,
 } from './dati.js';
 import { iconaSvg } from './disegni.js';
-import { colturaDaNome, disposizione, resa, AIUOLA, TAPPE } from './catalogo.js';
+import { colturaDaNome, disposizione, resa, AIUOLA, TAPPE, CATALOGO, GLOSSARIO, ESIGENZA } from './catalogo.js';
 
 const TIPI = {
   semina: 'Semina', trapianto: 'Trapianto', irrigazione: 'Irrigazione',
@@ -22,7 +22,8 @@ function testoTipo(voce) {
 
 // Icone di Feather Icons (licenza MIT)
 const ICONE = {
-  registro: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  // Quaderno ad anelli con il segnalibro che spunta di lato
+  registro: '<rect x="5" y="2.5" width="13.5" height="19" rx="2"/><path d="M3 6h4M3 10h4M3 14h4M3 18h4"/><path d="M9.5 8h5.5M9.5 12h5.5M9.5 16h3.5"/><path d="M18.5 5.5h4l-1.3 2 1.3 2h-4"/>',
   task: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
   // Cronometro con le tacche delle ore
   test: '<circle cx="12" cy="13.5" r="8"/><path d="M12 5.5V3.5M10 2.5h4M17.7 7.8l1.4-1.4"/>'
@@ -1141,9 +1142,11 @@ export function schedaColtura(dati, coltura) {
     riga('Inizio', dataPerUtente(coltura.dataInizio)),
   );
   if (!attiva) sezione.append(riga('Fine', dataPerUtente(coltura.dataFine)));
+  const schedaCat = colturaDaNome(coltura.nome);
   sezione.append(
     riga('Metodo', testoMetodo(coltura)),
     riga('Note', coltura.note || 'Nessuna nota.'),
+    ...(schedaCat ? [link(`Scheda "${schedaCat.nome}" nel catalogo`, `#/catalogo/${schedaCat.id}`, 'pulsante secondario')] : []),
     elemento('h3', 'Da fare'),
     elencoTask(dati, ordinaTask(dati.task.filter(t => !t.fatto && t.colturaId === coltura.id)), 'Niente da fare.'),
     link('Aggiungi task', `#/coltura/${coltura.id}/nuovo-task`, 'pulsante secondario'),
@@ -1699,4 +1702,280 @@ function disegnaTest(dati, corpo) {
   legenda.innerHTML = '<span><i></i>nell\'orto</span><span><i class="fut"></i>in programma</span><span><i class="og"></i>oggi</span>';
   const aiuto = elemento('p', 'Tocca una barra per aprire la coltura. Il colore è il gruppo della rotazione; senza data di fine, la barra arriva alla fine della raccolta indicata dal catalogo.', 'test-aiuto');
   corpo.replaceChildren(frecce, mesi, settori, legenda, aiuto);
+}
+
+// ---- Catalogo delle colture: elenco con calendario e scheda di ogni coltura ----
+
+let misuraCatalogo = { L: AIUOLA.L, W: AIUOLA.W };   // spazio scelto nelle schede: resta cambiando coltura
+let lenteAccesa = false;                              // parole con spiegazione evidenziate
+
+const COLORI_CAL = { s: '#8b5e3c', t: '#3f8a2e', r: '#e2861b' };
+const GIORNI_MESE = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+const semplice = testo => testo.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+// Posizione di 'MM-GG' nell'anno, da 0 a 1
+function frazioneAnno(mmgg, fine) {
+  const [m, g] = mmgg.split('-').map(Number);
+  return (m - 1 + (g - (fine ? 0 : 1)) / GIORNI_MESE[m - 1]) / 12;
+}
+
+// Barra dei 12 mesi con semina, trapianto (in alto) e raccolta (in basso)
+function barraMesi(scheda) {
+  let html = '';
+  for (const [k, lista] of [['s', scheda.s], ['t', scheda.t], ['r', scheda.r]]) {
+    for (const [dal, al] of lista ?? []) {
+      const a = frazioneAnno(dal), b = frazioneAnno(al, true);
+      for (const [x, y] of a <= b ? [[a, b]] : [[a, 1], [0, b]]) {
+        html += `<i class="cal-${k}" style="left:${x * 100}%;width:${(y - x) * 100}%"></i>`;
+      }
+    }
+  }
+  return `<div class="cal">${html}</div>`;
+}
+
+const termine = (id, testo) => `<button type="button" class="termine" data-termine="${id}">${testo}</button>`;
+const conTermini = testo => testo.replace(/\{(\w+):([^}]+)\}/g, (_, id, t) => termine(id, t));
+
+// Lente: spenta (legno, vetro azzurro) e accesa (germoglio nel vetro, con i raggi di luce)
+const LENTE_BASE = `<ellipse cx="36" cy="54" rx="14" ry="2.6" fill="#4E3220" stroke="none"/>
+  <path d="M35 35 L49 49" fill="none" stroke="#2B1D12" stroke-width="9.6"/><path d="M35 35 L49 49" fill="none" stroke="#A66B35" stroke-width="6.4"/>
+  <path d="M37.5 35.5 L47 45" fill="none" stroke="#D9A86C" stroke-width="1.4"/><circle cx="24" cy="24" r="15" fill="#D9A86C"/>
+  <path d="M13.5 16.5 C15 13.5 17.5 11.5 20.5 10.5" fill="none" stroke="#F5DDB0" stroke-width="1.3"/><circle cx="24" cy="24" r="10.8" fill="#CBE6EA" stroke-width="1.2"/>`;
+const LENTE_SPENTA = `<svg class="spenta" viewBox="0 0 60 60" stroke="#2B1D12" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${LENTE_BASE}
+  <path d="M16.5 22 C17 18.5 19.5 16.2 23 15.6" fill="none" stroke="#FFFFFF" stroke-width="2.2"/><circle cx="17.2" cy="26.8" r="1.1" fill="#FFFFFF" stroke="none"/></svg>`;
+const LENTE_ACCESA = `<svg class="accesa" viewBox="0 0 60 60" stroke="#2B1D12" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+  <defs><clipPath id="vetro-lente"><circle cx="24" cy="24" r="10.4"/></clipPath></defs>${LENTE_BASE}
+  <g clip-path="url(#vetro-lente)"><path d="M11 34 C16 29.5 32 29.5 37 34 V40 H11 Z" fill="#7A4F2A"/><path d="M24 32 V22" fill="none" stroke="#4E9A3A" stroke-width="2.4"/>
+  <path d="M24 26 C20 26 17.5 23.5 17 20.5 C21 20.5 23.5 22.5 24 26 Z" fill="#6FBF45" stroke-width="1.2"/><path d="M24 22 C24.5 18 27 16 30 16.2 C30 19.5 27.5 22 24 22 Z" fill="#5FA83C" stroke-width="1.2"/></g>
+  <circle cx="24" cy="24" r="10.8" fill="none" stroke-width="1.2"/><path d="M16.2 21 C16.7 18 18.8 16 21.5 15.2" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M41 8 L46 2.5 M44.5 13.5 L52 10 M45.5 20 L53.5 20.5" fill="none" stroke="#2B1D12" stroke-width="5"/>
+  <path d="M41 8 L46 2.5 M44.5 13.5 L52 10 M45.5 20 L53.5 20.5" fill="none" stroke="#FFD43B" stroke-width="2.8"/>
+  <path d="M55 4 l1.2 2.6 2.6 1.2 -2.6 1.2 -1.2 2.6 -1.2 -2.6 -2.6 -1.2 2.6 -1.2 Z" fill="#FFF3B0" stroke-width="1"/></svg>`;
+
+// Spiegazione di una parola (o di un gruppo) in un pop-up
+function apriParola(id) {
+  const g = GLOSSARIO[id];
+  if (!g) return;
+  const sezione = (titolo, html) => (html ? `<h3>${titolo}</h3>${html}` : '');
+  const finestra = elemento('dialog', '', 'popup parola');
+  const gruppo = g.gruppo ? `<p class="elenco-gruppo">${CATALOGO.filter(c => c.tappa === g.gruppo)
+    .map(c => `<a href="#/catalogo/${c.id}">${iconaSvg(c.nome, 2)}${c.nome}</a>`).join('')}</p>` : '';
+  // Testi fissi del catalogo, nessun testo dell'utente
+  finestra.innerHTML = `<div class="parola-testa"><button type="button" class="chiudi">← Indietro</button><span>Parole dell'orto</span></div>
+    <div class="popup-contenuto">
+      <p class="tipo-parola">${g.tipo}</p><h2>${g.titolo}</h2><p>${g.def}</p>
+      ${sezione(g.percheTitolo || 'Perché si fa', g.perche && `<p>${g.perche}</p>`)}
+      ${sezione('Come prevenirlo', g.prevenzione && `<p>${g.prevenzione}</p>`)}
+      ${sezione('Se serve intervenire', g.intervento && `<p>${g.intervento}</p>`)}
+      ${sezione('Come si fa', g.passi && `<ol class="passi">${g.passi.map(x => `<li>${x}</li>`).join('')}</ol>`)}
+      ${sezione('Attenzione a', g.attenzione && `<ul class="attenzione">${g.attenzione.map(x => `<li>${x}</li>`).join('')}</ul>`)}
+      ${sezione('In questo gruppo', gruppo)}
+      ${g.vedi ? `<p class="nota-parola">${g.vedi}</p>` : ''}
+    </div>`;
+  finestra.addEventListener('click', evento => {
+    if (evento.target === finestra || evento.target.closest('.chiudi') || evento.target.closest('a')) finestra.close();
+  });
+  finestra.addEventListener('close', () => finestra.remove());
+  document.body.append(finestra);
+  finestra.showModal();
+}
+
+// Clic sulle parole spiegate e sulle lenti dei gruppi (delegato alla sezione)
+function attivaParole(sezione) {
+  sezione.addEventListener('click', evento => {
+    const t = evento.target.closest('[data-termine]');
+    if (t) apriParola(t.dataset.termine);
+  });
+}
+
+function lenteGruppo(k) {
+  return `<button type="button" class="lente-gruppo" data-termine="gruppo-${k}" aria-label="Cos'hanno in comune: ${TAPPE[k].nome}">
+    ${LENTE_SPENTA.replace('class="spenta"', '')}</button>`;
+}
+
+export function paginaCatalogo() {
+  const sezione = document.createElement('section');
+  sezione.className = 'catalogo';
+  // Testi fissi del catalogo; la ricerca dell'utente si legge solo con .value
+  sezione.innerHTML = `
+    <a href="#/" class="indietro">← Mappa</a>
+    <h2>Catalogo dell'orto</h2>
+    <p class="intro-catalogo">${CATALOGO.length} colture, con i periodi a Bologna. Tocca una coltura per la sua scheda, o la lente accanto a un gruppo per sapere cos'hanno in comune.</p>
+    <input type="search" class="cerca-catalogo" placeholder="Cerca una coltura" aria-label="Cerca una coltura" autocomplete="off">
+    <div class="legenda-cal"><span class="l-s">semina</span><span class="l-t">trapianto</span><span class="l-r">raccolta</span></div>
+    <div class="mesi-cal">${MESI.map(m => `<span>${m[0].toUpperCase()}</span>`).join('')}</div>
+    ${Object.keys(TAPPE).map(k => `
+      <div class="gruppo-catalogo" data-gruppo="${k}">
+        <h3><span class="pallino-gruppo" style="background:${TAPPE[k].c}"></span>${TAPPE[k].nome}${lenteGruppo(k)}</h3>
+        ${CATALOGO.filter(c => c.tappa === k).map(c => `
+          <a class="riga-catalogo" href="#/catalogo/${c.id}" data-cerca="${semplice([c.nome, ...c.parole].join(' '))}">
+            <span class="nome-catalogo">${iconaSvg(c.nome, 2)}${c.nome}</span>${barraMesi(c)}
+          </a>`).join('')}
+      </div>`).join('')}
+    <p class="nessuna" hidden>Nessuna coltura con questo nome.</p>`;
+  const cerca = sezione.querySelector('.cerca-catalogo');
+  cerca.addEventListener('input', () => {
+    const q = semplice(cerca.value.trim());
+    let trovate = 0;
+    for (const g of sezione.querySelectorAll('.gruppo-catalogo')) {
+      let qui = 0;
+      for (const r of g.querySelectorAll('.riga-catalogo')) {
+        r.hidden = Boolean(q) && !r.dataset.cerca.includes(q);
+        if (!r.hidden) qui++;
+      }
+      g.hidden = qui === 0;
+      trovate += qui;
+    }
+    sezione.querySelector('.nessuna').hidden = trovate > 0;
+  });
+  attivaParole(sezione);
+  return sezione;
+}
+
+// Lo spazio visto dall'alto (lunghezza × larghezza scelte) con le piante al loro posto
+const metri = cm => (cm / 100).toLocaleString('it-IT', { maximumFractionDigits: 2 }) + ' m';
+function disegnoSpazio(scheda, d) {
+  const W = d.L, H = d.W, y = i => H * (i + 0.5) / d.file, x = j => W * (j + 0.5) / d.perFila;
+  const fs = Math.max(W, H) / 20;
+  let segni = '';
+  if (scheda.id === 'fava' && d.perFila) {
+    const coppie = d.file / 2, inizio = (H - ((coppie - 1) * 75 + 25)) / 2;
+    for (let k = 0; k < coppie; k++) for (const yy of [inizio + k * 75, inizio + k * 75 + 25])
+      for (let j = 0; j < d.perFila; j++) segni += `<circle cx="${x(j)}" cy="${yy}" r="4"/>`;
+  } else if (!d.perFila && scheda.traLeFile.includes('spaglio')) {
+    const passo = Math.max(W, H) / 22;
+    for (let yy = passo / 2; yy < H; yy += passo) for (let xx = passo / 2; xx < W; xx += passo) {
+      const s = Math.sin(xx * 12.9898 + yy * 78.233) * 43758.5453, v = s - Math.floor(s);
+      segni += `<circle cx="${xx + (v - 0.5) * passo * 0.7}" cy="${yy + (((v * 7) % 1) - 0.5) * passo * 0.7}" r="${passo * 0.18}"/>`;
+    }
+  } else if (!d.perFila) {
+    for (let i = 0; i < d.file; i++) segni += `<line x1="8" x2="${W - 8}" y1="${y(i)}" y2="${y(i)}" stroke-dasharray="1 5"/>`;
+  } else if (d.piante <= 30) {
+    const lato = Math.min(H / d.file, W / d.perFila) * 0.9;
+    const disegno = iconaSvg(scheda.nome, 2.4).replace(/^<svg[^>]*>|<\/svg>$/g, '');
+    for (let i = 0; i < d.file; i++) for (let j = 0; j < d.perFila; j++)
+      segni += `<g stroke-width="2.4" transform="translate(${x(j) - lato / 2} ${y(i) - lato / 2}) scale(${lato / 60})">${disegno}</g>`;
+  } else {
+    const r = Math.max(1.6, Math.min(4, W / d.perFila / 2.4));
+    for (let i = 0; i < d.file; i++) for (let j = 0; j < d.perFila; j++) segni += `<circle cx="${x(j)}" cy="${y(i)}" r="${r}"/>`;
+  }
+  const semi = d.piante > 40 ? 'semi' : 'piante';
+  const descr = scheda.traLeFile.includes('spaglio') ? 'seminato a spaglio su tutto lo spazio'
+    : d.perFila ? `${d.file} ${d.file === 1 ? 'fila' : 'file'} da ${d.perFila} ${semi}`
+      : `${d.file} ${d.file === 1 ? 'fila seminata fitta' : 'file seminate fitte'}`;
+  return `<figure class="spazio-disegno">
+    <svg viewBox="${-fs * 1.6} ${-fs * 0.5} ${W + fs * 2} ${H + fs * 2}" style="max-width:${Math.min(340, 340 * Math.max(W, H * 1.5) / 180)}px" role="img" aria-label="Spazio visto dall'alto: ${descr}">
+      <rect x="0" y="0" width="${W}" height="${H}" rx="${fs * 0.6}" class="terra-spazio"/>
+      <g class="segni-spazio" stroke="#2B1D12" stroke-linejoin="round" stroke-linecap="round">${segni}</g>
+      <text x="${W / 2}" y="${H + fs * 1.3}" text-anchor="middle" style="font-size:${fs}px">${metri(W)}</text>
+      <text x="${-fs * 0.6}" y="${H / 2}" text-anchor="middle" style="font-size:${fs}px" transform="rotate(-90 ${-fs * 0.6} ${H / 2})">${metri(H)}</text>
+    </svg>
+    <figcaption>${descr}${d.piante ? ` = <b>${d.piante} ${semi}</b>` : ''}</figcaption>
+  </figure>`;
+}
+
+export function schedaCatalogo(scheda) {
+  const righe = [
+    scheda.s && ['Semina', scheda.s.map(periodoCatalogo).join(' · ')],
+    scheda.t && [scheda.tLabel ?? termine('trapianto', 'Trapianto'), scheda.t.map(periodoCatalogo).join(' · ')],
+    [scheda.rLabel ?? 'Raccolta', scheda.r.map(periodoCatalogo).join(' · ')],
+    scheda.giorni && ['Dalla semina', `${scheda.giorni} giorni`],
+    scheda.prof && ['Profondità', scheda.prof],
+  ].filter(Boolean);
+  const famigliaDoppia = scheda.famiglia.toLowerCase() === TAPPE[scheda.tappa].breve.toLowerCase();
+  const sezione = document.createElement('section');
+  sezione.className = 'scheda-catalogo';
+  // Testi fissi del catalogo, nessun testo dell'utente
+  sezione.innerHTML = `
+    <a href="#/catalogo" class="indietro">← Catalogo</a>
+    <span class="lente-box">
+      <button type="button" class="lente" aria-pressed="${lenteAccesa}" aria-label="Lente: evidenzia le parole con spiegazione">${LENTE_SPENTA}${LENTE_ACCESA}</button>
+      <span class="fumetto" role="status" hidden><b>Lente accesa!</b> Le parole evidenziate hanno una spiegazione: toccane una per leggerla. Premi di nuovo la lente per spegnerla.<button type="button" class="capito">Ho capito</button></span>
+    </span>
+    <div class="testa-scheda">
+      <div class="disegno-scheda">${iconaSvg(scheda.nome)}</div>
+      <div>
+        <h2>${scheda.nome}</h2>
+        <div class="chips">
+          <span class="chip" style="background:${TAPPE[scheda.tappa].c}">${TAPPE[scheda.tappa].breve}</span>
+          ${famigliaDoppia ? '' : `<span class="chip chiaro">${scheda.famiglia}</span>`}
+          <span class="chip chiaro">${ESIGENZA[scheda.esigenza]}</span>
+        </div>
+      </div>
+    </div>
+    ${scheda.avviso ? `<p class="avviso-scheda">${conTermini(scheda.avviso)}</p>` : ''}
+    <h3>Calendario a Bologna</h3>
+    <div class="legenda-cal">${scheda.s ? '<span class="l-s">semina</span>' : ''}${scheda.t ? `<span class="l-t">${(scheda.tLabel ?? 'trapianto').toLowerCase()}</span>` : ''}<span class="l-r">${(scheda.rLabel ?? 'raccolta').toLowerCase()}</span></div>
+    ${barraMesi(scheda)}
+    <div class="mesi-cal">${MESI.map(m => `<span>${m}</span>`).join('')}</div>
+    <dl class="fatti">${righe.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>
+    <h3>Nell'aiuola</h3>
+    <dl class="fatti">
+      <dt>Tra le piante, sulla fila</dt><dd>${scheda.sullaFila === 'fitta' ? 'seme fitto' : scheda.sullaFila + ' cm'}</dd>
+      <dt>Tra una fila e l'altra</dt><dd>${/^\d/.test(scheda.traLeFile) ? scheda.traLeFile + ' cm' : scheda.traLeFile}</dd>
+    </dl>
+    <div class="misura">
+      <p>Quanto spazio usi?</p>
+      <div class="preset-riga">
+        <button type="button" class="preset" data-l="180" data-w="120">Aiuola intera<small>1,8 × 1,2 m</small></button>
+        <button type="button" class="preset" data-l="180" data-w="60">Metà fondo o davanti<small>1,8 × 0,6 m</small></button>
+        <button type="button" class="preset" data-l="90" data-w="120">Metà vialetto o esterno<small>0,9 × 1,2 m</small></button>
+      </div>
+      <div class="campi-misura">
+        <label>Lunghezza<span><input type="number" name="lunghezza" inputmode="numeric" min="20" max="600" step="10"> cm</span></label>
+        <label>Larghezza<span><input type="number" name="larghezza" inputmode="numeric" min="20" max="600" step="10"> cm</span></label>
+      </div>
+    </div>
+    <div class="spazio-scelto"></div>
+    <h3>Consigli</h3>
+    <ul class="consigli">${scheda.consigli.map(x => `<li>${conTermini(x)}</li>`).join('')}</ul>
+    ${scheda.problemi.length ? `<h3>Da tenere d'occhio</h3><p>${scheda.problemi.map(p => termine(p, GLOSSARIO[p]?.titolo ?? p)).join(' · ')}</p>` : ''}
+    <p class="nota-scheda">Periodi, distanze e consigli sono indicativi: la terra, l'annata e la varietà contano.</p>`;
+
+  const lunghezza = sezione.querySelector('[name="lunghezza"]');
+  const larghezza = sezione.querySelector('[name="larghezza"]');
+  function aggiornaSpazio() {
+    lunghezza.value = misuraCatalogo.L;
+    larghezza.value = misuraCatalogo.W;
+    const d = disposizione(scheda, misuraCatalogo.L, misuraCatalogo.W);
+    const intera = misuraCatalogo.L === AIUOLA.L && misuraCatalogo.W === AIUOLA.W;
+    const r = resa(scheda, d);
+    const dettaglio = scheda.kgM2
+      ? `${String(scheda.kgM2[0]).replace('.', ',')}–${String(scheda.kgM2[1]).replace('.', ',')} kg/m² × ${String(Math.round(d.area * 100) / 100).replace('.', ',')} m²`
+      : scheda.kgP ? `${d.piante} piante × ${String(scheda.kgP[0]).replace('.', ',')}–${String(scheda.kgP[1]).replace('.', ',')} kg${scheda.unita ? ' di ' + scheda.unita : ''} ciascuna` : '';
+    sezione.querySelector('.spazio-scelto').innerHTML = disegnoSpazio(scheda, d) + (r
+      ? `<p class="resa-scheda">Resa stimata: <b>${kgTesto(r[0])}–${kgTesto(r[1])} kg</b> ${intera ? "nell'aiuola intera" : 'in questo spazio'}<small>${dettaglio}. Stima indicativa: dipende da varietà, annata e terreno.</small></p>`
+      : `<p class="resa-scheda">A cosa serve<small>${conTermini(scheda.scopo ?? '')}</small></p>`);
+    sezione.querySelectorAll('.preset').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.l) === misuraCatalogo.L && Number(b.dataset.w) === misuraCatalogo.W));
+  }
+  sezione.querySelectorAll('.preset').forEach(b => b.addEventListener('click', () => {
+    misuraCatalogo = { L: Number(b.dataset.l), W: Number(b.dataset.w) };
+    aggiornaSpazio();
+  }));
+  for (const campo of [lunghezza, larghezza]) {
+    campo.addEventListener('input', () => {
+      const L = Number(lunghezza.value), W = Number(larghezza.value);
+      if (L >= 20 && L <= 600 && W >= 20 && W <= 600) {
+        misuraCatalogo = { L, W };
+        const fuoco = document.activeElement;
+        aggiornaSpazio();
+        fuoco.focus();
+      }
+    });
+  }
+  aggiornaSpazio();
+
+  // Lente: accende o spegne le parole evidenziate; la prima volta che si accende spiega cosa fa
+  const lente = sezione.querySelector('.lente');
+  const fumetto = sezione.querySelector('.fumetto');
+  sezione.classList.toggle('evidenzia', lenteAccesa);
+  lente.addEventListener('click', () => {
+    lenteAccesa = !lenteAccesa;
+    lente.setAttribute('aria-pressed', lenteAccesa);
+    sezione.classList.toggle('evidenzia', lenteAccesa);
+    fumetto.hidden = !lenteAccesa;
+  });
+  sezione.querySelector('.capito').addEventListener('click', () => { fumetto.hidden = true; });
+  attivaParole(sezione);
+  return sezione;
 }
