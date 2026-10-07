@@ -841,7 +841,8 @@ function avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, coltura
   // Rotazione: la stessa famiglia non torna nello stesso settore prima di 4 anni (in Arcade: la regola scelta)
   const regola = simulazioneAttiva()?.parametri ?? { rotazione: 'base' };
   const anniGiro = regola.rotazione === 'personalizzata' ? regola.anni : 4;
-  if (scheda && regola.rotazione !== 'nessuna' && !['J', 'P', 'F', 'V'].includes(scheda.tappa)) {
+  const famigliaControllata = regola.rotazione !== 'personalizzata' || !regola.famiglie || regola.famiglie.includes(scheda?.famiglia);
+  if (scheda && regola.rotazione !== 'nessuna' && famigliaControllata && !['J', 'P', 'F', 'V'].includes(scheda.tappa)) {
     const anno = annoOrto(inizio);
     const settori = [...new Set(aiuoleIds.map(id => dati.aiuole.find(a => a.id === id).settore))];
     for (const settore of settori) {
@@ -2753,6 +2754,13 @@ export function paginaSimulazioniArcade() {
 
 const MESI_SCELTA = MESI_LUNGHI.map((m, i) => [String(i + 1).padStart(2, '0'), m]);
 
+// Famiglie che la rotazione controlla (quelle delle colture del giro L → C → A → S), con due esempi ciascuna
+const FAMIGLIE_ROTAZIONE = [...new Set(CATALOGO.filter(s => GIRO.includes(s.tappa)).map(s => s.famiglia))].sort();
+function esempiFamiglia(f) {
+  return CATALOGO.filter(s => GIRO.includes(s.tappa) && s.famiglia === f).slice(0, 2)
+    .map(s => s.nome.toLowerCase()).join(', ');
+}
+
 // Parametri di una simulazione nuova (id null) o di una salvata
 export function paginaArcade(id) {
   const sim = id ? leggiSimulazione(id) : null;
@@ -2772,6 +2780,10 @@ export function paginaArcade(id) {
     <fieldset><legend>Rotazione</legend>${scelte('rotazione', [['base', 'Base'], ['personalizzata', 'Personalizzata'], ['nessuna', 'Nessuna']])}</fieldset>
     <label class="campo-anni" hidden>La stessa famiglia torna dopo
       <select name="anni"><option value="2">2 anni</option><option value="3">3 anni</option><option value="4">4 anni</option><option value="5">5 anni</option></select></label>
+    <fieldset class="campo-famiglie" hidden><legend>Famiglie da controllare</legend>
+      <div class="scelte-arcade scelte-famiglie">${FAMIGLIE_ROTAZIONE.map(f =>
+        `<label><input type="checkbox" name="famiglie" value="${f}"><span>${f}<small>${esempiFamiglia(f)}</small></span></label>`).join('')}</div>
+    </fieldset>
     <fieldset><legend>Partenza</legend>${scelte('partenza', [['vuoto', 'Orto vuoto'], ['reale', "Dall'orto reale"]])}</fieldset>
     <label class="campo-dal" hidden>Com'era l'orto reale il<input type="text" name="dal" placeholder="gg/mm/aaaa"></label>
     <fieldset><legend>Terreno</legend>${scelte('terreno', [['reale', 'Quello reale'], ['stima', 'Stima di Bologna']])}</fieldset>
@@ -2791,6 +2803,7 @@ export function paginaArcade(id) {
   c.anni.value = String(p.anni ?? 4);
   c.dal.value = dataPerUtente(p.dal);
   for (const k of ['rotazione', 'partenza', 'terreno']) modulo.querySelector(`[name="${k}"][value="${p[k]}"]`).checked = true;
+  for (const casella of modulo.querySelectorAll('[name="famiglie"]')) casella.checked = (p.famiglie ?? FAMIGLIE_ROTAZIONE).includes(casella.value);
   const pref = { preferite: [], escluse: [], obiettivo: 'varieta', ...(p.preferenze ?? {}) };
   modulo.querySelector(`[name="obiettivo"][value="${pref.obiettivo}"]`).checked = true;
   c.riempi.checked = !sim;
@@ -2815,7 +2828,9 @@ export function paginaArcade(id) {
   }
   modulo.querySelector('.posto-preferenze').replaceWith(griglia);
   const mostraCampi = () => {
-    modulo.querySelector('.campo-anni').hidden = modulo.querySelector('[name="rotazione"]:checked').value !== 'personalizzata';
+    const personalizzata = modulo.querySelector('[name="rotazione"]:checked').value === 'personalizzata';
+    modulo.querySelector('.campo-anni').hidden = !personalizzata;
+    modulo.querySelector('.campo-famiglie').hidden = !personalizzata;
     modulo.querySelector('.campo-dal').hidden = modulo.querySelector('[name="partenza"]:checked').value !== 'reale';
   };
   modulo.addEventListener('change', mostraCampi);
@@ -2828,6 +2843,7 @@ export function paginaArcade(id) {
     const anno = Number(c.anno.value.trim());
     const nuovi = {
       inizio: `${anno}-${c.mese.value}`, rotazione: scelto('rotazione'), anni: Number(c.anni.value),
+      famiglie: [...modulo.querySelectorAll('[name="famiglie"]:checked')].map(x => x.value),
       partenza: scelto('partenza'), dal: dataPerArchivio(c.dal.value) ?? '', terreno: scelto('terreno'),
       preferenze: {
         preferite: [...statoPref].filter(([, v]) => v === 'si').map(([k]) => k),
@@ -2838,6 +2854,7 @@ export function paginaArcade(id) {
     const errori = [];
     if (!c.nome.value.trim()) errori.push('Scrivi un nome per la simulazione.');
     if (!Number.isInteger(anno) || anno < 2000 || anno > 2100) errori.push("Scrivi l'anno di partenza, es. 2027.");
+    if (nuovi.rotazione === 'personalizzata' && nuovi.famiglie.length === 0) errori.push('Scegli almeno una famiglia da controllare, oppure la rotazione "Nessuna".');
     if (nuovi.partenza === 'reale') {
       const primo = inizioOrtoReale();
       if (!nuovi.dal) errori.push("Scrivi la data dell'orto reale come gg/mm/aaaa.");

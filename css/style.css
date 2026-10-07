@@ -746,3 +746,7 @@ body[data-stagione="inverno"] { background-image: radial-gradient(#ffffff 1.8px,
 .stato-in { color: #fff; background: #c46a1c; }
 .stato-finita { color: #2b4a1f; background: #dbe9cc; }
 .stato-dopo { color: var(--marrone-scuro); background: #efe2c6; }
+
+/* Arcade: famiglie da controllare nella rotazione personalizzata */
+.scelte-famiglie { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.scelte-famiglie small { display: block; font-size: .75rem; font-weight: 500; line-height: 1.2; }

@@ -192,7 +192,7 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Raccolto (solo Arcade): kg stimati dal catalogo (`resa` per lo spazio occupato, aiuola intera o metà), raccolti un po' alla volta lungo il periodo di raccolta (il primo dopo l'inizio; le perenni ogni anno; se la coltura è terminata prima, si ferma alla fine). In arcade.js `resaColtura`, `kgTra`, `inRaccolta`. Fiori, sovesci e colture senza resa non contano
 - Sulla mappa di Arcade: cestino accanto al nome delle aiuole dove quel giorno si raccoglie; sopra la barra del tempo la barra "Raccolto finora circa N kg" (dalla partenza al giorno della simulazione) → `#/raccolto`, pagina "Il raccolto": totale con la forbice da… a…, anni dell'orto (ottobre–settembre), grafico per mese (pieno = raccolto, tratteggiato = ancora da raccogliere), colture con stato in raccolta / finita / da venire
 - Il nome della simulazione sta nella barra rossa, accanto a "Orto ARCADE" (`.nome-arcade` in index.html, riempito da app.js)
-- Da fare: scelta delle famiglie nella rotazione personalizzata
+- Rotazione personalizzata: oltre agli anni (2–5), "Famiglie da controllare": una casella per ogni famiglia delle colture del giro L → C → A → S (con due esempi), tutte accese di partenza; salvate in `parametri.famiglie`. L'avviso di rotazione scatta solo per le famiglie accese; almeno una è obbligatoria. Il riempimento automatico segue comunque il giro delle tappe
 - Diverso dalla modalità prova: PROVA serve solo allo sviluppatore per collaudare l'app; Arcade è per tutti gli utenti
 - Si parte dal piano vero (copia) o da zero; si accelera il tempo e si vede cosa cresce, quando e quanto si raccoglie, cosa piantare dopo
 - Non tocca mai i dati veri e non si sincronizza: resta nella sezione Arcade del singolo telefono
