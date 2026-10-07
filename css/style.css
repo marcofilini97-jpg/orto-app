@@ -673,3 +673,25 @@ button.termine { margin: 0; padding: 0; font: inherit; font-weight: inherit; col
 body[data-stagione="primavera"] { background-image: radial-gradient(#f6e27a 2px, transparent 2.5px), radial-gradient(var(--prato-punti) 1.5px, transparent 2px); background-size: 22px 22px, 10px 10px; }
 body[data-stagione="autunno"] { background-image: radial-gradient(#c96a2a 2.5px, transparent 3px), radial-gradient(var(--prato-punti) 1.5px, transparent 2px); background-size: 26px 26px, 10px 10px; }
 body[data-stagione="inverno"] { background-image: radial-gradient(#ffffff 1.8px, transparent 2.3px), radial-gradient(var(--prato-punti) 1.5px, transparent 2px); background-size: 18px 18px, 10px 10px; }
+
+/* Arcade: barra rosso scuro, etichetta ARCADE, uscita al posto dell'ingranaggio */
+.esci-arcade { display: none; }
+.arcade .esci-arcade { display: flex; }
+.arcade .impostazioni-icona { display: none; }
+.arcade header { background: #8e3b30; border-bottom-color: #62261f; }
+.arcade header h1::after { content: 'ARCADE'; margin-left: 10px; padding: 0 8px; font-size: .75rem; font-weight: 800; letter-spacing: .08em; vertical-align: middle; color: #3a1a12; background: #f2c230; border-radius: 6px; }
+.nome-simulazione { grid-column: 1 / -1; margin: 0 0 4px; font-family: 'Fredoka', 'Baloo 2', sans-serif; text-align: center; color: var(--crema); text-shadow: 0 1px 0 rgb(0 0 0 / .45); }
+.mappa-arcade .cursore-tempo { accent-color: #8e3b30; }
+.simulazioni-salvate { display: grid; gap: 6px; }
+.salvata { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; color: var(--testo); text-decoration: none; background: #fff; border: 2px solid var(--legno); border-radius: 10px; }
+.salvata small { color: var(--marrone-scuro); }
+.freccia-salvata { font-size: 1.4rem; font-weight: 800; }
+.pulsante.pulsante-arcade, .modulo .pulsante.pulsante-arcade { background: #8e3b30; border-bottom: 3px solid #62261f; }
+.modulo-arcade select { width: 100%; padding: 10px 12px; font: inherit; color: var(--testo); background: #fff; border: 2px solid #767676; border-radius: 8px; }
+.modulo .senza-margine { margin-top: 0; }
+.scelte-arcade { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 6px; margin-top: 6px; }
+.modulo .scelte-arcade label { margin: 0; }
+.scelte-arcade input { position: absolute; opacity: 0; }
+.scelte-arcade span { display: block; padding: 8px 4px; font-size: .9rem; font-weight: 700; text-align: center; background: #fff; border: 2px solid var(--legno); border-radius: 10px; cursor: pointer; }
+.scelte-arcade input:checked + span { color: var(--crema); background: #8e3b30; border-color: #62261f; }
+.scelte-arcade input:focus-visible + span { outline: 3px solid var(--verde); outline-offset: 2px; }

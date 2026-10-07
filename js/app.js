@@ -1,9 +1,9 @@
-import { carica, salva, sincronizza, inProva } from './dati.js';
+import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva } from './dati.js';
 import { CATALOGO } from './catalogo.js';
 import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
-  listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -27,7 +27,16 @@ function schermata() {
     if (task) return schedaTask(dati, task);
     return listaTask(dati);
   }
+  if (pagina === 'arcade' && id === 'esci') {
+    // Uscita da Arcade: si torna ai parametri della simulazione
+    const sim = simulazioneAttiva();
+    esciArcade();
+    location.replace(sim ? `#/test/arcade/${sim.id}` : '#/test');
+    return document.createElement('section');
+  }
   if (pagina === 'test') {
+    if (id === 'arcade') return paginaArcade(sotto && sotto !== 'nuova' ? sotto : null);
+    if (inArcade()) return mappa(dati);
     if (id === 'reale') return ortoNelTempo(dati);
     if (id === 'calendario') return paginaTest(dati);
     return paginaSimulazioni();
@@ -69,7 +78,8 @@ function disegna() {
   document.body.style.removeProperty('--prato');
   document.body.style.removeProperty('--prato-punti');
   delete document.body.dataset.stagione;
-  document.body.classList.toggle('prova', inProva());
+  document.body.classList.toggle('prova', inProva() && !inArcade());
+  document.body.classList.toggle('arcade', inArcade());
   try {
     contenuto.replaceChildren(schermata());
   } catch (errore) {

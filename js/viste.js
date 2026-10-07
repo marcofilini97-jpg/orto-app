@@ -4,6 +4,8 @@ import {
   carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio, orarioPerUtente,
   inProva, attivaProva, disattivaProva, ricominciaProva,
   sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione, cancellaDatiTelefono,
+  elencoSimulazioni, leggiSimulazione, salvaSimulazione, eliminaSimulazione, entraArcade, inArcade,
+  simulazioneAttiva, impostaGiornoArcade, datiPerSimulazione, inizioOrtoReale, oggiVero,
 } from './dati.js';
 import { iconaSvg } from './disegni.js';
 import { colturaDaNome, disposizione, resa, AIUOLA, TAPPE, CATALOGO, GLOSSARIO, ESIGENZA } from './catalogo.js';
@@ -81,6 +83,7 @@ function posizioneBollino(zona, lato) {
 }
 
 export function mappa(dati) {
+  if (inArcade()) return mappaArcade(dati);
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
   mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(dati), colonna(dati, 'destra'), staccionata(), etichetta('Davanti'));
@@ -823,8 +826,10 @@ function avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, coltura
     }
   }
 
-  // Rotazione (regola base): la stessa famiglia non torna nello stesso settore prima di 4 anni
-  if (scheda && !['J', 'P', 'F', 'V'].includes(scheda.tappa)) {
+  // Rotazione: la stessa famiglia non torna nello stesso settore prima di 4 anni (in Arcade: la regola scelta)
+  const regola = simulazioneAttiva()?.parametri ?? { rotazione: 'base' };
+  const anniGiro = regola.rotazione === 'personalizzata' ? regola.anni : 4;
+  if (scheda && regola.rotazione !== 'nessuna' && !['J', 'P', 'F', 'V'].includes(scheda.tappa)) {
     const anno = annoOrto(inizio);
     const settori = [...new Set(aiuoleIds.map(id => dati.aiuole.find(a => a.id === id).settore))];
     for (const settore of settori) {
@@ -832,13 +837,13 @@ function avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, coltura
         const s = colturaDaNome(c.nome);
         const a = annoOrto(c.dataInizio);
         return s && s.famiglia === scheda.famiglia && !['J', 'P', 'F', 'V'].includes(s.tappa)
-          && a >= anno - 3 && a < anno
+          && a >= anno - (anniGiro - 1) && a < anno
           && c.aiuoleIds.some(id => dati.aiuole.find(x => x.id === id).settore === settore);
       });
       if (stesse.length) {
         const ultimo = Math.max(...stesse.map(c => annoOrto(c.dataInizio)));
         const nomi = [...new Set(stesse.map(c => c.nome))].join(', ');
-        avvisi.push(['Rotazione. ', `Nel settore ${settore} ci sono già state ${scheda.famiglia.toLowerCase()} (${nomi}, anno dell'orto ${ultimo}–${ultimo + 1}). La stessa famiglia non dovrebbe tornare prima di 4 anni: meglio dall'autunno ${ultimo + 4}, oppure in un altro settore.`]);
+        avvisi.push(['Rotazione. ', `Nel settore ${settore} ci sono già state ${scheda.famiglia.toLowerCase()} (${nomi}, anno dell'orto ${ultimo}–${ultimo + 1}). La stessa famiglia non dovrebbe tornare prima di ${anniGiro} anni: meglio dall'autunno ${ultimo + anniGiro}, oppure in un altro settore.`]);
       }
     }
   }
@@ -2360,8 +2365,11 @@ export function paginaSimulazioni() {
     elemento('h2', 'Simulazioni'),
     scheda('#/test/reale', 'sim-reale', ICONE.test, 'Orto reale nel tempo',
       'La tua mappa con le colture vere: vai avanti e indietro nel tempo e vedi cosa c\'era e cosa ci sarà, con le stime del catalogo. Solo da guardare.'),
-    scheda('#/test', 'sim-arcade in-arrivo', '<rect x="2" y="7" width="20" height="12" rx="5"/><path d="M7 11v4M5 13h4"/><circle cx="16" cy="12" r="1.2"/><circle cx="18.5" cy="14.5" r="1.2"/>',
-      'Arcade · in arrivo', 'Un orto inventato, da zero o copiato dal tuo: prova colture e rotazioni e guarda come va negli anni.'),
+    scheda('#/test/arcade/nuova', 'sim-arcade', '<rect x="2" y="7" width="20" height="12" rx="5"/><path d="M7 11v4M5 13h4"/><circle cx="16" cy="12" r="1.2"/><circle cx="18.5" cy="14.5" r="1.2"/>',
+      'Arcade', 'Un orto inventato, da zero o copiato dal tuo: prova colture e rotazioni e guarda come va negli anni. Non tocca i dati veri.'),
+    elemento('h3', 'Simulazioni Arcade salvate'),
+    paginaSimulazioniArcade(),
+    link('+ Nuova simulazione Arcade', '#/test/arcade/nuova', 'pulsante pulsante-arcade'),
     link('Calendario delle colture (binari per aiuola)', '#/test/calendario', 'pulsante secondario'),
   );
   return sezione;
@@ -2381,6 +2389,7 @@ function presenteIl(c, g) {
 
 // Colture da disegnare sulla mappa: quelle attive oggi, oppure (nel tempo) quelle presenti quel giorno
 function visibile(c) {
+  if (modoArcade) return presenteInSimulazione(c, oggi());
   return giornoMappa === null ? c.stato === 'attiva' && iniziata(c) : presenteIl(c, giornoMappa);
 }
 
@@ -2459,19 +2468,12 @@ function mappaDelGiorno(dati, g) {
   }
 }
 
-export function ortoNelTempo(dati) {
-  const sezione = document.createElement('section');
-  sezione.className = 'mappa orto-tempo';
-  // Da quando c'è l'orto (prima coltura o voce) a 4 anni da oggi, a passi di una settimana
-  const date = [...dati.colture.map(c => c.dataInizio), ...dati.registro.map(v => v.data)].filter(Boolean).sort();
-  const inizio = date[0] && date[0] < oggi() ? date[0] : piuGiorni(oggi(), -30);
-  const passi = Math.ceil((new Date(piuGiorni(oggi(), 4 * 365)) - new Date(inizio)) / (7 * GIORNO));
-  let indice = Math.round((new Date(oggi()) - new Date(inizio)) / (7 * GIORNO));
-  const giornoDi = i => (i === Math.round((new Date(oggi()) - new Date(inizio)) / (7 * GIORNO)) ? oggi() : piuGiorni(inizio, i * 7));
-
-  const testa = elemento('div', '', 'testa-tempo');
-  testa.append(link('← Simulazioni', '#/test', 'indietro-tempo'), elemento('span', 'Orto reale nel tempo · solo da guardare', 'titolo-tempo'));
-  const posto = elemento('div');
+// Barra del tempo: cursore a settimane tra `inizio` e `fine`, pulsanti, data e stagione.
+// cambia(giorno) viene chiamata a ogni spostamento; `centro` = [testo, giorno] per il pulsante centrale
+function barraDelTempo(inizio, fine, giorno, cambia, centro) {
+  const passi = Math.max(1, Math.ceil((new Date(fine) - new Date(inizio)) / (7 * GIORNO)));
+  const indiceDi = g => Math.max(0, Math.min(passi, Math.round((new Date(g) - new Date(inizio)) / (7 * GIORNO))));
+  let attuale = giorno;
   const barra = elemento('div', '', 'barra-tempo');
   const data = elemento('div', '', 'data-tempo');
   const stagione = elemento('span', '', 'stagione-tempo');
@@ -2479,9 +2481,7 @@ export function ortoNelTempo(dati) {
   cursore.type = 'range';
   cursore.min = '0';
   cursore.max = String(passi);
-  cursore.value = String(indice);
   cursore.setAttribute('aria-label', 'Giorno mostrato sulla mappa');
-  const comandi = elemento('div', '', 'comandi-tempo');
   const pulsante = (testo, nome) => {
     const b = elemento('button', testo, 'comando-tempo');
     b.type = 'button';
@@ -2490,35 +2490,201 @@ export function ortoNelTempo(dati) {
   };
   const prima = pulsante('◀ settimana', 'Una settimana prima');
   const scorri = pulsante('▶▶ scorri', 'Fai scorrere il tempo');
+  const mezzo = pulsante(centro[0], `Vai a: ${centro[0]}`);
   const dopo = pulsante('settimana ▶', 'Una settimana dopo');
-  const vaiOggi = pulsante('oggi', 'Torna a oggi');
-  comandi.append(prima, scorri, vaiOggi, dopo);
+  const comandi = elemento('div', '', 'comandi-tempo');
+  comandi.append(prima, scorri, mezzo, dopo);
   barra.append(data, stagione, cursore, comandi);
-  sezione.append(testa, posto, barra);
 
-  function mostraGiorno() {
-    const g = giornoDi(indice);
-    cursore.value = String(indice);
-    data.textContent = dataLunga(g) + (g === oggi() ? ' · oggi' : '');
-    stagione.textContent = stagioneDi(g);
-    posto.replaceChildren(mappaDelGiorno(dati, g));
-    coloraPrato(g);
+  function vai(g) {
+    attuale = g < inizio ? inizio : g > fine ? fine : g;
+    cursore.value = String(indiceDi(attuale));
+    data.textContent = dataLunga(attuale) + (attuale === oggiVero() && !inArcade() ? ' · oggi' : '');
+    stagione.textContent = stagioneDi(attuale);
+    cambia(attuale);
   }
-  const vai = i => { indice = Math.max(0, Math.min(passi, i)); mostraGiorno(); };
-  cursore.addEventListener('input', () => vai(Number(cursore.value)));
-  prima.addEventListener('click', () => vai(indice - 1));
-  dopo.addEventListener('click', () => vai(indice + 1));
-  vaiOggi.addEventListener('click', () => vai(Math.round((new Date(oggi()) - new Date(inizio)) / (7 * GIORNO))));
+  cursore.addEventListener('input', () => vai(piuGiorni(inizio, Number(cursore.value) * 7)));
+  prima.addEventListener('click', () => vai(piuGiorni(attuale, -7)));
+  dopo.addEventListener('click', () => vai(piuGiorni(attuale, 7)));
+  mezzo.addEventListener('click', () => vai(centro[1]));
   let timer = null;
   const ferma = () => { clearInterval(timer); timer = null; scorri.textContent = '▶▶ scorri'; };
   scorri.addEventListener('click', () => {
     if (timer) return ferma();
     scorri.textContent = '❚❚ ferma';
     timer = setInterval(() => {
-      if (!sezione.isConnected || indice >= passi) return ferma();
-      vai(indice + 1);
+      if (!barra.isConnected || attuale >= fine) return ferma();
+      vai(piuGiorni(attuale, 7));
     }, 450);
   });
-  mostraGiorno();
+  // Primo disegno, senza chiamare cambia due volte: lo fa chi crea la barra
+  cursore.value = String(indiceDi(attuale));
+  data.textContent = dataLunga(attuale) + (attuale === oggiVero() && !inArcade() ? ' · oggi' : '');
+  stagione.textContent = stagioneDi(attuale);
+  return barra;
+}
+
+export function ortoNelTempo(dati) {
+  const sezione = document.createElement('section');
+  sezione.className = 'mappa orto-tempo';
+  // Da quando c'è l'orto (prima coltura o voce) a 4 anni da oggi
+  const date = [...dati.colture.map(c => c.dataInizio), ...dati.registro.map(v => v.data)].filter(Boolean).sort();
+  const inizio = date[0] && date[0] < oggi() ? date[0] : piuGiorni(oggi(), -30);
+  const testa = elemento('div', '', 'testa-tempo');
+  testa.append(link('← Simulazioni', '#/test', 'indietro-tempo'), elemento('span', 'Orto reale nel tempo · solo da guardare', 'titolo-tempo'));
+  const posto = elemento('div');
+  const mostra = g => {
+    posto.replaceChildren(mappaDelGiorno(dati, g));
+    coloraPrato(g);
+  };
+  sezione.append(testa, posto, barraDelTempo(inizio, piuGiorni(oggi(), 4 * 365), oggi(), mostra, ['oggi', oggi()]));
+  mostra(oggi());
+  return sezione;
+}
+
+// ---- Arcade ----
+
+let modoArcade = false;   // vero mentre si disegna la mappa di una simulazione
+
+// In una simulazione le colture spariscono a fine raccolta (vera o stimata), anche se nessuno le termina
+function presenteInSimulazione(c, g) {
+  if (c.stato === 'pianificata' || c.dataInizio > g) return false;
+  if (c.dataFine) return g < c.dataFine;
+  const scheda = colturaDaNome(c.nome);
+  if (!scheda || scheda.tappa === 'P') return true;
+  const stima = fineSuggerita(scheda, c.dataInizio);
+  return !stima || g < stima;
+}
+
+function mappaArcade(dati) {
+  const sim = simulazioneAttiva();
+  const sezione = document.createElement('section');
+  sezione.className = 'mappa orto-tempo mappa-arcade';
+  const posto = elemento('div');
+  const partenza = `${sim.parametri.inizio}-01`;
+  const disegnaMappa = () => {
+    modoArcade = true;
+    try {
+      const m = elemento('div', '', 'mappa-tempo');
+      m.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(dati), colonna(dati, 'destra'), staccionata(), etichetta('Davanti'));
+      posto.replaceChildren(m);
+    } finally {
+      modoArcade = false;
+    }
+    coloraPrato(oggi());
+  };
+  const barra = barraDelTempo(piuGiorni(partenza, -30), piuGiorni(partenza, 4 * 365), sim.giorno, g => {
+    impostaGiornoArcade(g);
+    disegnaMappa();
+  }, ['partenza', partenza]);
+  const nome = elemento('p', sim.nome, 'nome-simulazione');
+  sezione.append(nome, posto, barra);
+  disegnaMappa();
+  return sezione;
+}
+
+export function paginaSimulazioniArcade() {
+  const elenco = elemento('div', '', 'simulazioni-salvate');
+  const tutte = elencoSimulazioni();
+  if (tutte.length === 0) elenco.append(elemento('p', 'Nessuna simulazione salvata.', 'nota-terreno'));
+  for (const s of tutte) {
+    const voce = link('', `#/test/arcade/${s.id}`, 'salvata');
+    const testo = elemento('span');
+    testo.append(elemento('strong', s.nome), elemento('br'),
+      elemento('small', `creata il ${dataPerUtente(s.creata)} · ${s.parametri.partenza === 'reale' ? `dall'orto reale al ${dataPerUtente(s.parametri.dal)}` : 'orto vuoto'}`));
+    voce.append(testo, elemento('span', '›', 'freccia-salvata'));
+    elenco.append(voce);
+  }
+  return elenco;
+}
+
+const MESI_SCELTA = MESI_LUNGHI.map((m, i) => [String(i + 1).padStart(2, '0'), m]);
+
+// Parametri di una simulazione nuova (id null) o di una salvata
+export function paginaArcade(id) {
+  const sim = id ? leggiSimulazione(id) : null;
+  const p = sim?.parametri ?? {
+    inizio: oggiVero().slice(0, 7), rotazione: 'base', anni: 4, partenza: 'vuoto', dal: oggiVero(), terreno: 'reale',
+  };
+  const modulo = document.createElement('form');
+  modulo.className = 'modulo modulo-arcade';
+  modulo.noValidate = true;
+  const scelte = (nome, opzioni) => `<div class="scelte-arcade">${opzioni.map(([v, t]) =>
+    `<label><input type="radio" name="${nome}" value="${v}"><span>${t}</span></label>`).join('')}</div>`;
+  modulo.innerHTML = `
+    <label>Nome<input type="text" name="nome" autocomplete="off"></label>
+    <fieldset><legend>Si parte</legend><div class="due-colonne">
+      <label class="senza-margine">Mese<select name="mese">${MESI_SCELTA.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>
+      <label class="senza-margine">Anno<input type="text" inputmode="numeric" name="anno"></label></div></fieldset>
+    <fieldset><legend>Rotazione</legend>${scelte('rotazione', [['base', 'Base'], ['personalizzata', 'Personalizzata'], ['nessuna', 'Nessuna']])}</fieldset>
+    <label class="campo-anni" hidden>La stessa famiglia torna dopo
+      <select name="anni"><option value="2">2 anni</option><option value="3">3 anni</option><option value="4">4 anni</option><option value="5">5 anni</option></select></label>
+    <fieldset><legend>Partenza</legend>${scelte('partenza', [['vuoto', 'Orto vuoto'], ['reale', "Dall'orto reale"]])}</fieldset>
+    <label class="campo-dal" hidden>Com'era l'orto reale il<input type="text" name="dal" placeholder="gg/mm/aaaa"></label>
+    <fieldset><legend>Terreno</legend>${scelte('terreno', [['reale', 'Quello reale'], ['stima', 'Stima di Bologna']])}</fieldset>
+    <p class="errore" role="alert" hidden></p>
+    <button type="submit" class="pulsante pulsante-arcade">${sim ? 'Riprendi simulazione' : 'Inizia simulazione'}</button>`;
+  const c = modulo.elements;
+  c.nome.value = sim?.nome ?? `Simulazione del ${dataPerUtente(oggiVero())}`;
+  c.mese.value = p.inizio.slice(5, 7);
+  c.anno.value = p.inizio.slice(0, 4);
+  c.anni.value = String(p.anni ?? 4);
+  c.dal.value = dataPerUtente(p.dal);
+  for (const k of ['rotazione', 'partenza', 'terreno']) modulo.querySelector(`[name="${k}"][value="${p[k]}"]`).checked = true;
+  const mostraCampi = () => {
+    modulo.querySelector('.campo-anni').hidden = modulo.querySelector('[name="rotazione"]:checked').value !== 'personalizzata';
+    modulo.querySelector('.campo-dal').hidden = modulo.querySelector('[name="partenza"]:checked').value !== 'reale';
+  };
+  modulo.addEventListener('change', mostraCampi);
+  mostraCampi();
+
+  modulo.addEventListener('submit', evento => {
+    evento.preventDefault();
+    const avviso = modulo.querySelector('.errore');
+    const scelto = k => modulo.querySelector(`[name="${k}"]:checked`).value;
+    const anno = Number(c.anno.value.trim());
+    const nuovi = {
+      inizio: `${anno}-${c.mese.value}`, rotazione: scelto('rotazione'), anni: Number(c.anni.value),
+      partenza: scelto('partenza'), dal: dataPerArchivio(c.dal.value) ?? '', terreno: scelto('terreno'),
+    };
+    const errori = [];
+    if (!c.nome.value.trim()) errori.push('Scrivi un nome per la simulazione.');
+    if (!Number.isInteger(anno) || anno < 2000 || anno > 2100) errori.push("Scrivi l'anno di partenza, es. 2027.");
+    if (nuovi.partenza === 'reale') {
+      const primo = inizioOrtoReale();
+      if (!nuovi.dal) errori.push("Scrivi la data dell'orto reale come gg/mm/aaaa.");
+      else if (!primo) errori.push("L'orto reale è ancora vuoto: scegli \"Orto vuoto\".");
+      else if (nuovi.dal < primo) errori.push(`L'orto reale comincia il ${dataPerUtente(primo)}: scegli una data da lì in poi.`);
+      else if (nuovi.dal > oggiVero()) errori.push("La data dell'orto reale non può essere nel futuro.");
+    }
+    if (errori.length) {
+      avviso.textContent = errori.join('\n');
+      avviso.hidden = false;
+      return;
+    }
+    const base = ['inizio', 'partenza', 'dal', 'terreno'];
+    const ricomincia = !sim || base.some(k => (k === 'dal' && nuovi.partenza !== 'reale') ? false : nuovi[k] !== p[k]);
+    if (sim && ricomincia && !confirm('Hai cambiato la partenza: la simulazione ricomincia da capo e perde le colture aggiunte. Continuare?')) return;
+    const nuova = sim ?? { id: nuovoId('s'), creata: oggiVero() };
+    Object.assign(nuova, { nome: c.nome.value.trim(), parametri: nuovi });
+    if (ricomincia) Object.assign(nuova, { dati: datiPerSimulazione(nuovi), giorno: `${nuovi.inizio}-01` });
+    salvaSimulazione(nuova);
+    entraArcade(nuova.id);
+    location.hash = '#/';
+  });
+
+  const sezione = document.createElement('section');
+  sezione.className = 'pagina-arcade';
+  sezione.append(link('← Simulazioni', '#/test', 'indietro'), elemento('h2', sim ? sim.nome : 'Nuova simulazione Arcade'), modulo);
+  if (sim) {
+    const elimina = elemento('button', 'Elimina simulazione', 'pulsante pericolo');
+    elimina.type = 'button';
+    elimina.addEventListener('click', () => {
+      if (!confirm(`Eliminare "${sim.nome}"? Non si potrà recuperare.`)) return;
+      eliminaSimulazione(sim.id);
+      location.hash = '#/test';
+    });
+    sezione.append(elimina);
+  }
   return sezione;
 }

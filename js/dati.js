@@ -7,6 +7,8 @@ const CHIAVE = 'orto-dati';
 const CHIAVE_PROVA = 'orto-dati-prova';      // copia separata per la modalità prova
 const CHIAVE_MODO = 'orto-modo-prova';       // '1' se la modalità prova è attiva
 const CHIAVE_SYNC = 'orto-sync';             // stato della sincronizzazione
+const CHIAVE_ARCADE = 'orto-arcade';         // simulazioni Arcade (solo su questo telefono)
+const CHIAVE_ARCADE_ATTIVA = 'orto-arcade-attiva';   // id della simulazione in cui si sta giocando
 const VERSIONE = 1;
 
 const AIUOLE = [
@@ -45,10 +47,23 @@ function leggiDa(chiave) {
 }
 
 export function carica() {
+  const sim = simulazioneAttiva();
+  if (sim) return structuredClone(sim.dati);
   return leggiDa(inProva() ? CHIAVE_PROVA : CHIAVE);
 }
 
+// I dati veri (anche dentro Arcade, per copiarli in una simulazione)
+export function caricaReali() {
+  return leggiDa(CHIAVE);
+}
+
 export function salva(dati) {
+  const sim = simulazioneAttiva();
+  if (sim) {
+    sim.dati = dati;
+    salvaSimulazione(sim);
+    return;
+  }
   if (inProva()) {
     localStorage.setItem(CHIAVE_PROVA, JSON.stringify(dati));
     return;
@@ -99,6 +114,82 @@ export function disattivaProva() {
 // La copia di prova riparte dai dati veri
 export function ricominciaProva() {
   localStorage.setItem(CHIAVE_PROVA, localStorage.getItem(CHIAVE) ?? JSON.stringify(datiIniziali()));
+}
+
+// ---- Arcade: simulazioni salvate solo su questo telefono, mai sincronizzate ----
+// Ogni simulazione: { id, nome, creata, parametri, dati, giorno }. Dentro Arcade carica() e salva()
+// usano i dati della simulazione e oggi() è il giorno scelto con la barra del tempo.
+
+export function elencoSimulazioni() {
+  try {
+    return JSON.parse(localStorage.getItem(CHIAVE_ARCADE)) ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export function leggiSimulazione(id) {
+  return elencoSimulazioni().find(s => s.id === id) ?? null;
+}
+
+export function salvaSimulazione(sim) {
+  const tutte = elencoSimulazioni().filter(s => s.id !== sim.id);
+  tutte.unshift(sim);
+  localStorage.setItem(CHIAVE_ARCADE, JSON.stringify(tutte));
+}
+
+export function eliminaSimulazione(id) {
+  localStorage.setItem(CHIAVE_ARCADE, JSON.stringify(elencoSimulazioni().filter(s => s.id !== id)));
+  if (localStorage.getItem(CHIAVE_ARCADE_ATTIVA) === id) esciArcade();
+}
+
+export function entraArcade(id) {
+  localStorage.setItem(CHIAVE_ARCADE_ATTIVA, id);
+}
+
+export function esciArcade() {
+  localStorage.removeItem(CHIAVE_ARCADE_ATTIVA);
+}
+
+export function simulazioneAttiva() {
+  const id = localStorage.getItem(CHIAVE_ARCADE_ATTIVA);
+  return id ? leggiSimulazione(id) : null;
+}
+
+export function inArcade() {
+  return simulazioneAttiva() !== null;
+}
+
+export function impostaGiornoArcade(giorno) {
+  const sim = simulazioneAttiva();
+  if (!sim) return;
+  sim.giorno = giorno;
+  salvaSimulazione(sim);
+}
+
+// Dati di partenza di una simulazione: orto vuoto oppure l'orto vero com'era il giorno `dal`
+export function datiPerSimulazione({ partenza, dal, terreno }) {
+  const reali = leggiDa(CHIAVE);
+  const dati = datiIniziali();
+  dati.aiuole = dati.aiuole.map(a => {
+    const vera = reali.aiuole.find(x => x.id === a.id);
+    return terreno === 'reale' && vera?.suolo ? { ...a, suolo: structuredClone(vera.suolo) } : a;
+  });
+  if (partenza === 'reale') {
+    dati.colture = reali.colture.filter(c => c.dataInizio <= dal && c.stato !== 'pianificata').map(c => {
+      const copia = structuredClone(c);
+      if (copia.dataFine && copia.dataFine > dal) Object.assign(copia, { stato: 'attiva', dataFine: null });
+      return copia;
+    });
+    dati.registro = reali.registro.filter(v => v.data <= dal).map(v => structuredClone(v));
+  }
+  return dati;
+}
+
+// Il primo giorno dell'orto vero: la prima coltura o voce di registro (null se è vuoto)
+export function inizioOrtoReale() {
+  const reali = leggiDa(CHIAVE);
+  return [...reali.colture.map(c => c.dataInizio), ...reali.registro.map(v => v.data)].filter(Boolean).sort()[0] ?? null;
 }
 
 // ---- Sincronizzazione ----
@@ -243,7 +334,7 @@ export function scollegaTelefono() {
 // Cancella tutto ciò che l'app ha salvato su questo telefono (i dati sul server restano)
 export function cancellaDatiTelefono() {
   scollegaTelefono();
-  for (const chiave of [CHIAVE, CHIAVE_PROVA, CHIAVE_MODO]) localStorage.removeItem(chiave);
+  for (const chiave of [CHIAVE, CHIAVE_PROVA, CHIAVE_MODO, CHIAVE_ARCADE, CHIAVE_ARCADE_ATTIVA]) localStorage.removeItem(chiave);
 }
 
 export function statoSincronizzazione() {
@@ -279,12 +370,16 @@ function aIso(d) {                            // oggetto data → 'AAAA-MM-GG'
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export function oggi() {                      // data di oggi in AAAA-MM-GG
+export function oggi() {                      // data di oggi in AAAA-MM-GG (dentro Arcade: il giorno della simulazione)
+  return simulazioneAttiva()?.giorno ?? aIso(new Date());
+}
+
+export function oggiVero() {                  // la data di oggi anche dentro Arcade
   return aIso(new Date());
 }
 
 export function domani() {                    // data di domani in AAAA-MM-GG
-  const d = new Date();
+  const d = new Date(oggi());
   d.setDate(d.getDate() + 1);
   return aIso(d);
 }
