@@ -1,5 +1,5 @@
 import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva, accessoDaLink, completaCollegamento, ortoAttuale,
-  soloLettura, MESSAGGIO_SOLA_LETTURA } from './dati.js';
+  soloLettura, MESSAGGIO_SOLA_LETTURA, aggiornaDatiSalvati } from './dati.js';
 import { CATALOGO } from './catalogo.js';
 import { PROVE } from './terreno.js';
 import {
@@ -114,6 +114,13 @@ function disegna() {
 function mostra() {
   disegna();
   window.scrollTo(0, 0);
+}
+
+// Dati di una versione precedente (es. aiuole senza misure, metà vialetto/esterno): si aggiornano e si salvano
+try {
+  aggiornaDatiSalvati();
+} catch {
+  // dati danneggiati: se ne occupa la schermata (messaggio di errore)
 }
 
 // Le colture "pianificata" di una versione di prova del pianificatore diventano colture attive

@@ -16,6 +16,7 @@ import {
   spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
 } from './terreno.js';
 import { GUIDE, LAVORI } from './impara.js';
+import { quadratoDentro, toccaRettangoli, ingombro, ingombroZona, posti, puntoEtichetta, tracciato, misure } from './geometria.js';
 import { pianoAutomatico, resaColtura, kgTra, inRaccolta, fineSovescio } from './arcade.js';
 
 const TIPI = {
@@ -44,10 +45,11 @@ const ICONE = {
 // Ogni metà appartiene a uno dei due modi di dividere un'aiuola
 const ASSI = {
   fondo: 'fondo-davanti', davanti: 'fondo-davanti',
-  vialetto: 'vialetto-esterno', esterno: 'vialetto-esterno',
+  sinistra: 'sinistra-destra', destra: 'sinistra-destra',
 };
+const ZONE = { 'fondo-davanti': ['fondo', 'davanti'], 'sinistra-destra': ['sinistra', 'destra'] };
 
-// Come è divisa un'aiuola dalle colture attive: 'fondo-davanti', 'vialetto-esterno' o null
+// Come è divisa un'aiuola dalle colture attive: 'fondo-davanti', 'sinistra-destra' o null
 // Una coltura attiva con la data di inizio nel futuro è "in programma": non si vede ancora sulla mappa
 function iniziata(c) {
   return c.dataInizio <= oggi();
@@ -70,7 +72,7 @@ function doveColtura(c) {
 function bollini(dati, aiuola) {
   const attive = dati.colture.filter(c => visibile(c) && c.aiuoleIds.includes(aiuola.id));
   const asse = divisione(dati, aiuola.id);
-  const zone = !asse ? ['tutta'] : asse === 'fondo-davanti' ? ['fondo', 'davanti'] : ['vialetto', 'esterno'];
+  const zone = asse ? ZONE[asse] : ['tutta'];
   return zone
     .map(zona => ({
       zona,
@@ -79,18 +81,11 @@ function bollini(dati, aiuola) {
     .filter(z => z.n > 1);
 }
 
-// Dove va il bollino nel riquadro: 'alto' (metà di sopra), 'sinistra' (metà di sinistra) o 'angolo' (in basso a destra)
-function posizioneBollino(zona, lato) {
-  if (zona === 'fondo') return 'alto';
-  const metaSinistra = lato === 'sinistra' ? 'esterno' : 'vialetto';
-  return zona === metaSinistra ? 'sinistra' : 'angolo';
-}
-
 export function mappa(dati) {
   if (inArcade()) return mappaArcade(dati);
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
-  mappa.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(dati), colonna(dati, 'destra'), staccionata(), etichetta('Davanti'));
+  mappa.append(etichetta('Fondo'), terrenoMappa(dati), staccionata(dati), etichetta('Davanti'));
   const scorciatoie = elemento('div', '', 'scorciatoie');
   const daFare = scorciatoia('Da fare', '#/task', 'task');
   const segnoSenzaAiuole = segnoTask(dati.task.filter(t => t.aiuoleIds.length === 0));
@@ -106,40 +101,6 @@ function scorciatoia(testo, href, icona) {
     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONE[icona]}</svg>`;
   a.append(elemento('span', testo));
   return a;
-}
-
-function colonna(dati, lato) {
-  const colonna = document.createElement('div');
-  colonna.className = 'lato';
-  const aiuole = dati.aiuole
-    .filter(a => a.lato === lato)
-    .sort((x, y) => x.posizione - y.posizione);
-  for (const a of aiuole) {
-    const link = document.createElement('a');
-    const asse = divisione(dati, a.id);
-    link.className = asse ? `aiuola diviso-${asse}` : 'aiuola';
-    link.href = `#/aiuola/${a.id}`;
-    // Il "tieni premuto" serve a spostare gli ortaggi: niente menu del browser sul link
-    link.addEventListener('contextmenu', evento => evento.preventDefault());
-    const nome = elemento('span', a.id, 'nome');
-    // In Arcade: cestino accanto al nome se in quel giorno si raccoglie qualcosa
-    if (modoArcade && dati.colture.some(c => c.aiuoleIds.includes(a.id) && inRaccoltaIl(c, oggi()))) {
-      const cestino = elemento('span', '', 'cestino');
-      cestino.innerHTML = CESTO;
-      cestino.title = 'Si raccoglie';
-      nome.append(cestino);
-    }
-    link.append(nome, ...piantine(dati, a));
-    for (const { zona, n } of bollini(dati, a)) {
-      link.append(elemento('span', `× ${n}`, `bollino bollino-${posizioneBollino(zona, a.lato)}`));
-    }
-    const segno = segnoTask(taskAiuola(dati, a.id));
-    if (segno) link.append(puntino(segno));
-    const arrivo = prossimoArrivo(dati, a.id);
-    if (arrivo) link.append(paletto(arrivo));
-    colonna.append(link);
-  }
-  return colonna;
 }
 
 const GIORNO = 86400000;
@@ -164,62 +125,228 @@ function paletto(coltura) {
   return segno;
 }
 
-function vialetto(dati) {
-  const vialetto = document.createElement('div');
-  vialetto.className = 'vialetto';
-  vialetto.setAttribute('aria-hidden', 'true');
-  const segno = segnoTask(dati.task.filter(t => tuttoOrto(dati, t)));
-  if (segno) vialetto.append(puntino(segno));
-  return vialetto;
+// ---- Il terreno dell'orto disegnato dalle misure (cm): vialetti e aiuole con la loro forma vera ----
+
+let numeroSvg = 0;   // per dare un id diverso ai motivi (solchi, terra arata) di ogni disegno
+
+// Posizione e misure di un rettangolo (cm) in percentuale del terreno
+function inPercentuale(el, b, t) {
+  el.style.left = `${b.x / t.larghezza * 100}%`;
+  el.style.top = `${b.y / t.lunghezza * 100}%`;
+  el.style.width = `${b.w / t.larghezza * 100}%`;
+  el.style.height = `${b.h / t.lunghezza * 100}%`;
 }
 
-// Disegnini delle colture attive: uno spazio per tutta l'aiuola, oppure uno per ogni metà.
-// Più colture nello stesso spazio si alternano
+// Disegno SVG della forma dell'aiuola, grande quanto il suo ingombro.
+// divisa: 'fondo-davanti' | 'sinistra-destra' | null (riga tratteggiata). scelta: null, 'intera' o una metà (terra arata)
+function sagomaAiuola(a, { divisa = null, scelta = null } = {}) {
+  const b = ingombro(a);
+  const n = ++numeroSvg;
+  const giro = `translate(${a.x} ${a.y}) rotate(${a.rot ?? 0})`;
+  const forma = a.forma === 'rettangolo'
+    ? `<rect x="${-a.w / 2}" y="${-a.h / 2}" width="${a.w}" height="${a.h}" rx="7"/>`
+    : `<path d="${tracciato(a)}"/>`;
+  const zona = z => {
+    const r = ingombroZona(a, z);
+    return `<rect x="${r.x - 2}" y="${r.y - 2}" width="${r.w + 4}" height="${r.h + 4}"/>`;
+  };
+  let sopra = '';
+  if (divisa) {
+    const linea = divisa === 'fondo-davanti'
+      ? `<line x1="${b.x}" y1="${a.y}" x2="${b.x + b.w}" y2="${a.y}"/>`
+      : `<line x1="${a.x}" y1="${b.y}" x2="${a.x}" y2="${b.y + b.h}"/>`;
+    sopra += `<g clip-path="url(#forma-${n})" class="riga-meta">${linea}</g>`;
+  }
+  if (scelta) {
+    const parte = scelta === 'intera' ? `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"/>` : zona(scelta);
+    sopra += `<clipPath id="parte-${n}">${parte}</clipPath>
+      <g clip-path="url(#forma-${n})"><g clip-path="url(#parte-${n})"><rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="url(#arata-${n})"/></g></g>
+      <g clip-path="url(#parte-${n})" class="bordo-scelta"><g transform="${giro}">${forma}</g></g>`;
+    if (scelta !== 'intera') {
+      const linea = ASSI[scelta] === 'fondo-davanti'
+        ? `<line x1="${b.x}" y1="${a.y}" x2="${b.x + b.w}" y2="${a.y}"/>`
+        : `<line x1="${a.x}" y1="${b.y}" x2="${a.x}" y2="${b.y + b.h}"/>`;
+      sopra += `<g clip-path="url(#forma-${n})" class="bordo-scelta">${linea}</g>`;
+    }
+  }
+  // Solo misure e forme calcolate, nessun testo dell'utente
+  return `<svg class="sagoma" viewBox="${b.x} ${b.y} ${b.w} ${b.h}" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <pattern id="solchi-${n}" patternUnits="userSpaceOnUse" width="30" height="14.5" patternTransform="rotate(${a.rot ?? 0})">
+        <rect width="30" height="14.5" fill="#8B5E3C"/><rect y="12" width="30" height="2.5" fill="#7A5134"/></pattern>
+      <pattern id="arata-${n}" patternUnits="userSpaceOnUse" width="40" height="19.2">
+        <image href="icone/terra-arata.svg" width="40" height="19.2"/></pattern>
+      <clipPath id="forma-${n}">${forma.replace(/^<(rect|path) /, `<$1 transform="${giro}" `)}</clipPath>
+    </defs>
+    <g class="terra" transform="${giro}" fill="url(#solchi-${n})">${forma}</g>
+    ${sopra}
+  </svg>`;
+}
+
+// Il terreno: un riquadro con le proporzioni vere; dentro, in percentuale, vialetti e aiuole.
+// creaAiuola(a) restituisce l'elemento dell'aiuola (link, pulsante o riquadro), già con il suo contenuto
+function terrenoOrto(dati, creaAiuola, classe = 'terreno') {
+  const t = dati.terreno[0];
+  const box = elemento('div', '', classe);
+  box.style.aspectRatio = `${t.larghezza} / ${t.lunghezza}`;
+  box.style.setProperty('--rapporto', String(t.larghezza / t.lunghezza));
+  for (const v of dati.vialetti) {
+    const via = elemento('div', '', 'vialetto-libero');
+    inPercentuale(via, { x: v.x - v.w / 2, y: v.y - v.h / 2, w: v.w, h: v.h }, t);
+    if (v.rot) via.style.transform = `rotate(${v.rot}deg)`;
+    via.setAttribute('aria-hidden', 'true');
+    box.append(via);
+  }
+  for (const a of dati.aiuole) {
+    const el = creaAiuola(a);
+    inPercentuale(el, ingombro(a), t);
+    el.dataset.id = a.id;
+    box.append(el);
+  }
+  return box;
+}
+
+// Cartellino col nome nel punto della forma più vicino all'angolo in alto a sinistra
+function cartellino(a) {
+  const nome = elemento('span', a.nome ?? a.id, 'nome');
+  const b = ingombro(a);
+  const p = puntoEtichetta(a);
+  nome.style.left = `max(3px, calc(${(p.x - b.x) / b.w * 100}% - 4px))`;
+  nome.style.top = `max(3px, calc(${(p.y - b.y) / b.h * 100}% - 4px))`;
+  return nome;
+}
+
+// Un'aiuola della mappa: forma, cartellino, disegnini delle colture e segni (task, paletto, cestino, bollini)
+function aiuolaMappa(dati, a) {
+  const link = document.createElement('a');
+  const asse = divisione(dati, a.id);
+  link.className = 'aiuola aiuola-forma';
+  link.href = `#/aiuola/${a.id}`;
+  // Il "tieni premuto" serve a spostare gli ortaggi: niente menu del browser sul link
+  link.addEventListener('contextmenu', evento => evento.preventDefault());
+  link.innerHTML = sagomaAiuola(a, { divisa: asse });
+  const nome = cartellino(a);
+  // In Arcade: cestino accanto al nome se in quel giorno si raccoglie qualcosa
+  if (modoArcade && dati.colture.some(c => c.aiuoleIds.includes(a.id) && inRaccoltaIl(dati, c, oggi()))) {
+    const cestino = elemento('span', '', 'cestino');
+    cestino.innerHTML = CESTO;
+    cestino.title = 'Si raccoglie';
+    nome.append(cestino);
+  }
+  link.append(nome, ...piantine(dati, a));
+  for (const { zona, n } of bollini(dati, a)) {
+    link.append(elemento('span', `× ${n}`, `bollino bollino-${posizioneBollino(zona)}`));
+  }
+  const segno = segnoTask(taskAiuola(dati, a.id));
+  if (segno) link.append(puntino(segno));
+  const arrivo = prossimoArrivo(dati, a.id);
+  if (arrivo) link.append(paletto(arrivo));
+  return link;
+}
+
+// Il terreno della mappa principale, con il segno dei task su tutto l'orto in alto al centro
+function terrenoMappa(dati) {
+  const box = terrenoOrto(dati, a => aiuolaMappa(dati, a));
+  const segno = segnoTask(dati.task.filter(t => tuttoOrto(dati, t)));
+  if (segno) {
+    const p = puntino(segno);
+    p.classList.add('puntino-orto');
+    box.append(p);
+  }
+  disponiQuandoPronto(box, dati);
+  return box;
+}
+
+// I disegnini si dispongono quando si conosce la grandezza vera del terreno sullo schermo (e a ogni cambio)
+function disponiQuandoPronto(box, dati) {
+  const osservatore = new ResizeObserver(() => {
+    if (!box.isConnected) return osservatore.disconnect();
+    if (box.clientWidth > 0) disponiPiantine(box, dati);
+  });
+  osservatore.observe(box);
+}
+
+const LATO_PIANTINA = 38;   // pixel, se c'è posto
+
+// Mette ogni disegnino al suo posto: quello scelto a mano se ci sta ancora, altrimenti la casella automatica.
+// Se nella zona non ci stanno, si rimpiccioliscono un po' alla volta. Mai fuori dalla forma
+function disponiPiantine(box, dati) {
+  const t = dati.terreno[0];
+  const scala = box.clientWidth / t.larghezza;   // pixel per cm
+  for (const el of box.querySelectorAll('.aiuola-forma')) {
+    const a = dati.aiuole.find(x => x.id === el.dataset.id);
+    if (!a) continue;
+    const b = ingombro(a);
+    // Il cartellino col nome non va coperto
+    const nome = el.querySelector('.nome');
+    const evita = nome ? [{ x: b.x + nome.offsetLeft / scala, y: b.y + nome.offsetTop / scala, w: nome.offsetWidth / scala, h: nome.offsetHeight / scala }] : [];
+    const perZona = new Map();
+    for (const p of el.querySelectorAll('.piantina')) {
+      if (!perZona.has(p.dataset.zona)) perZona.set(p.dataset.zona, []);
+      perZona.get(p.dataset.zona).push(p);
+    }
+    for (const [zona, piante] of perZona) {
+      let s = LATO_PIANTINA / scala;
+      let auto = null;
+      while (!(auto = posti(a, zona, piante.length, s, `${a.id}-${zona}`, evita)) && s * scala > 14) s *= 0.85;
+      // Se proprio non ci stanno senza coprire il nome, almeno dentro la forma
+      if (!auto) auto = posti(a, zona, piante.length, s, `${a.id}-${zona}`);
+      const zb = ingombroZona(a, zona);
+      piante.forEach((p, i) => {
+        let c = auto?.[i] ?? { x: zb.x + zb.w / 2, y: zb.y + zb.h / 2 };
+        const salvata = p._salvata;
+        if (salvata) {
+          const cx = zb.x + s / 2 + salvata.x * Math.max(0, zb.w - s);
+          const cy = zb.y + zb.h - s / 2 - salvata.y * Math.max(0, zb.h - s);
+          if (quadratoDentro(a, zona, cx, cy, s)) c = { x: cx, y: cy };
+        }
+        p._centro = c;
+        p._lato = s;
+        p.style.setProperty('--l', `${s * scala}px`);
+        p.style.left = `${(c.x - s / 2 - b.x) * scala}px`;
+        p.style.top = `${(c.y - s / 2 - b.y) * scala}px`;
+        p.style.zIndex = String(1 + Math.round((c.y - b.y) / b.h * 5));   // quelli più in basso davanti
+      });
+    }
+    el._scala = scala;
+  }
+}
+
+// Dove va il bollino nel riquadro: 'alto' (metà di sopra), 'sinistra' (metà di sinistra) o 'angolo' (in basso a destra)
+function posizioneBollino(zona) {
+  if (zona === 'fondo') return 'alto';
+  return zona === 'sinistra' ? 'sinistra' : 'angolo';
+}
+
+// Disegnini delle colture attive: 4 per tutta l'aiuola, 2 per ogni metà; più colture nello stesso spazio si alternano.
+// La posizione la decide disponiPiantine, quando la mappa è sullo schermo
 function piantine(dati, aiuola) {
   const attive = dati.colture.filter(c => visibile(c) && c.aiuoleIds.includes(aiuola.id));
   if (attive.length === 0) return [];
   const asse = divisione(dati, aiuola.id);
-  const zone = !asse ? ['tutta'] : asse === 'fondo-davanti' ? ['fondo', 'davanti'] : ['vialetto', 'esterno'];
-  return zone.map(zona => {
+  const zone = asse ? ZONE[asse] : ['tutta'];
+  const tutte = [];
+  for (const zona of zone) {
     const qui = attive.filter(c => !c.parti?.[aiuola.id] || c.parti[aiuola.id] === zona);
-    const posto = zona === 'tutta' ? 'tutta' : latoDisegno(zona, aiuola.lato);
-    const spazio = elemento('span', '', `piantine piantine-${posto}`);
-    // Intera: 2 file da 2. Metà fondo/davanti: 2 affiancati. Metà vialetto/esterno (strette): 2 in colonna
-    const verticale = posto === 'sinistra' || posto === 'destra';
-    const righe = zona === 'tutta' || verticale ? 2 : 1;
-    const colonne = verticale ? 1 : 2;
-    for (let i = 0; qui.length > 0 && i < righe * colonne; i++) {
+    const quante = zona === 'tutta' ? 4 : 2;
+    for (let i = 0; qui.length > 0 && i < quante; i++) {
       const coltura = qui[i % qui.length];
       const k = Math.floor(i / qui.length);   // quale disegnino di questa coltura, in questa aiuola
       const pianta = icona(coltura.nome, 'piantina', 2.6);
-      const salvata = coltura.posizioni?.[aiuola.id]?.[k];
-      if (salvata) {
-        // Posizione scelta a mano: frazioni della sezione. Sottraendo --l non esce a destra né in basso
-        pianta.style.left = `calc((100cqw - var(--l)) * ${salvata.x})`;
-        pianta.style.bottom = `calc(max(0px, 100cqh - var(--l)) * ${salvata.y})`;
-      } else {
-        // Casella automatica: ogni ortaggio nella sua parte della sezione, con un po' di variazione dentro
-        // (prima la fila in alto, così quella in basso le viene disegnata davanti)
-        const riga = righe - 1 - Math.floor(i / colonne);
-        const colonna = i % colonne;
-        const seme = `${aiuola.id}-${zona}-${i}`;
-        const rx = casuale(seme + 'x').toFixed(3);
-        const ry = casuale(seme + 'y').toFixed(3);
-        pianta.style.left = `calc(${colonna / colonne} * 100cqw + max(0px, ${1 / colonne} * 100cqw - var(--l)) * ${rx})`;
-        pianta.style.bottom = `calc(${riga / righe} * 100cqh + max(0px, ${1 / righe} * 100cqh - var(--l)) * ${ry})`;
-      }
-      if (giornoMappa === null) rendiSpostabile(pianta, spazio, { colturaId: coltura.id, aiuolaId: aiuola.id, k, sporgeInAlto: posto !== 'sotto' });
-      spazio.append(pianta);
+      pianta.dataset.zona = zona;
+      pianta._salvata = coltura.posizioni?.[aiuola.id]?.[k] ?? null;
+      if (giornoMappa === null) rendiSpostabile(pianta, { aiuola, zona, colturaId: coltura.id, k });
+      tutte.push(pianta);
     }
-    return spazio;
-  });
+  }
+  return tutte;
 }
 
 const PRESSIONE = 500;   // millisecondi di pressione per "sollevare" un ortaggio
 
-// Tenendo premuto 1 secondo l'ortaggio si solleva e si può trascinare dentro la sua sezione.
-// Verso il fondo (in alto) può sporgere al massimo per metà; mai oltre gli altri bordi
-function rendiSpostabile(pianta, spazio, { colturaId, aiuolaId, k, sporgeInAlto }) {
+// Tenendo premuto mezzo secondo l'ortaggio si solleva e si può trascinare dentro la sua parte dell'aiuola:
+// si sposta solo dove ci sta tutto, senza uscire dalla forma
+function rendiSpostabile(pianta, { aiuola, zona, colturaId, k }) {
   let timer = null;
   let inizio = null;
   let presa = null;   // dove il dito ha preso il disegno, rispetto al suo angolo in alto a sinistra
@@ -243,13 +370,18 @@ function rendiSpostabile(pianta, spazio, { colturaId, aiuolaId, k, sporgeInAlto 
       timer = null;
     }
     if (!presa) return;
-    const z = spazio.getBoundingClientRect();
-    const l = pianta.offsetWidth;
-    const maxBasso = Math.max(0, z.height - l) + (sporgeInAlto ? l / 2 : 0);
-    const sinistra = Math.min(Math.max(evento.clientX - z.left - presa.dx, 0), Math.max(0, z.width - l));
-    const basso = Math.min(Math.max(z.bottom - evento.clientY - (l - presa.dy), 0), maxBasso);
+    const el = pianta.closest('.aiuola-forma');
+    const scala = el._scala;
+    const z = el.getBoundingClientRect();
+    const b = ingombro(aiuola);
+    const s = pianta._lato;
+    const sinistra = evento.clientX - z.left - presa.dx;
+    const alto = evento.clientY - z.top - presa.dy;
+    const c = { x: b.x + sinistra / scala + s / 2, y: b.y + alto / scala + s / 2 };
+    if (!quadratoDentro(aiuola, zona, c.x, c.y, s)) return;   // lì non ci sta: resta dov'era
+    pianta._centro = c;
     pianta.style.left = `${sinistra}px`;
-    pianta.style.bottom = `${basso}px`;
+    pianta.style.top = `${alto}px`;
   });
 
   const fine = () => {
@@ -265,11 +397,13 @@ function rendiSpostabile(pianta, spazio, { colturaId, aiuolaId, k, sporgeInAlto 
     collegamento.addEventListener('click', blocca, { capture: true, once: true });
     setTimeout(() => collegamento.removeEventListener('click', blocca, { capture: true }), 400);
 
-    const z = spazio.getBoundingClientRect();
-    const l = pianta.offsetWidth;
-    const x = z.width > l ? parseFloat(pianta.style.left) / (z.width - l) : 0;
-    const y = z.height > l ? parseFloat(pianta.style.bottom) / (z.height - l) : 0;
-    salvaPosizione(colturaId, aiuolaId, k, x, y);
+    // Si salva come frazione della parte dell'aiuola (0 = sinistra / in basso, 1 = destra / in alto)
+    const zb = ingombroZona(aiuola, zona);
+    const s = pianta._lato;
+    const c = pianta._centro;
+    const x = zb.w > s ? (c.x - s / 2 - zb.x) / (zb.w - s) : 0;
+    const y = zb.h > s ? (zb.y + zb.h - c.y - s / 2) / (zb.h - s) : 0;
+    salvaPosizione(colturaId, aiuola.id, k, Math.min(1, Math.max(0, x)), Math.min(1, Math.max(0, y)));
   };
   pianta.addEventListener('pointerup', fine);
   pianta.addEventListener('pointercancel', fine);
@@ -288,13 +422,6 @@ function salvaPosizione(colturaId, aiuolaId, k, x, y) {
   }
 }
 
-// Numero tra 0 e 1 che sembra casuale ma è sempre uguale per lo stesso testo
-function casuale(testo) {
-  let h = 2166136261;
-  for (const c of testo) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
-  return (h >>> 0) / 4294967296;
-}
-
 // Disegno fisso scelto in base al nome; il nome scritto dall'utente non entra nell'HTML
 function icona(nome, classe, tratto) {
   const contenitore = elemento('span', '', classe);
@@ -302,9 +429,19 @@ function icona(nome, classe, tratto) {
   return contenitore;
 }
 
-// Staccionata davanti all'orto, con l'ingresso libero in corrispondenza del vialetto
-function staccionata() {
+// Staccionata davanti all'orto, con l'ingresso libero dove arriva un vialetto (altrimenti al centro)
+function staccionata(dati) {
+  const t = dati.terreno[0];
   const riga = elemento('div', '', 'staccionata');
+  if (!t.staccionata) {
+    riga.classList.add('senza');
+    return riga;
+  }
+  const via = dati.vialetti.find(x => !x.rot && x.y + x.h / 2 >= t.lunghezza - 1);
+  const centro = via ? via.x : t.larghezza / 2, largo = via ? via.w : 40;
+  const sx = Math.max(0, (centro - largo / 2) / t.larghezza * 100), dx = Math.max(0, (t.larghezza - centro - largo / 2) / t.larghezza * 100);
+  riga.style.gridTemplateColumns = `${sx}% 1fr ${dx}%`;
+  riga.style.setProperty('--rapporto', String(t.larghezza / t.lunghezza));
   riga.setAttribute('aria-hidden', 'true');
   // Solo disegno fisso, nessun testo dell'utente
   const tratto = `<svg width="100%" height="32">
@@ -355,6 +492,8 @@ export function schedaAiuola(dati, aiuola) {
   return sezione;
 }
 
+const NOMI_FORMA = { rettangolo: 'rettangolo', ellisse: 'rotonda', elle: 'a L' };
+
 export function infoAiuola(dati, aiuola) {
   const asse = divisione(dati, aiuola.id);
 
@@ -387,9 +526,9 @@ export function infoAiuola(dati, aiuola) {
     link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro'),
     elemento('h2', `Info ${aiuola.id}`),
     riga('Settore', String(aiuola.settore)),
-    riga('Posizione', `a ${aiuola.lato}, ${aiuola.posizione}ª dal fondo`),
+    riga('Forma', `${NOMI_FORMA[aiuola.forma] ?? 'rettangolo'}, ${aiuola.w} × ${aiuola.h} cm`),
     riga('Divisione', asse === 'fondo-davanti' ? 'divisa a metà: fondo / davanti'
-      : asse === 'vialetto-esterno' ? 'divisa a metà: vialetto / esterno' : 'non divisa'),
+      : asse === 'sinistra-destra' ? 'divisa a metà: sinistra / destra' : 'non divisa'),
     elemento('h3', 'Terreno'),
     cartaTerreno(aiuola),
     modulo,
@@ -818,10 +957,10 @@ function fineSuggerita(scheda, inizio) {
   return scheda.tappa === 'V' && date[0] ? fineSovescio(scheda, inizio, date[0]) : date[0] ?? null;
 }
 
-// Misure (cm) della parte di aiuola usata: intera 180 × 120; metà fondo/davanti 180 × 60; metà vialetto/esterno 90 × 120
-function misuraParte(parte) {
-  if (!parte) return AIUOLA;
-  return ASSI[parte] === 'fondo-davanti' ? { L: AIUOLA.L, W: AIUOLA.W / 2 } : { L: AIUOLA.L / 2, W: AIUOLA.W };
+// Misure (cm) della parte di aiuola usata, dalla sua forma vera (per un rettangolo 180 × 120: metà fondo 180 × 60, metà sinistra 90 × 120)
+function misureParte(dati, id, parte) {
+  const a = dati.aiuole.find(x => x.id === id);
+  return a ? misure(a, parte || 'tutta') : AIUOLA;
 }
 
 const kgTesto = v => (v < 10 ? v.toFixed(1) : String(Math.round(v))).replace('.', ',');
@@ -870,7 +1009,7 @@ function suggerimentiCatalogo(dati, modulo, colturaId) {
     // Piante e resa nelle aiuole (o metà) scelte
     let piante = 0, min = 0, max = 0, conResa = true;
     for (const id of aiuoleIds) {
-      const m = misuraParte(parti[id]);
+      const m = misureParte(dati, id, parti[id]);
       const d = disposizione(scheda, m.L, m.W);
       piante += d.piante ?? 0;
       const r = resa(scheda, d);
@@ -1010,7 +1149,7 @@ function selettoreAiuole(dati, scelteIniziali) {
 
   function aggiorna() {
     tutto.textContent = tutteScelte() ? 'Togli tutte' : 'Tutto l\'orto';
-    mini.replaceChildren(miniColonna('sinistra'), elemento('div', '', 'mini-vialetto'), miniColonna('destra'));
+    mini.replaceChildren(miniTerreno(dati, scelte, tocca));
     nascosti.replaceChildren();
     for (const [id, parte] of [...scelte].sort(([x], [y]) => x.localeCompare(y))) {
       nascosti.append(campoNascosto('aiuole', id));
@@ -1018,27 +1157,18 @@ function selettoreAiuole(dati, scelteIniziali) {
     }
   }
 
-  function miniColonna(lato) {
-    const colonna = elemento('div', '', 'mini-lato');
-    for (const a of dati.aiuole.filter(a => a.lato === lato).sort((x, y) => x.posizione - y.posizione)) {
-      const pulsante = disegnoAiuola(a, scelte.has(a.id) ? scelte.get(a.id) || 'intera' : null, 'button');
-      pulsante.type = 'button';
-      pulsante.setAttribute('aria-pressed', scelte.has(a.id));
-      pulsante.addEventListener('click', () => {
-        if (!scelte.has(a.id)) {
-          scelte.set(a.id, '');
-          aggiorna();
-          return;
-        }
-        apriPopup(dati, a, scelte.get(a.id), parte => {
-          if (parte === null) scelte.delete(a.id);
-          else scelte.set(a.id, parte);
-          aggiorna();
-        });
-      });
-      colonna.append(pulsante);
+  // Tocco su un'aiuola: la sceglie intera; se è già scelta, apre il pop-up delle metà
+  function tocca(a) {
+    if (!scelte.has(a.id)) {
+      scelte.set(a.id, '');
+      aggiorna();
+      return;
     }
-    return colonna;
+    apriPopup(dati, a, scelte.get(a.id), parte => {
+      if (parte === null) scelte.delete(a.id);
+      else scelte.set(a.id, parte);
+      aggiorna();
+    });
   }
 
   const riquadro = elemento('fieldset');
@@ -1055,22 +1185,28 @@ function campoNascosto(nome, valore) {
   return campo;
 }
 
-// Riquadro di un'aiuola con la parte scelta in terra arata: parte = null (non scelta), 'intera' o una metà
-function disegnoAiuola(aiuola, parte, tag = 'div') {
-  const riquadro = elemento(tag, '', 'mini-aiuola');
-  if (parte) riquadro.append(elemento('span', '', `riempimento riempimento-${latoDisegno(parte, aiuola.lato)}`));
-  riquadro.append(elemento('span', aiuola.id, 'nome'));
-  return riquadro;
+// Mini-mappa dei moduli: le aiuole sono pulsanti, la parte scelta è in terra arata
+function miniTerreno(dati, scelte, tocca) {
+  return terrenoOrto(dati, a => {
+    const pulsante = elemento('button', '', 'aiuola-forma mini-forma');
+    pulsante.type = 'button';
+    pulsante.innerHTML = sagomaAiuola(a, { scelta: scelte.has(a.id) ? scelte.get(a.id) || 'intera' : null });
+    pulsante.append(cartellino(a));
+    pulsante.setAttribute('aria-pressed', scelte.has(a.id));
+    pulsante.setAttribute('aria-label', `Aiuola ${a.nome ?? a.id}`);
+    pulsante.addEventListener('click', () => tocca(a));
+    return pulsante;
+  }, 'terreno mini-terreno');
 }
 
-// Da metà "logica" a lato del disegno: il vialetto è a destra per le aiuole di sinistra e viceversa
-function latoDisegno(parte, lato) {
-  if (parte === 'intera') return 'tutta';
-  if (parte === 'fondo') return 'sopra';
-  if (parte === 'davanti') return 'sotto';
-  const versoVialetto = lato === 'sinistra' ? 'destra' : 'sinistra';
-  if (parte === 'vialetto') return versoVialetto;
-  return versoVialetto === 'destra' ? 'sinistra' : 'destra';
+// Disegno di un'aiuola sola (pop-up delle metà) con la parte scelta in terra arata: 'intera' o una metà
+function disegnoAiuola(aiuola, parte) {
+  const b = ingombro(aiuola);
+  const box = elemento('div', '', 'aiuola-forma anteprima-forma');
+  box.style.aspectRatio = `${b.w} / ${b.h}`;
+  box.innerHTML = sagomaAiuola(aiuola, { scelta: parte });
+  box.append(cartellino(aiuola));
+  return box;
 }
 
 const ALTEZZA_VOCE = 48;   // altezza di ogni voce della rotella, in pixel
@@ -1800,7 +1936,7 @@ function disegnaTest(dati, corpo) {
 
   const settori = elemento('div');
   for (const settore of [1, 2, 3, 4]) {
-    const aiuole = dati.aiuole.filter(a => a.settore === settore).sort((x, y) => x.posizione - y.posizione);
+    const aiuole = dati.aiuole.filter(a => a.settore === settore).sort((x, y) => x.y - y.y || x.x - y.x);
     const testa = elemento('div', '', 'test-settore');
     testa.append(elemento('span', `Settore ${settore}`));
     settori.append(testa);
@@ -1812,7 +1948,7 @@ function disegnaTest(dati, corpo) {
         if (fineC < daIni || c.dataInizio >= aFin) continue;
         const scheda = colturaDaNome(c.nome);
         const parte = c.parti?.[a.id];
-        const posto = !parte ? 'pieno' : parte === 'fondo' || parte === 'vialetto' ? 'alto' : 'basso';
+        const posto = !parte ? 'pieno' : parte === 'fondo' || parte === 'sinistra' ? 'alto' : 'basso';
         const barra = link('', `#/coltura/${c.id}`, `test-barra ${posto}${iniziata(c) ? '' : ' futura'}`);
         barra.style.left = `${pos(c.dataInizio)}%`;
         barra.style.width = `${Math.max(1.5, pos(fineC) - pos(c.dataInizio))}%`;
@@ -2555,10 +2691,10 @@ function mappaDelGiorno(dati, g) {
   giornoMappa = g;
   try {
     const m = elemento('div', '', 'mappa-tempo');
-    m.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(dati), colonna(dati, 'destra'), staccionata(), etichetta('Davanti'));
+    m.append(etichetta('Fondo'), terrenoMappa(dati), staccionata(dati), etichetta('Davanti'));
     for (const a of m.querySelectorAll('a.aiuola')) {
       a.removeAttribute('href');
-      const aiuola = dati.aiuole.find(x => x.id === a.querySelector('.nome').textContent);
+      const aiuola = dati.aiuole.find(x => x.id === a.dataset.id);
       if (g > oggi() && !a.querySelector('.piantina')) {
         const tappa = tappaAttesa(dati, aiuola.settore, g);
         if (tappa) {
@@ -2673,7 +2809,7 @@ function mappaArcade(dati) {
     modoArcade = true;
     try {
       const m = elemento('div', '', 'mappa-tempo');
-      m.append(etichetta('Fondo'), colonna(dati, 'sinistra'), vialetto(dati), colonna(dati, 'destra'), staccionata(), etichetta('Davanti'));
+      m.append(etichetta('Fondo'), terrenoMappa(dati), staccionata(dati), etichetta('Davanti'));
       posto.replaceChildren(m);
     } finally {
       modoArcade = false;
@@ -2718,14 +2854,14 @@ function testoKg(n) {
   return `${n >= 10 ? Math.round(n) : String(Math.round(n * 10) / 10).replace('.', ',')} kg`;
 }
 
-function inRaccoltaIl(c, g) {
-  const info = resaColtura(c);
+function inRaccoltaIl(dati, c, g) {
+  const info = resaColtura(c, dati.aiuole);
   return !!info && inRaccolta(info, g);
 }
 
 // kg [min, max] di tutte le colture tra da (compreso) e a (escluso)
 function totaleRaccolto(dati, da, a) {
-  return dati.colture.map(resaColtura).filter(Boolean)
+  return dati.colture.map(c => resaColtura(c, dati.aiuole)).filter(Boolean)
     .map(info => kgTra(info, da, a))
     .reduce((t, kg) => [t[0] + kg[0], t[1] + kg[1]], [0, 0]);
 }
@@ -2771,7 +2907,7 @@ export function paginaRaccolto(dati) {
 
 // Grafico dei 12 mesi (ottobre–settembre) e colture con raccolta nell'anno dell'orto y
 function annoDiRaccolto(dati, y, g, fino) {
-  const infos = dati.colture.map(resaColtura).filter(Boolean);
+  const infos = dati.colture.map(c => resaColtura(c, dati.aiuole)).filter(Boolean);
   const mezzo = kg => (kg[0] + kg[1]) / 2;
   const mesi = MESI_ANNO_ORTO.map((_, i) => {
     const m = (i + 9) % 12 + 1;

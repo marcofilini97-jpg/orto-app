@@ -17,29 +17,64 @@ const DA_PARTE_DATI = 'orto-dati:';
 const DA_PARTE_SYNC = 'orto-sync:';
 const VERSIONE = 1;
 
+// L'orto di partenza (8 aiuole da 180 × 120 cm, 4 per lato di un vialetto centrale), con le misure in cm.
+// x e y sono il centro di ogni aiuola: x da sinistra a destra, y dal fondo (in alto) al davanti
 const AIUOLE = [
-  { id: '1A', settore: 1, lato: 'sinistra', posizione: 1 },
-  { id: '1B', settore: 1, lato: 'sinistra', posizione: 2 },
-  { id: '3A', settore: 3, lato: 'sinistra', posizione: 3 },
-  { id: '3B', settore: 3, lato: 'sinistra', posizione: 4 },
-  { id: '2A', settore: 2, lato: 'destra', posizione: 1 },
-  { id: '2B', settore: 2, lato: 'destra', posizione: 2 },
-  { id: '4A', settore: 4, lato: 'destra', posizione: 3 },
-  { id: '4B', settore: 4, lato: 'destra', posizione: 4 },
-];
+  { id: '1A', settore: 1, x: 90, y: 60 },
+  { id: '1B', settore: 1, x: 90, y: 190 },
+  { id: '3A', settore: 3, x: 90, y: 330 },
+  { id: '3B', settore: 3, x: 90, y: 460 },
+  { id: '2A', settore: 2, x: 300, y: 60 },
+  { id: '2B', settore: 2, x: 300, y: 190 },
+  { id: '4A', settore: 4, x: 300, y: 330 },
+  { id: '4B', settore: 4, x: 300, y: 460 },
+].map(a => ({ ...a, nome: a.id, forma: 'rettangolo', w: 180, h: 120, rot: 0 }));
+const TERRENO = { id: 'terreno', larghezza: 390, lunghezza: 520, staccionata: true, esposizione: null };
+const VIALETTI = [{ id: 'vialetto', x: 195, y: 260, w: 30, h: 520, rot: 0 }];
+// Nell'orto di partenza le metà "vialetto" ed "esterno" (nomi di prima) diventano sinistra e destra
+const LATO_VIALETTO = { '1A': 'destra', '1B': 'destra', '3A': 'destra', '3B': 'destra', '2A': 'sinistra', '2B': 'sinistra', '4A': 'sinistra', '4B': 'sinistra' };
 
 // Gruppi dei dati e nome del "tipo" sul server
-const TIPO = { aiuole: 'aiuola', colture: 'coltura', registro: 'registro', task: 'task' };
-const GRUPPO = { aiuola: 'aiuole', coltura: 'colture', registro: 'registro', task: 'task' };
+const TIPO = { aiuole: 'aiuola', colture: 'coltura', registro: 'registro', task: 'task', terreno: 'terreno', vialetti: 'vialetto', alberi: 'albero' };
+const GRUPPO = Object.fromEntries(Object.entries(TIPO).map(([g, t]) => [t, g]));
+
+function vuoti() {
+  return Object.fromEntries(Object.keys(TIPO).map(g => [g, []]));
+}
 
 function datiIniziali() {
   return {
+    ...vuoti(),
     versione: VERSIONE,
     aiuole: AIUOLE.map(a => ({ ...a, note: '' })),
-    colture: [],
-    registro: [],
-    task: [],
+    terreno: [{ ...TERRENO }],
+    vialetti: VIALETTI.map(v => ({ ...v })),
   };
+}
+
+// Porta i dati salvati con versioni precedenti dell'app alla forma di adesso (senza salvarli):
+// gruppi mancanti, misure e forma delle aiuole dell'orto di partenza, metà vialetto/esterno → sinistra/destra
+export function normalizza(dati) {
+  for (const g of Object.keys(TIPO)) dati[g] ??= [];
+  const partenza = new Map(AIUOLE.map(a => [a.id, a]));
+  for (const a of dati.aiuole) {
+    if (a.forma) continue;
+    const base = partenza.get(a.id) ?? { nome: a.id, forma: 'rettangolo', w: 180, h: 120, rot: 0, x: 90, y: 60 };
+    Object.assign(a, { nome: a.nome ?? base.nome, forma: base.forma, x: base.x, y: base.y, w: base.w, h: base.h, rot: base.rot });
+    a.settore ??= base.settore ?? 1;
+  }
+  if (dati.terreno.length === 0) {
+    dati.terreno.push({ ...TERRENO });
+    if (dati.vialetti.length === 0 && dati.aiuole.every(a => partenza.has(a.id))) dati.vialetti.push(...VIALETTI.map(v => ({ ...v })));
+  }
+  for (const x of [...dati.colture, ...dati.registro, ...dati.task]) {
+    for (const [id, parte] of Object.entries(x.parti ?? {})) {
+      if (parte !== 'vialetto' && parte !== 'esterno') continue;
+      const versoVialetto = LATO_VIALETTO[id] ?? 'destra';
+      x.parti[id] = parte === 'vialetto' ? versoVialetto : versoVialetto === 'destra' ? 'sinistra' : 'destra';
+    }
+  }
+  return dati;
 }
 
 function leggiDa(chiave) {
@@ -54,13 +89,26 @@ function leggiDa(chiave) {
 
 export function carica() {
   const sim = simulazioneAttiva();
-  if (sim) return structuredClone(sim.dati);
-  return leggiDa(inProva() ? CHIAVE_PROVA : CHIAVE);
+  if (sim) return normalizza(structuredClone(sim.dati));
+  return normalizza(leggiDa(inProva() ? CHIAVE_PROVA : CHIAVE));
 }
 
 // I dati veri (anche dentro Arcade, per copiarli in una simulazione)
 export function caricaReali() {
-  return leggiDa(CHIAVE);
+  return normalizza(leggiDa(CHIAVE));
+}
+
+// All'avvio: se i dati salvati sono di una versione precedente, li aggiorna e li salva (così vanno anche sul server)
+export function aggiornaDatiSalvati() {
+  const prima = leggiDa(CHIAVE);
+  const dopo = normalizza(structuredClone(prima));
+  if (JSON.stringify(prima) !== JSON.stringify(dopo) && !soloLettura()) {
+    registraModifiche(prima, dopo);
+    localStorage.setItem(CHIAVE, JSON.stringify(dopo));
+    programmaSincronizzazione();
+  }
+  const prova = localStorage.getItem(CHIAVE_PROVA);
+  if (prova) localStorage.setItem(CHIAVE_PROVA, JSON.stringify(normalizza(JSON.parse(prova))));
 }
 
 export function salva(dati) {
@@ -176,12 +224,15 @@ export function impostaGiornoArcade(giorno) {
 
 // Dati di partenza di una simulazione: orto vuoto oppure l'orto vero com'era il giorno `dal`
 export function datiPerSimulazione({ partenza, dal, terreno }) {
-  const reali = leggiDa(CHIAVE);
+  // La simulazione ha la stessa forma dell'orto vero (aiuole, vialetti, alberi); il terreno vero solo se scelto
+  const reali = normalizza(leggiDa(CHIAVE));
   const dati = datiIniziali();
-  dati.aiuole = dati.aiuole.map(a => {
-    const vera = reali.aiuole.find(x => x.id === a.id);
-    return terreno === 'reale' && vera?.suolo ? { ...a, suolo: structuredClone(vera.suolo) } : a;
+  dati.aiuole = reali.aiuole.map(a => {
+    const copia = { ...structuredClone(a), note: '' };
+    if (terreno !== 'reale') delete copia.suolo;
+    return copia;
   });
+  for (const g of ['terreno', 'vialetti', 'alberi']) dati[g] = structuredClone(reali[g]);
   if (partenza === 'reale') {
     dati.colture = reali.colture.filter(c => c.dataInizio <= dal && c.stato !== 'pianificata').map(c => {
       const copia = structuredClone(c);
@@ -232,8 +283,8 @@ function registraModifiche(prima, dopo) {
     stato.daInviare[elemento.id] = { id: elemento.id, tipo: TIPO[gruppo], dati: elemento, modificato: ora, eliminato };
   };
   for (const gruppo of Object.keys(TIPO)) {
-    const vecchi = new Map(prima[gruppo].map(e => [e.id, e]));
-    for (const elemento of dopo[gruppo]) {
+    const vecchi = new Map((prima[gruppo] ?? []).map(e => [e.id, e]));
+    for (const elemento of dopo[gruppo] ?? []) {
       const vecchio = vecchi.get(elemento.id);
       if (!vecchio || JSON.stringify(vecchio) !== JSON.stringify(elemento)) segna(gruppo, elemento, false);
       vecchi.delete(elemento.id);
@@ -352,7 +403,7 @@ export async function nuovoOrto(nome) {
   const orto = (await aggiornaElencoOrti()).find(o => o.id === id);
   await cambiaOrto(orto);
   // Le aiuole di partenza vanno anche sul server
-  registraModifiche({ aiuole: [], colture: [], registro: [], task: [] }, leggiDa(CHIAVE));
+  registraModifiche(vuoti(), leggiDa(CHIAVE));
   await sincronizza();
 }
 
@@ -367,7 +418,7 @@ async function dimenticaOrtoAttuale() {
     return;
   }
   await sincronizza();
-  registraModifiche({ aiuole: [], colture: [], registro: [], task: [] }, leggiDa(CHIAVE));
+  registraModifiche(vuoti(), leggiDa(CHIAVE));
   await sincronizza();
 }
 
@@ -457,19 +508,19 @@ export async function completaCollegamento(chiediSostituzione) {
   const stato = nuovoStato();
   stato.orto = orto;
   if (righe.length > 0 && chiediSostituzione()) {
-    const dati = { versione: VERSIONE, aiuole: [], colture: [], registro: [], task: [] };
+    const dati = { ...vuoti(), versione: VERSIONE };
     for (const riga of righe) {
       applica(dati, riga);
       stato.orari[riga.id] = riga.modificato;
     }
-    if (dati.aiuole.length === 0) dati.aiuole = datiIniziali().aiuole;
+    if (dati.aiuole.length === 0) Object.assign(dati, { aiuole: datiIniziali().aiuole, vialetti: datiIniziali().vialetti });
     stato.ultimoRicevuto = righe.at(-1).ricevuto;
     localStorage.setItem(CHIAVE, JSON.stringify(dati));
     scriviStato(stato);
   } else {
     // Tutto ciò che c'è sul telefono va inviato; poi la sincronizzazione unisce i due lati
     scriviStato(stato);
-    registraModifiche({ aiuole: [], colture: [], registro: [], task: [] }, leggiDa(CHIAVE));
+    registraModifiche(vuoti(), leggiDa(CHIAVE));
   }
   await sincronizza();
 }

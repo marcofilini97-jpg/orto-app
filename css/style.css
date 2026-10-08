@@ -66,15 +66,15 @@ main > section:not(.mappa) {
 }
 
 .mappa {
-  display: grid;
-  grid-template-columns: 1fr 28px 1fr;
+  display: flex;
+  flex-direction: column;
   max-width: 480px;
   margin: 0 auto;
 }
 
 .estremo {
   grid-column: 1 / -1;
-  justify-self: center;
+  align-self: center;
   margin: 0 0 8px;
   padding: 0 12px;
   font-size: 0.9rem;
@@ -810,3 +810,26 @@ body:not(.arcade) .nome-barra::after { content: ' ▾'; }
 .sola-lettura .modifica-dati,
 .sola-lettura a[href$="/nuova-coltura"], .sola-lettura a[href$="/nuova-voce"], .sola-lettura a[href$="/nuovo-task"],
 .sola-lettura a[href$="/modifica"], .sola-lettura a[href="#/task/nuovo"], .sola-lettura a[href*="/terreno/"] { display: none !important; }
+
+/* Terreno disegnato dalle misure: aiuole con la loro forma vera, vialetti, disegnini sempre dentro */
+.terreno { position: relative; width: min(100%, calc((100dvh - 290px) * var(--rapporto, 0.75))); margin: 0 auto; }
+.vialetto-libero { position: absolute; border-radius: 6px; background-color: var(--vialetto); background-image: radial-gradient(var(--ghiaia) 2px, transparent 2.5px); background-size: 12px 12px; }
+.aiuola.aiuola-forma, .aiuola-forma { position: absolute; display: block; min-height: 0; padding: 0; color: var(--testo); text-decoration: none; background: none; border: 0; border-radius: 0; pointer-events: none; }
+.aiuola-forma .sagoma { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.aiuola-forma .terra > * { pointer-events: visiblePainted; stroke: var(--bordo-aiuola); stroke-width: 3; vector-effect: non-scaling-stroke; cursor: pointer; }
+.aiuola-forma .riga-meta line { stroke: var(--cartellino); stroke-width: 2; stroke-dasharray: 6 5; vector-effect: non-scaling-stroke; }
+.aiuola-forma .bordo-scelta * { fill: none; stroke: #5c9e3a; stroke-width: 4; vector-effect: non-scaling-stroke; }
+.aiuola-forma .nome, .aiuola-forma .piantina, .aiuola-forma .bollino, .aiuola-forma .puntino, .aiuola-forma .paletto, .aiuola-forma .tocca-a { pointer-events: auto; }
+.aiuola-forma .nome { z-index: 8; white-space: nowrap; }
+.aiuola-forma .bollino, .aiuola-forma .tocca-a { z-index: 8; }
+.aiuola-forma .puntino, .aiuola-forma .paletto { z-index: 9; }
+.aiuola-forma .piantina { top: 0; left: 0; }
+.puntino-orto { top: -8px; left: 50%; right: auto; transform: translateX(-50%); z-index: 9; }
+.staccionata.senza { height: 8px; }
+.mini-terreno { --rapporto: 0.75; width: min(100%, 300px); margin: 8px auto 0; }
+.mini-forma { cursor: pointer; }
+.mini-forma .nome { padding: 0 5px; font-size: .85rem; line-height: 1.4; }
+.anteprima .anteprima-forma { position: relative; width: 120px; max-width: 120px; font-size: 1.1rem; }
+.staccionata { width: min(100%, calc((100dvh - 290px) * var(--rapporto, 0.75))); margin-left: auto; margin-right: auto; }
+.mini-mappa { display: block; max-width: none; }
+.aiuola-forma .nome { position: absolute; padding: 0 7px; font-family: 'Fredoka', 'Baloo 2', sans-serif; font-weight: 600; line-height: 1.45; background: var(--cartellino); border: 2px solid var(--marrone-scuro); border-radius: 6px; }

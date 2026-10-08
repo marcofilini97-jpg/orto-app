@@ -41,6 +41,7 @@ orto-app/
 │   ├── terreno.js        ← terreno delle aiuole: prove guidate, stime, avvisi
 │   ├── arcade.js         ← Arcade: riempimento automatico secondo rotazione e preferenze, calcolo del raccolto
 │   ├── impara.js         ← Impara: guide brevi (testi e disegni) e lavori di ogni mese
+│   ├── geometria.js      ← forme delle aiuole (rettangolo, rotonda, a L, girate): dentro/fuori, metà, misure, posti dei disegnini
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
 ```
@@ -152,6 +153,15 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Persone e ruoli (tappa 3, fatta): `#/orti/persone` "Persone dell'orto" (funzione `persone_orto(o)`: email, ruolo, iscritta sì/no). Il gestore aggiunge email con il ruolo, cambia ruoli (tendina), toglie persone; gli altri vedono solo l'elenco. Sul server: `mia_email()`, ognuno può togliere se stesso ("Esci da questo orto"), un orto ha sempre almeno un gestore (trigger `almeno_un_gestore`), `elimina_orto(o)` solo per il gestore (cancella anche persone e dati). In "I miei orti": "Esci da questo orto" e, per il gestore, "Elimina questo orto" (conferma scrivendo il nome). Dopo l'uscita o l'eliminazione il telefono apre il primo altro orto, o ne crea uno nuovo
 - Sola lettura (`soloLettura()` in dati.js: ruolo `lettore`, fuori da prova e Arcade): `salva()` rifiuta con `MESSAGGIO_SOLA_LETTURA` (app.js lo mostra con un alert), striscia gialla in cima, le pagine dei moduli diventano "Sola lettura" (app.js), e il CSS `.sola-lettura` nasconde i collegamenti per aggiungere/modificare e gli elementi con classe `modifica-dati`; caselle dei task disattivate, ortaggi non trascinabili
 - Nella barra verde, dopo "Orto", il nome dell'orto in uso con ▾ (`.nome-barra`, tocco = `#/orti`); in Arcade lo stesso posto mostra il nome della simulazione; in prova e senza account resta vuoto
+
+## Forma dell'orto (tappa 4, in corso)
+- Fatto (pezzo 1, la mappa dalle misure): ogni aiuola ha `nome`, `settore`, `forma` (`rettangolo` | `ellisse` | `elle` con `taglio: { w, h, angolo: 'ne'|'no'|'se'|'so' }`), centro `x`, `y`, misure `w`, `h` e `rot` (gradi), tutto in cm; x da sinistra, y dal fondo (in alto) al davanti. Nuovi gruppi sincronizzati: `terreno` (un elemento `{ id: 'terreno', larghezza, lunghezza, staccionata, esposizione }`), `vialetti` (`{ id, x, y, w, h, rot }`), `alberi` (per dopo)
+- L'orto di partenza: 8 aiuole 180 × 120, terreno 390 × 520, vialetto centrale largo 30. `normalizza()` in dati.js porta i dati vecchi alla forma nuova (anche quelli che arrivano da telefoni non aggiornati); `aggiornaDatiSalvati()` all'avvio li salva
+- Metà: `fondo` / `davanti` (sopra / sotto il centro sulla mappa) e `sinistra` / `destra` (prima "vialetto" / "esterno": per 1A, 1B, 3A, 3B vialetto = destra, per 2A, 2B, 4A, 4B vialetto = sinistra)
+- La mappa (`terrenoOrto` in viste.js) mette tutto in percentuale del terreno; ogni aiuola è un SVG della sua forma (solchi girati con l'aiuola, riga tratteggiata delle metà, terra arata nella scelta) e il cartellino col nome nel punto della forma più vicino all'angolo in alto a sinistra. Il terreno si adatta all'altezza dello schermo
+- Disegnini: `disponiPiantine` li mette quando la mappa è sullo schermo (e a ogni ridimensionamento): sempre tutti dentro la forma e la metà, senza coprire il cartellino; se non ci stanno si rimpiccioliscono. Le posizioni a mano restano frazioni della parte dell'aiuola; trascinando si sposta solo dove il disegno ci sta tutto (non sporge più verso il fondo)
+- Resa e piante (catalogo, Arcade) usano le misure vere: `misure(aiuola, metà)` = lato lungo e larghezza equivalente alla superficie
+- Da fare: editor "Disegna l'orto" (solo il gestore; aiuole già usate non eliminabili; forme a L, rotonde, storte), esposizione (rotellina N/S/E/O e percorso del sole), alberi sul verde (tipo e misure; trasparenti quando si tocca un'aiuola o un ortaggio sotto)
 
 ## Prossimi passi (decisi, da costruire in quest'ordine)
 1. Catalogo delle colture in `js/catalogo.js`: conoscenza generale, uguale per tutti gli orti di Bologna (periodi in `MM-GG`, distanze, piante per aiuola da 1,2 × 1,8 m, resa in kg sempre "stima indicativa", famiglia, tappa della rotazione, consigli). Nel codice va solo conoscenza generale: mai il piano o dati personali di un orto. **Fatto**: esporta `CATALOGO` (53 colture, con `parole` per riconoscere il nome), `TAPPE`, `ESIGENZA`, `GLOSSARIO`, `AIUOLA`, `numero()`, `disposizione()`, `resa()`, `colturaDaNome()` (parola chiave a inizio parola, vince la più lunga). Nessuna schermata lo usa ancora

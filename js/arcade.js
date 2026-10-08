@@ -2,6 +2,7 @@
 // Solo calcoli: restituisce le colture (e le voci di registro) da aggiungere, senza salvare niente.
 
 import { CATALOGO, colturaDaNome, disposizione, resa, AIUOLA } from './catalogo.js';
+import { misure } from './geometria.js';
 
 const GIRO = ['L', 'C', 'A', 'S'];
 // Ordine di partenza dei settori se l'orto non ha storia (come nel piano 2026–27)
@@ -94,7 +95,7 @@ export function pianoAutomatico(dati, { dal, anni = 4, preferenze = {}, nuovoId 
   for (let y = y0; y < y0 + anni; y++) {
     for (const settore of [1, 2, 3, 4]) {
       const tappa = tappaDelSettore({ ...dati, colture }, settore, y, y0);
-      const aiuole = dati.aiuole.filter(a => a.settore === settore).sort((x, z) => x.posizione - z.posizione);
+      const aiuole = dati.aiuole.filter(a => a.settore === settore).sort((x, z) => x.y - z.y || x.x - z.x);
       for (const momento of MOMENTI[tappa]) {
         const fin = finestra(momento.quando, y);
         // Candidate: adatte al momento, non escluse; le sconsigliate solo se preferite; prima le preferite
@@ -185,13 +186,14 @@ const giorniTra = (da, a) => (Date.parse(a) - Date.parse(da)) / 86400000;
 
 // Resa della coltura nelle sue aiuole/metà e periodi di raccolta (il primo dopo l'inizio; le perenni ogni anno).
 // null se il catalogo non dà la resa (fiori, sovesci, aromatiche…)
-export function resaColtura(c) {
+export function resaColtura(c, aiuole = []) {
   const scheda = colturaDaNome(c.nome);
   if (!scheda?.r) return null;
   let kg = [0, 0];
   for (const id of c.aiuoleIds) {
     const parte = c.parti?.[id];
-    const misura = !parte ? AIUOLA : ['fondo', 'davanti'].includes(parte) ? { L: AIUOLA.L, W: AIUOLA.W / 2 } : { L: AIUOLA.L / 2, W: AIUOLA.W };
+    const aiuola = aiuole.find(x => x.id === id);
+    const misura = aiuola ? misure(aiuola, parte || 'tutta') : !parte ? AIUOLA : ['fondo', 'davanti'].includes(parte) ? { L: AIUOLA.L, W: AIUOLA.W / 2 } : { L: AIUOLA.L / 2, W: AIUOLA.W };
     const r = resa(scheda, disposizione(scheda, misura.L, misura.W));
     if (!r) return null;
     kg = [kg[0] + r[0], kg[1] + r[1]];
