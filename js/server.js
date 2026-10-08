@@ -134,6 +134,41 @@ export async function rinominaOrtoServer(ortoId, nome) {
   });
 }
 
+// Le persone dell'orto: [{ email, ruolo, iscritta }]
+export async function personeOrto(ortoId) {
+  return chiedi('/rest/v1/rpc/persone_orto', { method: 'POST', headers: await intestazioneAccesso(), body: JSON.stringify({ o: ortoId }) });
+}
+
+export async function aggiungiPersona(ortoId, email, ruolo) {
+  try {
+    await chiedi('/rest/v1/persone', {
+      method: 'POST', headers: { ...await intestazioneAccesso(), Prefer: 'return=minimal' },
+      body: JSON.stringify({ orto_id: ortoId, email, ruolo }),
+    });
+  } catch (errore) {
+    if (errore.stato === 409) throw new Error("Questa email fa già parte dell'orto.");
+    throw errore;
+  }
+}
+
+const filtroPersona = (ortoId, email) => `/rest/v1/persone?orto_id=eq.${ortoId}&email=eq.${encodeURIComponent(email)}`;
+
+export async function cambiaRuolo(ortoId, email, ruolo) {
+  await chiedi(filtroPersona(ortoId, email), {
+    method: 'PATCH', headers: { ...await intestazioneAccesso(), Prefer: 'return=minimal' }, body: JSON.stringify({ ruolo }),
+  });
+}
+
+// Toglie una persona dall'orto (il gestore toglie chiunque; ognuno può togliere se stesso)
+export async function togliPersona(ortoId, email) {
+  await chiedi(filtroPersona(ortoId, email), { method: 'DELETE', headers: await intestazioneAccesso() });
+}
+
+// Elimina l'orto con tutti i suoi dati (solo il gestore)
+export async function eliminaOrtoServer(ortoId) {
+  await chiedi('/rest/v1/rpc/elimina_orto', { method: 'POST', headers: await intestazioneAccesso(), body: JSON.stringify({ o: ortoId }) });
+}
+
 // Le righe dell'orto ricevute dal server dopo l'ora "dopo" (tutte, se dopo è null), dalla più vecchia
 export async function scaricaNovita(ortoId, dopo) {
   const filtro = dopo ? `&ricevuto=gt.${encodeURIComponent(dopo)}` : '';

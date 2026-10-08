@@ -1,10 +1,11 @@
-import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva, accessoDaLink, completaCollegamento, ortoAttuale } from './dati.js';
+import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva, accessoDaLink, completaCollegamento, ortoAttuale,
+  soloLettura, MESSAGGIO_SOLA_LETTURA } from './dati.js';
 import { CATALOGO } from './catalogo.js';
 import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto,
-  paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaOrti, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaOrti, paginaPersone, paginaSolaLettura, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -15,7 +16,7 @@ function schermata() {
   // Impostazioni non legge i dati: così si può ripristinare un backup anche se sono danneggiati
   if (pagina === 'impostazioni') return impostazioni();
   if (pagina === 'nuova-password') return paginaNuovaPassword();
-  if (pagina === 'orti') return paginaOrti();
+  if (pagina === 'orti') return id === 'persone' ? paginaPersone() : paginaOrti();
   // Il catalogo è conoscenza generale: non legge i dati dell'orto
   if (pagina === 'impara') {
     if (id === 'mese') return paginaMese(sotto);
@@ -28,6 +29,10 @@ function schermata() {
     const scheda = CATALOGO.find(c => c.id === id);
     return scheda ? schedaCatalogo(scheda) : paginaCatalogo();
   }
+  // In sola lettura i moduli per aggiungere e modificare non si aprono
+  if (soloLettura() && (['nuova-coltura', 'nuova-voce', 'nuovo-task', 'modifica'].includes(sotto)
+    || (pagina === 'task' && id === 'nuovo') || (pagina === 'registro' && id === 'nuova-voce')
+    || (pagina === 'aiuola' && sotto === 'terreno' && altro))) return paginaSolaLettura();
   const dati = carica();
   if (pagina === 'task') {
     if (id === 'nuovo') return moduloTask(dati);
@@ -97,8 +102,10 @@ function disegna() {
   nomeBarra.textContent = inArcade() ? simulazioneAttiva().nome : orto && !inProva() ? orto.nome : '';
   if (inArcade()) nomeBarra.removeAttribute('href');
   else nomeBarra.href = '#/orti';
+  document.body.classList.toggle('sola-lettura', soloLettura());
   try {
     contenuto.replaceChildren(schermata());
+    if (soloLettura()) contenuto.prepend(Object.assign(document.createElement('p'), { className: 'avviso-lettura', textContent: 'Sola lettura: puoi guardare questo orto, non modificarlo.' }));
   } catch (errore) {
     contenuto.textContent = errore.message;
   }
@@ -145,6 +152,14 @@ async function linkDellEmail() {
   }
 }
 if (/[#&](access_token|error_description)=/.test(location.hash)) await linkDellEmail();
+
+// Un salvataggio rifiutato perché l'orto è in sola lettura: lo si dice, invece di non fare niente
+window.addEventListener('error', evento => {
+  if (evento.error?.message === MESSAGGIO_SOLA_LETTURA) {
+    evento.preventDefault();
+    alert(MESSAGGIO_SOLA_LETTURA);
+  }
+});
 
 window.addEventListener('hashchange', mostra);
 // Dopo una modifica che non cambia schermata (es. spuntare un task) si ridisegna restando dove si è

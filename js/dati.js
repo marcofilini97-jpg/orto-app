@@ -1,8 +1,9 @@
 // Unico file che sa dove e come sono salvati i dati: sul telefono (localStorage) e,
 // se collegato, su Supabase (tramite server.js). Le schermate usano solo carica() e salva().
 
-import { collegato, emailCollegata, accedi, esci, scaricaNovita, inviaModifiche, mieiOrti, creaOrto, rinominaOrtoServer } from './server.js';
-export { iscriviti, recuperaPassword, cambiaPassword, accessoDaLink } from './server.js';
+import { collegato, emailCollegata, accedi, esci, scaricaNovita, inviaModifiche, mieiOrti, creaOrto, rinominaOrtoServer,
+  personeOrto, aggiungiPersona, cambiaRuolo, togliPersona, eliminaOrtoServer } from './server.js';
+export { iscriviti, recuperaPassword, cambiaPassword, accessoDaLink, personeOrto, aggiungiPersona, cambiaRuolo, togliPersona } from './server.js';
 
 const CHIAVE = 'orto-dati';
 const CHIAVE_PROVA = 'orto-dati-prova';      // copia separata per la modalità prova
@@ -73,6 +74,7 @@ export function salva(dati) {
     localStorage.setItem(CHIAVE_PROVA, JSON.stringify(dati));
     return;
   }
+  if (soloLettura()) throw new Error(MESSAGGIO_SOLA_LETTURA);
   registraModifiche(leggiDa(CHIAVE), dati);
   localStorage.setItem(CHIAVE, JSON.stringify(dati));
   programmaSincronizzazione();
@@ -325,6 +327,11 @@ export async function cambiaOrto(orto) {
     localStorage.setItem(DA_PARTE_DATI + attuale.id, localStorage.getItem(CHIAVE) ?? JSON.stringify(datiIniziali()));
     localStorage.setItem(DA_PARTE_SYNC + attuale.id, localStorage.getItem(CHIAVE_SYNC) ?? JSON.stringify(nuovoStato()));
   }
+  await apriOrto(orto);
+}
+
+// Apre un orto: dalla copia messa da parte, se c'è, altrimenti scaricandolo tutto dal server
+async function apriOrto(orto) {
   const dati = localStorage.getItem(DA_PARTE_DATI + orto.id);
   const stato = localStorage.getItem(DA_PARTE_SYNC + orto.id);
   if (dati && stato) {
@@ -347,6 +354,37 @@ export async function nuovoOrto(nome) {
   // Le aiuole di partenza vanno anche sul server
   registraModifiche({ aiuole: [], colture: [], registro: [], task: [] }, leggiDa(CHIAVE));
   await sincronizza();
+}
+
+// Dopo aver eliminato l'orto in uso o esserne usciti: i suoi dati spariscono dal telefono e si apre
+// il primo altro orto dell'account; se non ce ne sono, se ne crea uno nuovo
+async function dimenticaOrtoAttuale() {
+  const orti = await aggiornaElencoOrti();
+  localStorage.setItem(CHIAVE, JSON.stringify(datiIniziali()));
+  scriviStato(nuovoStato());
+  if (orti.length > 0) {
+    await apriOrto(orti[0]);
+    return;
+  }
+  await sincronizza();
+  registraModifiche({ aiuole: [], colture: [], registro: [], task: [] }, leggiDa(CHIAVE));
+  await sincronizza();
+}
+
+export async function eliminaOrto() {
+  await eliminaOrtoServer(statoSync().orto.id);
+  await dimenticaOrtoAttuale();
+}
+
+export async function esciDallOrto() {
+  await togliPersona(statoSync().orto.id, emailCollegata().toLowerCase());
+  await dimenticaOrtoAttuale();
+}
+
+// In sola lettura (ruolo "lettore" nell'orto in uso) non si salva niente; prova e Arcade restano liberi
+export const MESSAGGIO_SOLA_LETTURA = 'Sei in sola lettura: puoi guardare questo orto, non modificarlo.';
+export function soloLettura() {
+  return !inProva() && !simulazioneAttiva() && collegato() && statoSync().orto?.ruolo === 'lettore';
 }
 
 export async function rinominaOrto(nome) {

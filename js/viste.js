@@ -5,6 +5,7 @@ import {
   inProva, attivaProva, disattivaProva, ricominciaProva,
   sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione, cancellaDatiTelefono,
   iscriviti, recuperaPassword, cambiaPassword, ortoAttuale, elencoOrti, cambiaOrto, nuovoOrto, rinominaOrto,
+  personeOrto, aggiungiPersona, cambiaRuolo, togliPersona, eliminaOrto, esciDallOrto, soloLettura,
   elencoSimulazioni, leggiSimulazione, salvaSimulazione, eliminaSimulazione, entraArcade, inArcade,
   simulazioneAttiva, impostaGiornoArcade, datiPerSimulazione, inizioOrtoReale, oggiVero,
 } from './dati.js';
@@ -224,6 +225,7 @@ function rendiSpostabile(pianta, spazio, { colturaId, aiuolaId, k, sporgeInAlto 
   let presa = null;   // dove il dito ha preso il disegno, rispetto al suo angolo in alto a sinistra
 
   pianta.addEventListener('pointerdown', evento => {
+    if (soloLettura()) return;
     inizio = { x: evento.clientX, y: evento.clientY };
     timer = setTimeout(() => {
       timer = null;
@@ -357,7 +359,7 @@ export function infoAiuola(dati, aiuola) {
   const asse = divisione(dati, aiuola.id);
 
   const modulo = document.createElement('form');
-  modulo.className = 'modulo';
+  modulo.className = 'modulo modifica-dati';
   modulo.innerHTML = `
     <label>Note<textarea name="note" rows="4" placeholder="es. terreno argilloso, ristagna l'acqua"></textarea></label>
     <p class="errore" role="alert" hidden></p>
@@ -398,7 +400,7 @@ export function infoAiuola(dati, aiuola) {
 
 // Cancella le posizioni scelte a mano in questa aiuola: si torna alla disposizione automatica
 function pulsanteRiposiziona(aiuola) {
-  const contenitore = elemento('div');
+  const contenitore = elemento('div', '', 'modifica-dati');
   const pulsante = elemento('button', 'Riposiziona gli ortaggi', 'pulsante secondario');
   pulsante.type = 'button';
   const conferma = elemento('p', 'Ortaggi riposizionati.', 'conferma');
@@ -1281,7 +1283,7 @@ export function schedaColtura(dati, coltura) {
     elemento('h3', 'Registro'),
     elencoVoci(dati, ordinaVoci(dati.registro.filter(v => v.colturaId === coltura.id)), 'Nessuna voce nel registro.'),
     link('Aggiungi al registro', `#/coltura/${coltura.id}/nuova-voce`, 'pulsante secondario'),
-    inProgramma ? pulsanteEliminaProgramma(dati, coltura) : attiva ? moduloTermina(coltura) : pulsanteRiattiva(dati, coltura),
+    modificaDati(inProgramma ? pulsanteEliminaProgramma(dati, coltura) : attiva ? moduloTermina(coltura) : pulsanteRiattiva(dati, coltura)),
   );
   return sezione;
 }
@@ -1533,7 +1535,7 @@ export function schedaVoce(dati, voce) {
   indietro.addEventListener('click', () => history.back());
 
   const coltura = dati.colture.find(c => c.id === voce.colturaId);
-  const elimina = elemento('button', 'Elimina voce', 'pulsante pericolo');
+  const elimina = elemento('button', 'Elimina voce', 'pulsante pericolo modifica-dati');
   elimina.type = 'button';
   elimina.addEventListener('click', () => eliminaVoce(voce));
 
@@ -1599,6 +1601,7 @@ function elencoTask(dati, tasks, testoSeVuoto) {
     const casella = elemento('input');
     casella.type = 'checkbox';
     casella.checked = t.fatto;
+    casella.disabled = soloLettura();
     casella.setAttribute('aria-label', `Fatto: ${t.titolo}`);
     casella.addEventListener('change', () => segnaTask(t.id, casella.checked));
 
@@ -1725,7 +1728,7 @@ export function schedaTask(dati, task) {
   indietro.type = 'button';
   indietro.addEventListener('click', () => history.back());
 
-  const elimina = elemento('button', 'Elimina task', 'pulsante pericolo');
+  const elimina = elemento('button', 'Elimina task', 'pulsante pericolo modifica-dati');
   elimina.type = 'button';
   elimina.addEventListener('click', () => eliminaTask(task));
 
@@ -2199,7 +2202,7 @@ export function paginaTerreno(dati, aiuola) {
     sezione.append(ul);
   }
 
-  const tutte = elemento('button', 'Usa questo terreno per tutto l\'orto', 'pulsante secondario');
+  const tutte = elemento('button', 'Usa questo terreno per tutto l\'orto', 'pulsante secondario modifica-dati');
   tutte.type = 'button';
   tutte.addEventListener('click', () => {
     if (!confirm(`Copiare il terreno della ${aiuola.id} in tutte le altre aiuole? I loro valori verranno sostituiti.`)) return;
@@ -3174,7 +3177,7 @@ export function paginaOrti() {
     }
     if (orti.length === 0) elenco.append(elemento('p', 'Nessun orto trovato.', 'nota-terreno'));
   });
-  sezione.append(elenco, avviso);
+  sezione.append(elenco, avviso, link('Persone dell\'orto', '#/orti/persone', 'pulsante secondario'));
 
   // Nome dell'orto attuale (solo il gestore)
   if (attuale.ruolo === 'gestore') {
@@ -3193,6 +3196,39 @@ export function paginaOrti() {
   sezione.append(elemento('h3', 'Nuovo orto'),
     elemento('p', 'Ne sarai il gestore. Parte con le 8 aiuole di base: la forma dell\'orto si potrà disegnare più avanti.', 'nota-terreno'),
     nuovo);
+
+  // Uscire dall'orto in uso, o eliminarlo (solo il gestore)
+  const esci = elemento('button', 'Esci da questo orto', 'pulsante secondario');
+  esci.type = 'button';
+  esci.addEventListener('click', async () => {
+    if (!confirm(`Uscire da "${attuale.nome}"? Non lo vedrai più, finché un gestore non ti aggiunge di nuovo.`)) return;
+    try {
+      await esciDallOrto();
+      location.hash = '#/';
+    } catch (e) {
+      errore(e);
+    }
+  });
+  sezione.append(elemento('h3', 'Questo orto'), esci);
+  if (attuale.ruolo === 'gestore') {
+    const elimina = elemento('button', 'Elimina questo orto', 'pulsante pericolo');
+    elimina.type = 'button';
+    elimina.addEventListener('click', async () => {
+      const scritto = prompt(`Eliminare "${attuale.nome}" con tutte le colture, il registro e i task, per tutte le persone dell'orto? Non si può annullare.\n\nPer confermare scrivi il nome dell'orto:`);
+      if (scritto === null) return;
+      if (scritto.trim() !== attuale.nome) {
+        alert('Il nome non corrisponde: l\'orto non è stato eliminato.');
+        return;
+      }
+      try {
+        await eliminaOrto();
+        location.hash = '#/';
+      } catch (e) {
+        errore(e);
+      }
+    });
+    sezione.append(elimina);
+  }
   return sezione;
 }
 
@@ -3232,4 +3268,152 @@ function moduloNome(etichetta, valore, testoPulsante, azione) {
     pulsante.disabled = false;
   });
   return modulo;
+}
+
+// ---- Persone dell'orto: elenco con il ruolo; il gestore aggiunge email, cambia ruoli e toglie persone ----
+
+const SCELTE_RUOLO = [['membro', 'Membro: usa l\'orto normalmente'], ['lettore', 'Sola lettura: può solo guardare'], ['gestore', 'Gestore: anche persone, nome ed eliminazione']];
+
+function sceltaRuolo(valore) {
+  const s = elemento('select', '', 'scelta-ruolo');
+  for (const [v, t] of SCELTE_RUOLO) {
+    const o = elemento('option', t.split(':')[0]);
+    o.value = v;
+    s.append(o);
+  }
+  s.value = valore;
+  return s;
+}
+
+export function paginaPersone() {
+  const sezione = document.createElement('section');
+  sezione.append(link('← I miei orti', '#/orti', 'indietro'));
+  const orto = ortoAttuale();
+  if (!orto) {
+    sezione.append(elemento('p', 'Entra con un account per condividere l\'orto con altre persone.'), link('Entra o iscriviti', '#/impostazioni', 'pulsante'));
+    return sezione;
+  }
+  const gestore = orto.ruolo === 'gestore';
+  const mia = statoSincronizzazione().email?.toLowerCase();
+  sezione.append(elemento('h2', 'Persone dell\'orto'), elemento('p', orto.nome, 'sottotitolo-guida'));
+  const elenco = elemento('div', '', 'elenco-orti');
+  const avviso = elemento('p', '', 'errore');
+  avviso.hidden = true;
+  const errore = e => {
+    avviso.textContent = e instanceof TypeError ? 'Server non raggiungibile: controlla la connessione.' : e.message;
+    avviso.hidden = false;
+  };
+
+  const ricarica = async () => {
+    try {
+      const persone = await personeOrto(orto.id);
+      elenco.replaceChildren();
+      for (const p of persone) {
+        const voce = elemento('div', '', 'voce-persona');
+        const testo = elemento('span');
+        testo.append(elemento('strong', p.email), elemento('small', p.email === mia ? 'tu' : p.iscritta ? 'iscritta' : 'non ancora iscritta: entrerà iscrivendosi con questa email'));
+        voce.append(testo);
+        if (gestore) {
+          const ruolo = sceltaRuolo(p.ruolo);
+          ruolo.setAttribute('aria-label', `Ruolo di ${p.email}`);
+          ruolo.addEventListener('change', async () => {
+            avviso.hidden = true;
+            try {
+              await cambiaRuolo(orto.id, p.email, ruolo.value);
+              await sincronizza();
+            } catch (e) {
+              errore(e);
+            }
+            ricarica();
+          });
+          const togli = elemento('button', 'Togli', 'pulsante-piccolo');
+          togli.type = 'button';
+          togli.hidden = p.email === mia;
+          togli.addEventListener('click', async () => {
+            if (!confirm(`Togliere ${p.email} dall'orto? Non potrà più vederlo.`)) return;
+            avviso.hidden = true;
+            try {
+              await togliPersona(orto.id, p.email);
+            } catch (e) {
+              errore(e);
+            }
+            ricarica();
+          });
+          const comandi = elemento('span', '', 'comandi-persona');
+          comandi.append(ruolo, togli);
+          voce.append(comandi);
+        } else {
+          voce.append(elemento('span', NOMI_RUOLO[p.ruolo], `ruolo-orto ruolo-${p.ruolo}`));
+        }
+        elenco.append(voce);
+      }
+    } catch (e) {
+      elenco.replaceChildren();
+      errore(e);
+    }
+  };
+  elenco.append(elemento('p', 'Carico le persone…', 'nota-terreno'));
+  ricarica();
+  sezione.append(elenco, avviso);
+
+  if (gestore) {
+    const modulo = document.createElement('form');
+    modulo.className = 'modulo';
+    modulo.noValidate = true;
+    const campo = elemento('input');
+    campo.type = 'email';
+    campo.autocomplete = 'off';
+    const label = elemento('label', 'Email');
+    label.append(campo);
+    const ruolo = sceltaRuolo('membro');
+    const labelRuolo = elemento('label', 'Ruolo');
+    labelRuolo.append(ruolo);
+    const errAgg = elemento('p', '', 'errore');
+    errAgg.hidden = true;
+    const pulsante = elemento('button', 'Aggiungi', 'pulsante');
+    pulsante.type = 'submit';
+    modulo.append(label, labelRuolo, errAgg, pulsante);
+    modulo.addEventListener('submit', async evento => {
+      evento.preventDefault();
+      const email = campo.value.trim().toLowerCase();
+      errAgg.hidden = true;
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        errAgg.textContent = 'Scrivi un\'email valida.';
+        errAgg.hidden = false;
+        return;
+      }
+      pulsante.disabled = true;
+      try {
+        await aggiungiPersona(orto.id, email, ruolo.value);
+        campo.value = '';
+        ricarica();
+      } catch (e) {
+        errAgg.textContent = e instanceof TypeError ? 'Server non raggiungibile: controlla la connessione.' : e.message;
+        errAgg.hidden = false;
+      }
+      pulsante.disabled = false;
+    });
+    sezione.append(elemento('h3', 'Aggiungi una persona'),
+      elemento('p', 'Scrivi la sua email: se si iscrive (o è già iscritta) con questa email, trova l\'orto in "I miei orti". Chi fa parte dell\'orto vede le email delle altre persone.', 'nota-terreno'),
+      modulo);
+  }
+  const ruoli = elemento('ul', '', 'nota-terreno spiega-ruoli');
+  for (const [, t] of SCELTE_RUOLO) ruoli.append(elemento('li', t));
+  sezione.append(elemento('h3', 'I ruoli'), ruoli);
+  return sezione;
+}
+
+// Pagina al posto dei moduli quando l'orto è in sola lettura
+export function paginaSolaLettura() {
+  const sezione = document.createElement('section');
+  sezione.append(link('← Mappa', '#/', 'indietro'), elemento('h2', 'Sola lettura'),
+    elemento('p', 'In questo orto puoi guardare tutto, ma non aggiungere né modificare. Se ti serve, chiedi a un gestore di cambiare il tuo ruolo.'),
+    link('Persone dell\'orto', '#/orti/persone', 'pulsante secondario'));
+  return sezione;
+}
+
+// Bottone che cambia i dati: in sola lettura non si mostra (vedi .sola-lettura .modifica-dati nel CSS)
+function modificaDati(el) {
+  el.classList.add('modifica-dati');
+  return el;
 }
