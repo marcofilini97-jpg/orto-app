@@ -127,6 +127,13 @@ export async function creaOrto(nome) {
   return chiedi('/rest/v1/rpc/crea_orto', { method: 'POST', headers: await intestazioneAccesso(), body: JSON.stringify({ nome_orto: nome }) });
 }
 
+// Nuovo nome dell'orto (solo il gestore)
+export async function rinominaOrtoServer(ortoId, nome) {
+  await chiedi(`/rest/v1/orti?id=eq.${ortoId}`, {
+    method: 'PATCH', headers: { ...await intestazioneAccesso(), Prefer: 'return=minimal' }, body: JSON.stringify({ nome }),
+  });
+}
+
 // Le righe dell'orto ricevute dal server dopo l'ora "dopo" (tutte, se dopo è null), dalla più vecchia
 export async function scaricaNovita(ortoId, dopo) {
   const filtro = dopo ? `&ricevuto=gt.${encodeURIComponent(dopo)}` : '';

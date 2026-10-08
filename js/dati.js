@@ -1,7 +1,7 @@
 // Unico file che sa dove e come sono salvati i dati: sul telefono (localStorage) e,
 // se collegato, su Supabase (tramite server.js). Le schermate usano solo carica() e salva().
 
-import { collegato, emailCollegata, accedi, esci, scaricaNovita, inviaModifiche, mieiOrti, creaOrto } from './server.js';
+import { collegato, emailCollegata, accedi, esci, scaricaNovita, inviaModifiche, mieiOrti, creaOrto, rinominaOrtoServer } from './server.js';
 export { iscriviti, recuperaPassword, cambiaPassword, accessoDaLink } from './server.js';
 
 const CHIAVE = 'orto-dati';
@@ -10,6 +10,10 @@ const CHIAVE_MODO = 'orto-modo-prova';       // '1' se la modalità prova è att
 const CHIAVE_SYNC = 'orto-sync';             // stato della sincronizzazione
 const CHIAVE_ARCADE = 'orto-arcade';         // simulazioni Arcade (solo su questo telefono)
 const CHIAVE_ARCADE_ATTIVA = 'orto-arcade-attiva';   // id della simulazione in cui si sta giocando
+const CHIAVE_ELENCO_ORTI = 'orto-elenco-orti';  // ultimo elenco degli orti dell'account (per vederlo anche offline)
+// Gli altri orti dell'account restano da parte sul telefono: 'orto-dati:<id>' e 'orto-sync:<id>'
+const DA_PARTE_DATI = 'orto-dati:';
+const DA_PARTE_SYNC = 'orto-sync:';
 const VERSIONE = 1;
 
 const AIUOLE = [
@@ -260,17 +264,97 @@ function programmaSincronizzazione() {
 // prima che esistessero più orti, o account nuovi) prende il primo orto dell'account, o ne crea uno
 async function ortoCollegato() {
   const stato = statoSync();
-  if (stato.orto) return stato.orto;
-  let orti = await mieiOrti();
+  if (stato.orto) {
+    // Nome e ruolo possono essere cambiati dal gestore: si aggiornano a ogni sincronizzazione
+    const orti = await aggiornaElencoOrti();
+    const qui = orti.find(o => o.id === stato.orto.id);
+    if (!qui) throw new Error('Non fai più parte di questo orto: scegline un altro in "I miei orti".');
+    if (qui.nome !== stato.orto.nome || qui.ruolo !== stato.orto.ruolo) {
+      const aggiornato = statoSync();
+      aggiornato.orto = qui;
+      scriviStato(aggiornato);
+      document.dispatchEvent(new Event('dati-sincronizzati'));
+    }
+    return qui;
+  }
+  let orti = await aggiornaElencoOrti();
   if (orti.length === 0) {
     await creaOrto('Il mio orto');
-    orti = await mieiOrti();
+    orti = await aggiornaElencoOrti();
   }
   const orto = orti[0];
   const aggiornato = statoSync();
   aggiornato.orto = orto;
   scriviStato(aggiornato);
   return orto;
+}
+
+async function aggiornaElencoOrti() {
+  const orti = await mieiOrti();
+  localStorage.setItem(CHIAVE_ELENCO_ORTI, JSON.stringify(orti));
+  return orti;
+}
+
+// ---- Più orti sul telefono ----
+
+// L'orto a cui è legato il telefono ({ id, nome, ruolo }), oppure null senza account
+export function ortoAttuale() {
+  return collegato() ? statoSync().orto : null;
+}
+
+// Gli orti dell'account: dal server se c'è rete, altrimenti l'ultimo elenco salvato
+export async function elencoOrti() {
+  try {
+    return await aggiornaElencoOrti();
+  } catch {
+    try {
+      return JSON.parse(localStorage.getItem(CHIAVE_ELENCO_ORTI)) ?? [];
+    } catch {
+      return [];
+    }
+  }
+}
+
+// Passa a un altro orto dell'account: quello attuale resta da parte sul telefono, quello nuovo
+// si riprende da parte (se c'era) oppure si scarica tutto dal server
+export async function cambiaOrto(orto) {
+  await sincronizza();                 // prima si prova a inviare le modifiche dell'orto attuale
+  const attuale = statoSync().orto;
+  if (attuale?.id === orto.id) return;
+  if (attuale) {
+    localStorage.setItem(DA_PARTE_DATI + attuale.id, localStorage.getItem(CHIAVE) ?? JSON.stringify(datiIniziali()));
+    localStorage.setItem(DA_PARTE_SYNC + attuale.id, localStorage.getItem(CHIAVE_SYNC) ?? JSON.stringify(nuovoStato()));
+  }
+  const dati = localStorage.getItem(DA_PARTE_DATI + orto.id);
+  const stato = localStorage.getItem(DA_PARTE_SYNC + orto.id);
+  if (dati && stato) {
+    localStorage.setItem(CHIAVE, dati);
+    localStorage.setItem(CHIAVE_SYNC, stato);
+  } else {
+    localStorage.setItem(CHIAVE, JSON.stringify(datiIniziali()));
+    scriviStato({ ...nuovoStato(), orto });
+  }
+  localStorage.removeItem(DA_PARTE_DATI + orto.id);
+  localStorage.removeItem(DA_PARTE_SYNC + orto.id);
+  await sincronizza();
+}
+
+// Nuovo orto dell'account (chi lo crea ne è il gestore): il telefono passa subito a lui
+export async function nuovoOrto(nome) {
+  const id = await creaOrto(nome);
+  const orto = (await aggiornaElencoOrti()).find(o => o.id === id);
+  await cambiaOrto(orto);
+  // Le aiuole di partenza vanno anche sul server
+  registraModifiche({ aiuole: [], colture: [], registro: [], task: [] }, leggiDa(CHIAVE));
+  await sincronizza();
+}
+
+export async function rinominaOrto(nome) {
+  const stato = statoSync();
+  await rinominaOrtoServer(stato.orto.id, nome);
+  stato.orto = { ...stato.orto, nome };
+  scriviStato(stato);
+  await aggiornaElencoOrti();
 }
 
 let inCorso = null;
@@ -356,6 +440,10 @@ export async function completaCollegamento(chiediSostituzione) {
 export function scollegaTelefono() {
   esci();
   localStorage.removeItem(CHIAVE_SYNC);
+  localStorage.removeItem(CHIAVE_ELENCO_ORTI);
+  for (const chiave of Object.keys(localStorage)) {
+    if (chiave.startsWith(DA_PARTE_DATI) || chiave.startsWith(DA_PARTE_SYNC)) localStorage.removeItem(chiave);
+  }
 }
 
 // Cancella tutto ciò che l'app ha salvato su questo telefono (i dati sul server restano)

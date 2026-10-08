@@ -4,7 +4,7 @@ import {
   carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio, orarioPerUtente,
   inProva, attivaProva, disattivaProva, ricominciaProva,
   sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione, cancellaDatiTelefono,
-  iscriviti, recuperaPassword, cambiaPassword,
+  iscriviti, recuperaPassword, cambiaPassword, ortoAttuale, elencoOrti, cambiaOrto, nuovoOrto, rinominaOrto,
   elencoSimulazioni, leggiSimulazione, salvaSimulazione, eliminaSimulazione, entraArcade, inArcade,
   simulazioneAttiva, impostaGiornoArcade, datiPerSimulazione, inizioOrtoReale, oggiVero,
 } from './dati.js';
@@ -652,6 +652,7 @@ function sezioneSincronizzazione() {
     riga('Orto', stato.orto ? `${stato.orto.nome} · ${NOMI_RUOLO[stato.orto.ruolo]}` : '—'),
     riga('Ultima sincronizzazione', stato.ultimaSync ? orarioPerUtente(stato.ultimaSync) : 'mai'),
   );
+  box.append(link('I miei orti', '#/orti', 'pulsante secondario'));
   if (stato.inAttesa > 0) box.append(riga('Modifiche in attesa di invio', String(stato.inAttesa)));
   if (stato.errore) box.append(elemento('p', stato.errore, 'errore'));
 
@@ -3127,4 +3128,108 @@ export function paginaGlossario() {
   sezione.append(cerca, elenco);
   attivaParole(sezione);
   return sezione;
+}
+
+// ---- I miei orti: elenco degli orti dell'account, cambio, nuovo orto e nome ----
+
+export function paginaOrti() {
+  const sezione = document.createElement('section');
+  sezione.append(link('← Mappa', '#/', 'indietro'), elemento('h2', 'I miei orti'));
+  const attuale = ortoAttuale();
+  if (!attuale) {
+    sezione.append(
+      elemento('p', 'Senza account i dati restano solo su questo telefono, in un solo orto. Entra o iscriviti per avere più orti e condividerli con altre persone.'),
+      link('Entra o iscriviti', '#/impostazioni', 'pulsante'),
+    );
+    return sezione;
+  }
+  const elenco = elemento('div', '', 'elenco-orti');
+  elenco.append(elemento('p', 'Carico gli orti…', 'nota-terreno'));
+  const avviso = elemento('p', '', 'errore');
+  avviso.hidden = true;
+  const errore = e => {
+    avviso.textContent = e instanceof TypeError ? 'Server non raggiungibile: controlla la connessione.' : e.message;
+    avviso.hidden = false;
+  };
+  elencoOrti().then(orti => {
+    elenco.replaceChildren();
+    for (const o of orti) {
+      const voce = elemento('button', '', `voce-orto${o.id === attuale.id ? ' attuale' : ''}`);
+      voce.type = 'button';
+      const nome = elemento('span');
+      nome.append(elemento('strong', o.nome), elemento('small', o.id === attuale.id ? 'quello che stai usando' : 'tocca per passare a questo orto'));
+      voce.append(nome, elemento('span', NOMI_RUOLO[o.ruolo], `ruolo-orto ruolo-${o.ruolo}`));
+      voce.addEventListener('click', async () => {
+        if (o.id === attuale.id) return;
+        voce.disabled = true;
+        try {
+          await cambiaOrto(o);
+          location.hash = '#/';
+        } catch (e) {
+          errore(e);
+          voce.disabled = false;
+        }
+      });
+      elenco.append(voce);
+    }
+    if (orti.length === 0) elenco.append(elemento('p', 'Nessun orto trovato.', 'nota-terreno'));
+  });
+  sezione.append(elenco, avviso);
+
+  // Nome dell'orto attuale (solo il gestore)
+  if (attuale.ruolo === 'gestore') {
+    const rinomina = moduloNome('Nome', attuale.nome, 'Salva il nome', async nome => {
+      await rinominaOrto(nome);
+      document.dispatchEvent(new Event('dati-cambiati'));
+    });
+    sezione.append(elemento('h3', 'Nome dell\'orto'), rinomina);
+  }
+
+  // Nuovo orto
+  const nuovo = moduloNome('Nome', '', '+ Crea il nuovo orto', async nome => {
+    await nuovoOrto(nome);
+    location.hash = '#/';
+  });
+  sezione.append(elemento('h3', 'Nuovo orto'),
+    elemento('p', 'Ne sarai il gestore. Parte con le 8 aiuole di base: la forma dell\'orto si potrà disegnare più avanti.', 'nota-terreno'),
+    nuovo);
+  return sezione;
+}
+
+// Piccolo modulo con un nome (max 60 caratteri) e un pulsante
+function moduloNome(etichetta, valore, testoPulsante, azione) {
+  const modulo = document.createElement('form');
+  modulo.className = 'modulo';
+  modulo.noValidate = true;
+  const campo = elemento('input');
+  campo.type = 'text';
+  campo.maxLength = 60;
+  campo.value = valore;
+  campo.autocomplete = 'off';
+  const label = elemento('label', etichetta);
+  label.append(campo);
+  const avviso = elemento('p', '', 'errore');
+  avviso.hidden = true;
+  const pulsante = elemento('button', testoPulsante, 'pulsante');
+  pulsante.type = 'submit';
+  modulo.append(label, avviso, pulsante);
+  modulo.addEventListener('submit', async evento => {
+    evento.preventDefault();
+    const nome = campo.value.trim();
+    avviso.hidden = true;
+    if (!nome) {
+      avviso.textContent = 'Scrivi un nome.';
+      avviso.hidden = false;
+      return;
+    }
+    pulsante.disabled = true;
+    try {
+      await azione(nome);
+    } catch (e) {
+      avviso.textContent = e instanceof TypeError ? 'Server non raggiungibile: controlla la connessione.' : e.message;
+      avviso.hidden = false;
+    }
+    pulsante.disabled = false;
+  });
+  return modulo;
 }

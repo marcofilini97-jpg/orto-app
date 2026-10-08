@@ -709,8 +709,9 @@ body[data-stagione="inverno"] { background-image: radial-gradient(#ffffff 1.8px,
 .preferenza[data-stato="no"]::after { content: '✕'; color: #b00020; }
 
 /* Arcade: nome della simulazione nella barra rossa */
-.nome-arcade { display: none; }
-.arcade .nome-arcade { display: block; flex: 1; min-width: 0; margin: 0 8px 0 10px; overflow: hidden; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+.nome-barra { flex: 1; min-width: 0; margin: 0 8px 0 10px; overflow: hidden; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; color: inherit; text-decoration: none; }
+.nome-barra:empty { display: none; }
+body:not(.arcade) .nome-barra::after { content: ' ▾'; }
 
 /* Raccolto in Arcade: cestino accanto al nome dell'aiuola, cesto sopra la barra del tempo, pagina Il raccolto */
 .aiuola .nome .cestino { display: inline-block; width: 20px; height: 20px; margin: -3px -4px 0 4px; vertical-align: middle; }
@@ -782,3 +783,13 @@ body[data-stagione="inverno"] { background-image: radial-gradient(#ffffff 1.8px,
 .fatto-accesso { padding: 8px 10px; font-weight: 700; color: #2b4a1f; background: #dbe9cc; border-radius: 8px; }
 .modulo-accesso .dimenticata { display: block; margin: 6px auto 0; font: inherit; background: none; border: 0; cursor: pointer; }
 .modulo-accesso label[hidden], .modulo-accesso .dimenticata[hidden] { display: none; }
+
+/* I miei orti */
+.elenco-orti { display: grid; gap: 6px; }
+.voce-orto { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 8px 12px; font: inherit; color: var(--testo); text-align: left; background: #fff; border: 2px solid #e5d3b0; border-radius: 10px; cursor: pointer; }
+.voce-orto.attuale { background: #eef5e6; border-color: var(--verde); cursor: default; }
+.voce-orto small { display: block; font-size: .82rem; color: var(--marrone-scuro); }
+.ruolo-orto { padding: 0 8px; font-size: .78rem; font-weight: 800; white-space: nowrap; border-radius: 6px; }
+.ruolo-gestore { color: #fff; background: var(--verde); }
+.ruolo-membro { color: #2b4a1f; background: #dbe9cc; }
+.ruolo-lettore { color: var(--marrone-scuro); background: #efe2c6; }

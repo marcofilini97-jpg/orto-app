@@ -1,10 +1,10 @@
-import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva, accessoDaLink, completaCollegamento } from './dati.js';
+import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva, accessoDaLink, completaCollegamento, ortoAttuale } from './dati.js';
 import { CATALOGO } from './catalogo.js';
 import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto,
-  paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaOrti, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -15,6 +15,7 @@ function schermata() {
   // Impostazioni non legge i dati: così si può ripristinare un backup anche se sono danneggiati
   if (pagina === 'impostazioni') return impostazioni();
   if (pagina === 'nuova-password') return paginaNuovaPassword();
+  if (pagina === 'orti') return paginaOrti();
   // Il catalogo è conoscenza generale: non legge i dati dell'orto
   if (pagina === 'impara') {
     if (id === 'mese') return paginaMese(sotto);
@@ -90,7 +91,12 @@ function disegna() {
   delete document.body.dataset.stagione;
   document.body.classList.toggle('prova', inProva() && !inArcade());
   document.body.classList.toggle('arcade', inArcade());
-  document.querySelector('.nome-arcade').textContent = inArcade() ? simulazioneAttiva().nome : '';
+  // Nella barra: il nome della simulazione in Arcade, altrimenti il nome dell'orto (tocco = I miei orti)
+  const nomeBarra = document.querySelector('.nome-barra');
+  const orto = ortoAttuale();
+  nomeBarra.textContent = inArcade() ? simulazioneAttiva().nome : orto && !inProva() ? orto.nome : '';
+  if (inArcade()) nomeBarra.removeAttribute('href');
+  else nomeBarra.href = '#/orti';
   try {
     contenuto.replaceChildren(schermata());
   } catch (errore) {
