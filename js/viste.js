@@ -93,7 +93,7 @@ export function mappa(dati) {
   if (inArcade()) return mappaArcade(dati);
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
-  mappa.append(etichetta('Fondo'), terrenoMappa(dati), staccionata(dati), etichetta('Davanti'));
+  mappa.append(etichetta(estremo(dati, 'Fondo')), terrenoMappa(dati), staccionata(dati), etichetta(estremo(dati, 'Davanti')));
   const scorciatoie = elemento('div', '', 'scorciatoie');
   const daFare = scorciatoia('Da fare', '#/task', 'task');
   const segnoSenzaAiuole = segnoTask(dati.task.filter(t => t.aiuoleIds.length === 0));
@@ -255,6 +255,7 @@ function aiuolaMappa(dati, a) {
 // Il terreno della mappa principale, con il segno dei task su tutto l'orto in alto al centro
 function terrenoMappa(dati) {
   const box = terrenoOrto(dati, a => aiuolaMappa(dati, a));
+  if (dati.terreno[0].esposizione) box.append(bussola(dati.terreno[0].esposizione));
   const segno = segnoTask(dati.task.filter(t => tuttoOrto(dati, t)));
   if (segno) {
     const p = puntino(segno);
@@ -2701,7 +2702,7 @@ function mappaDelGiorno(dati, g) {
   giornoMappa = g;
   try {
     const m = elemento('div', '', 'mappa-tempo');
-    m.append(etichetta('Fondo'), terrenoMappa(dati), staccionata(dati), etichetta('Davanti'));
+    m.append(etichetta(estremo(dati, 'Fondo')), terrenoMappa(dati), staccionata(dati), etichetta(estremo(dati, 'Davanti')));
     for (const a of m.querySelectorAll('a.aiuola')) {
       a.removeAttribute('href');
       const aiuola = dati.aiuole.find(x => x.id === a.dataset.id);
@@ -2819,7 +2820,7 @@ function mappaArcade(dati) {
     modoArcade = true;
     try {
       const m = elemento('div', '', 'mappa-tempo');
-      m.append(etichetta('Fondo'), terrenoMappa(dati), staccionata(dati), etichetta('Davanti'));
+      m.append(etichetta(estremo(dati, 'Fondo')), terrenoMappa(dati), staccionata(dati), etichetta(estremo(dati, 'Davanti')));
       posto.replaceChildren(m);
     } finally {
       modoArcade = false;
@@ -3338,7 +3339,7 @@ export function paginaOrti() {
   // Nuovo orto
   const nuovo = moduloNome('Nome', '', '+ Crea il nuovo orto', async nome => {
     await nuovoOrto(nome);
-    location.hash = '#/';
+    location.hash = '#/disegna';
   });
   sezione.append(elemento('h3', 'Nuovo orto'),
     elemento('p', 'Ne sarai il gestore. Parte con le 8 aiuole di base: la forma dell\'orto si potrà disegnare più avanti.', 'nota-terreno'),
@@ -3614,6 +3615,20 @@ export function paginaDisegna(originali) {
     disegnaTela();
   });
 
+  // Esposizione: cosa c'è in alto sulla mappa
+  const valoriEsposizione = [null, 'N', 'E', 'S', 'O'];
+  const spiegaEsposizione = elemento('p', testoEsposizione(t.esposizione), 'nota-terreno spiega-esposizione');
+  const rotellaEsposizione = creaRotella(['Non lo so', 'Nord', 'Est', 'Sud', 'Ovest'], Math.max(0, valoriEsposizione.indexOf(t.esposizione ?? null)), i => {
+    t.esposizione = valoriEsposizione[i];
+    spiegaEsposizione.textContent = testoEsposizione(t.esposizione);
+    disegnaTela();
+  });
+  const esposizione = elemento('div', '', 'blocco-esposizione');
+  esposizione.append(elemento('span', 'In alto (al fondo dell\'orto) c\'è:', 'titolo-esposizione'), rotellaEsposizione.elemento);
+  // La rotella mostra il valore salvato appena è sullo schermo
+  const mostraEsposizione = () => (esposizione.isConnected ? rotellaEsposizione.mostraIniziale() : setTimeout(mostraEsposizione, 30));
+  setTimeout(mostraEsposizione, 0);
+
   const tela = elemento('div', '', 'tela-disegno');
   const attrezzi = elemento('div', '', 'attrezzi-disegno');
   const pannello = elemento('div', '', 'pannello-disegno');
@@ -3679,6 +3694,7 @@ export function paginaDisegna(originali) {
       el.dataset.id = a.id;
       tela.append(el);
     }
+    if (t.esposizione) tela.append(percorsoSole(t.esposizione));
     // L'elemento scelto sta sopra gli altri, così si vede e si prende anche se è sotto un'aiuola
     const elScelto = sel && tela.querySelector(`.elemento-disegno[data-id="${sel.id}"]`);
     if (elScelto) tela.append(elScelto);
@@ -3879,8 +3895,85 @@ export function paginaDisegna(originali) {
   const azioni = elemento('div', '', 'azioni-disegno');
   azioni.append(salvaOrto, annulla);
 
-  sezione.append(elemento('h3', 'Il terreno'), terreno, attrezzi, tela, pannello, avviso, azioni);
+  sezione.append(elemento('h3', 'Il terreno'), terreno, elemento('h3', 'Esposizione'), esposizione, spiegaEsposizione,
+    elemento('h3', 'Aiuole e vialetti'), attrezzi, tela, pannello, avviso, azioni);
   disegnaTela();
   disegnaPannello();
   return sezione;
+}
+
+// ---- Esposizione: cosa c'è in alto sulla mappa (al fondo) e come si muove il sole sopra l'orto ----
+
+const DIREZIONI = ['N', 'E', 'S', 'O'];
+const NOMI_DIREZIONE = { N: 'Nord', E: 'Est', S: 'Sud', O: 'Ovest' };
+const POSTO_SULLA_MAPPA = { 0: 'in alto (al fondo)', 90: 'a destra', 180: 'in basso (davanti)', 270: 'a sinistra' };
+
+// Angolo (gradi, in senso orario dall'alto della mappa) della direzione d, se in alto c'è `alto`
+function angoloDirezione(alto, d) {
+  return ((DIREZIONI.indexOf(d) - DIREZIONI.indexOf(alto)) * 90 + 360) % 360;
+}
+
+// Punto in percentuale del terreno, nella direzione dell'angolo, a distanza r dal centro (50 = bordo)
+function puntoVerso(angolo, r) {
+  const a = angolo * Math.PI / 180;
+  return { x: 50 + r * Math.sin(a), y: 50 - r * Math.cos(a) };
+}
+
+// "Fondo · Nord" / "Davanti · Sud" se l'esposizione è nota
+function estremo(dati, testo) {
+  const esp = dati.terreno[0]?.esposizione;
+  if (!esp) return testo;
+  const d = testo === 'Fondo' ? esp : DIREZIONI[(DIREZIONI.indexOf(esp) + 2) % 4];
+  return `${testo} · ${NOMI_DIREZIONE[d]}`;
+}
+
+// Piccola bussola: la freccia punta verso il Nord vero
+function bussola(esposizione) {
+  const el = elemento('span', '', 'bussola');
+  el.title = `Il Nord è ${POSTO_SULLA_MAPPA[angoloDirezione(esposizione, 'N')]}`;
+  // Solo disegno fisso, girato con lo stile
+  el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" style="transform: rotate(${angoloDirezione(esposizione, 'N')}deg)">
+    <circle cx="12" cy="12" r="11" fill="#fff8e7" stroke="#5c3d22" stroke-width="1.5"/>
+    <path d="M12 3 L15.5 12 H8.5 Z" fill="#c0392b"/><path d="M12 21 L8.5 12 H15.5 Z" fill="#9aa3a8"/>
+    <text x="12" y="10.2" text-anchor="middle" font-size="5.5" font-weight="700" fill="#fff" font-family="sans-serif">N</text></svg>`;
+  return el;
+}
+
+// Percorso del sole sopra il terreno (alba a Est, mezzogiorno a Sud, tramonto a Ovest) e lettere dei punti cardinali
+function percorsoSole(esposizione) {
+  const box = elemento('div', '', 'percorso-sole');
+  box.setAttribute('aria-hidden', 'true');
+  const e = puntoVerso(angoloDirezione(esposizione, 'E'), 42);
+  const o = puntoVerso(angoloDirezione(esposizione, 'O'), 42);
+  const s = puntoVerso(angoloDirezione(esposizione, 'S'), 76);
+  box.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none">
+    <path d="M ${e.x} ${e.y} Q ${s.x} ${s.y} ${o.x} ${o.y}" fill="none" stroke="#f2c230" stroke-width="3" stroke-dasharray="7 5" vector-effect="non-scaling-stroke"/></svg>`;
+  const lungo = (t, testo) => {
+    // Punto della curva (Bézier quadratica) a t tra 0 e 1
+    const x = (1 - t) ** 2 * e.x + 2 * (1 - t) * t * s.x + t ** 2 * o.x;
+    const y = (1 - t) ** 2 * e.y + 2 * (1 - t) * t * s.y + t ** 2 * o.y;
+    const sole = elemento('span', '', 'sole-percorso');
+    sole.style.left = `${x}%`;
+    sole.style.top = `${y}%`;
+    sole.append(elemento('span', '☀', 'disco-sole'), elemento('span', testo, 'ora-sole'));
+    box.append(sole);
+  };
+  lungo(0.04, 'alba');
+  lungo(0.5, 'mezzogiorno');
+  lungo(0.96, 'tramonto');
+  for (const d of DIREZIONI) {
+    const p = puntoVerso(angoloDirezione(esposizione, d), 50);
+    const lettera = elemento('span', d, `lettera-bussola${d === 'N' ? ' nord' : ''}`);
+    lettera.style.left = `${p.x}%`;
+    lettera.style.top = `${p.y}%`;
+    box.append(lettera);
+  }
+  return box;
+}
+
+// Spiegazione: dove sorge e tramonta il sole e dove mettere le colture alte
+function testoEsposizione(esposizione) {
+  if (!esposizione) return 'Scegli cosa c\'è in alto sulla mappa (al fondo dell\'orto): vedrai come si muove il sole sopra l\'orto. Se non lo sai, guarda dove sorge il sole al mattino (Est) o usa la bussola del telefono.';
+  const dove = d => POSTO_SULLA_MAPPA[angoloDirezione(esposizione, d)];
+  return `Il sole sorge ${dove('E')}, a mezzogiorno è ${dove('S')} e tramonta ${dove('O')}. Le colture alte (pomodori, mais, fagioli rampicanti) stanno meglio ${dove('N')}, cioè verso Nord: così non fanno ombra alle altre. D'estate il sole sorge e tramonta un po' più a Nord, d'inverno un po' più a Sud.`;
 }

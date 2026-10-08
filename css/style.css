@@ -855,3 +855,18 @@ body:not(.arcade) .nome-barra::after { content: ' ▾'; }
 .modulo-terreno-orto input[type="number"] { width: 100%; padding: 10px 12px; font: inherit; color: var(--testo); background: #fff; border: 2px solid #767676; border-radius: 8px; }
 .modulo-terreno-orto label { display: flex; flex-direction: column; }
 .vialetto-libero.scelto { z-index: 5; }
+
+/* Esposizione e sole */
+.bussola { position: absolute; z-index: 9; top: -32px; right: 0; width: 28px; height: 28px; }
+.bussola svg { display: block; width: 100%; height: 100%; }
+.blocco-esposizione { display: flex; align-items: center; gap: 12px; }
+.titolo-esposizione { flex: 0 0 auto; max-width: 45%; font-weight: 700; }
+.blocco-esposizione .scatola-rotella { max-width: 200px; margin-top: 0; }
+.spiega-esposizione { margin-top: 6px; }
+.percorso-sole { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.percorso-sole svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.sole-percorso { position: absolute; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -50%); }
+.disco-sole { font-size: 1.6rem; line-height: 1; color: #f2a400; text-shadow: 0 0 6px #fff3b0, 0 1px 0 #8a4a14; }
+.ora-sole { padding: 0 5px; font-size: .7rem; font-weight: 800; color: var(--testo); background: rgb(255 248 231 / .9); border-radius: 5px; }
+.lettera-bussola { position: absolute; transform: translate(-50%, -50%); width: 22px; height: 22px; display: grid; place-items: center; font-size: .8rem; font-weight: 800; color: var(--testo); background: var(--crema); border: 2px solid var(--marrone-scuro); border-radius: 50%; }
+.lettera-bussola.nord { color: #fff; background: #c0392b; }
