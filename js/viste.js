@@ -63,9 +63,17 @@ function divisione(dati, aiuolaId) {
   return null;
 }
 
+// Nomi delle aiuole dell'orto mostrato (app.js li imposta a ogni schermata): le aiuole nuove
+// hanno un codice interno (a-…) diverso dal nome; quelle di partenza hanno codice = nome
+let nomiAiuole = new Map();
+export function impostaNomiAiuole(dati) {
+  nomiAiuole = new Map(dati.aiuole.map(a => [a.id, a.nome ?? a.id]));
+}
+const nomeId = id => nomiAiuole.get(id) ?? id;
+
 // es. "2A, 2B metà fondo"
 function doveColtura(c) {
-  return c.aiuoleIds.map(id => c.parti?.[id] ? `${id} metà ${c.parti[id]}` : id).join(', ');
+  return c.aiuoleIds.map(id => c.parti?.[id] ? `${nomeId(id)} metà ${c.parti[id]}` : nomeId(id)).join(', ');
 }
 
 // Spazi dell'aiuola dove più colture attive si sovrappongono, es. [{ zona: 'fondo', n: 2 }]
@@ -470,7 +478,7 @@ export function schedaAiuola(dati, aiuola) {
   const inProgramma = colturePer(dati, aiuola.id).filter(c => c.stato === 'attiva' && !iniziata(c))
     .sort((x, y) => x.dataInizio.localeCompare(y.dataInizio));
   const intestazione = elemento('div', '', 'intestazione');
-  intestazione.append(elemento('h2', `Aiuola ${aiuola.id}`), link('(info)', `#/aiuola/${aiuola.id}/info`, 'link-info'));
+  intestazione.append(elemento('h2', `Aiuola ${nomeId(aiuola.id)}`), link('(info)', `#/aiuola/${aiuola.id}/info`, 'link-info'));
   const sezione = document.createElement('section');
   sezione.append(
     link('← Mappa', '#/', 'indietro'),
@@ -487,7 +495,7 @@ export function schedaAiuola(dati, aiuola) {
     elemento('h3', 'Registro'),
     elencoVoci(dati, ordinaVoci(dati.registro.filter(v => v.aiuoleIds.includes(aiuola.id))).slice(0, 5), 'Nessuna voce nel registro.'),
     link('Aggiungi al registro', `#/aiuola/${aiuola.id}/nuova-voce`, 'pulsante'),
-    link(`Vedi tutto il registro di ${aiuola.id}`, `#/aiuola/${aiuola.id}/registro`, 'pulsante secondario'),
+    link(`Vedi tutto il registro di ${nomeId(aiuola.id)}`, `#/aiuola/${aiuola.id}/registro`, 'pulsante secondario'),
   );
   return sezione;
 }
@@ -523,8 +531,8 @@ export function infoAiuola(dati, aiuola) {
 
   const sezione = document.createElement('section');
   sezione.append(
-    link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro'),
-    elemento('h2', `Info ${aiuola.id}`),
+    link(`← Aiuola ${nomeId(aiuola.id)}`, `#/aiuola/${aiuola.id}`, 'indietro'),
+    elemento('h2', `Info ${nomeId(aiuola.id)}`),
     riga('Settore', String(aiuola.settore)),
     riga('Forma', `${NOMI_FORMA[aiuola.forma] ?? 'rettangolo'}, ${aiuola.w} × ${aiuola.h} cm`),
     riga('Divisione', asse === 'fondo-davanti' ? 'divisa a metà: fondo / davanti'
@@ -545,7 +553,7 @@ function pulsanteRiposiziona(aiuola) {
   const conferma = elemento('p', 'Ortaggi riposizionati.', 'conferma');
   conferma.hidden = true;
   pulsante.addEventListener('click', () => {
-    if (!confirm(`Rimettere gli ortaggi di ${aiuola.id} nella disposizione automatica?`)) return;
+    if (!confirm(`Rimettere gli ortaggi di ${nomeId(aiuola.id)} nella disposizione automatica?`)) return;
     try {
       const dati = carica();
       for (const c of dati.colture) delete c.posizioni?.[aiuola.id];
@@ -565,8 +573,8 @@ export function storicoAiuola(dati, aiuola) {
     .sort((x, y) => (y.dataFine ?? '').localeCompare(x.dataFine ?? ''));
   const sezione = document.createElement('section');
   sezione.append(
-    link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro'),
-    elemento('h2', `Storico ${aiuola.id}`),
+    link(`← Aiuola ${nomeId(aiuola.id)}`, `#/aiuola/${aiuola.id}`, 'indietro'),
+    elemento('h2', `Storico ${nomeId(aiuola.id)}`),
     elencoColture(passate, 'Nessuna coltura passata.'),
   );
   return sezione;
@@ -633,6 +641,8 @@ export function impostazioni() {
     elemento('p', 'Importare un backup sostituisce tutti i dati attuali.'),
     importaBtn,
     sceltaFile,
+    elemento('h3', "Forma dell'orto"),
+    puoDisegnare() ? link("Disegna l'orto", '#/disegna', 'pulsante secondario') : elemento('p', "Solo chi gestisce l'orto può cambiarne la forma.", 'nota-terreno'),
     elemento('h3', "Il terreno dell'orto"),
     riepilogoTerreno(),
     elemento('h3', 'Sincronizzazione'),
@@ -935,8 +945,8 @@ export function moduloColtura(dati, { aiuola = null, coltura = null }) {
     sezione.append(indietro, elemento('h2', 'Modifica coltura'), modulo);
   } else {
     sezione.append(
-      link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro'),
-      elemento('h2', `Nuova coltura in ${aiuola.id}`),
+      link(`← Aiuola ${nomeId(aiuola.id)}`, `#/aiuola/${aiuola.id}`, 'indietro'),
+      elemento('h2', `Nuova coltura in ${nomeId(aiuola.id)}`),
       modulo,
     );
   }
@@ -1099,7 +1109,7 @@ function avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, coltura
     const occupante = vicine.find(c => c.dataInizio <= inizio && (fineDi(c) ?? '9999-12-31') > inizio);
     if (occupante) {
       const fine = fineDi(occupante);
-      avvisi.push([`Aiuola ${id} occupata. `, fine
+      avvisi.push([`Aiuola ${nomeId(id)} occupata. `, fine
         ? `C'è ${occupante.nome} fino al ${dataPerUtente(fine)}${occupante.dataFine ? '' : ' (stima dal catalogo)'}, e la nuova coltura inizia il ${dataPerUtente(inizio)}.`
         : `C'è ${occupante.nome}, che non ha ancora una data di fine. Ricordati di terminarla quando la togli.`]);
       continue;
@@ -1108,7 +1118,7 @@ function avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, coltura
     if (prima) {
       const settimane = Math.round((new Date(inizio) - new Date(prima)) / (7 * 86400000));
       if (settimane >= 8) {
-        avvisi.push([`Aiuola ${id} vuota a lungo. `, `Resta libera per circa ${settimane} settimane (dal ${dataPerUtente(prima)}): puoi riempire il vuoto con un'insalata veloce o un sovescio, oppure coprire la terra con la pacciamatura.`]);
+        avvisi.push([`Aiuola ${nomeId(id)} vuota a lungo. `, `Resta libera per circa ${settimane} settimane (dal ${dataPerUtente(prima)}): puoi riempire il vuoto con un'insalata veloce o un sovescio, oppure coprire la terra con la pacciamatura.`]);
       }
     }
   }
@@ -1292,7 +1302,7 @@ function apriPopup(dati, aiuola, parteAttuale, scegli) {
   const azioni = elemento('div', '', 'popup-azioni');
   azioni.append(togli, conferma);
   const contenuto = elemento('div', '', 'popup-contenuto');
-  contenuto.append(elemento('h3', `Aiuola ${aiuola.id}`), corpo, azioni);
+  contenuto.append(elemento('h3', `Aiuola ${nomeId(aiuola.id)}`), corpo, azioni);
   finestra.append(contenuto);
 
   // Un tocco sullo sfondo scuro (fuori dal contenuto) chiude senza cambiare niente
@@ -1473,7 +1483,7 @@ function moduloTermina(coltura) {
       avviso.hidden = false;
       return;
     }
-    if (confirm(`Terminare "${coltura.nome}"? Passerà nello storico di ${coltura.aiuoleIds.join(', ')} e nel registro verrà aggiunto il raccolto.`)) {
+    if (confirm(`Terminare "${coltura.nome}"? Passerà nello storico di ${coltura.aiuoleIds.map(nomeId).join(', ')} e nel registro verrà aggiunto il raccolto.`)) {
       terminaColtura(coltura, dataFine);
     }
   });
@@ -1564,8 +1574,8 @@ export function registro(dati, aiuola = null) {
   const voci = aiuola ? dati.registro.filter(v => v.aiuoleIds.includes(aiuola.id)) : dati.registro;
   const sezione = document.createElement('section');
   sezione.append(
-    aiuola ? link(`← Aiuola ${aiuola.id}`, `#/aiuola/${aiuola.id}`, 'indietro') : link('← Mappa', '#/', 'indietro'),
-    elemento('h2', aiuola ? `Registro ${aiuola.id}` : 'Registro'),
+    aiuola ? link(`← Aiuola ${nomeId(aiuola.id)}`, `#/aiuola/${aiuola.id}`, 'indietro') : link('← Mappa', '#/', 'indietro'),
+    elemento('h2', aiuola ? `Registro ${nomeId(aiuola.id)}` : 'Registro'),
     link('Aggiungi al registro', aiuola ? `#/aiuola/${aiuola.id}/nuova-voce` : '#/registro/nuova-voce', 'pulsante'),
     elencoVoci(dati, ordinaVoci(voci), 'Nessuna voce nel registro.'),
   );
@@ -1935,7 +1945,7 @@ function disegnaTest(dati, corpo) {
   for (let i = 0; i < 13; i++) mesi.append(elemento('span', INIZIALI_MESI[(inizio.getMonth() + i) % 12]));
 
   const settori = elemento('div');
-  for (const settore of [1, 2, 3, 4]) {
+  for (const settore of [...new Set(dati.aiuole.map(a => a.settore))].sort((x, y) => x - y)) {
     const aiuole = dati.aiuole.filter(a => a.settore === settore).sort((x, y) => x.y - y.y || x.x - y.x);
     const testa = elemento('div', '', 'test-settore');
     testa.append(elemento('span', `Settore ${settore}`));
@@ -2296,7 +2306,7 @@ export function paginaTerreno(dati, aiuola) {
   const suolo = suoloDi(aiuola);
   const sezione = document.createElement('section');
   sezione.className = 'pagina-terreno';
-  sezione.append(link(`← Info ${aiuola.id}`, `#/aiuola/${aiuola.id}/info`, 'indietro'), elemento('h2', `Terreno della ${aiuola.id}`));
+  sezione.append(link(`← Info ${nomeId(aiuola.id)}`, `#/aiuola/${aiuola.id}/info`, 'indietro'), elemento('h2', `Terreno della ${nomeId(aiuola.id)}`));
 
   const elenco = elemento('div', '', 'proprieta');
   for (const k of Object.keys(NOMI_PROPRIETA)) {
@@ -2341,7 +2351,7 @@ export function paginaTerreno(dati, aiuola) {
   const tutte = elemento('button', 'Usa questo terreno per tutto l\'orto', 'pulsante secondario modifica-dati');
   tutte.type = 'button';
   tutte.addEventListener('click', () => {
-    if (!confirm(`Copiare il terreno della ${aiuola.id} in tutte le altre aiuole? I loro valori verranno sostituiti.`)) return;
+    if (!confirm(`Copiare il terreno della ${nomeId(aiuola.id)} in tutte le altre aiuole? I loro valori verranno sostituiti.`)) return;
     try {
       salvaTerreno(aiuola.id, aiuola.suolo ?? suoloDiPartenza(), true);
       alert('Fatto: tutte le aiuole hanno ora questo terreno.');
@@ -2384,7 +2394,7 @@ export function paginaProva(dati, aiuola, idProva) {
   const sezione = document.createElement('section');
   sezione.className = 'pagina-prova';
   const corpo = elemento('div');
-  sezione.append(link(`← Terreno della ${aiuola.id}`, `#/aiuola/${aiuola.id}/terreno`, 'indietro'), elemento('h2', prova.nome), corpo);
+  sezione.append(link(`← Terreno della ${nomeId(aiuola.id)}`, `#/aiuola/${aiuola.id}/terreno`, 'indietro'), elemento('h2', prova.nome), corpo);
   const passi = () => prova.passi.filter(p => !p.se || p.se(risposte));
 
   function mostra() {
@@ -2460,7 +2470,7 @@ export function paginaProva(dati, aiuola, idProva) {
     const valori = Object.fromEntries(Object.entries(esito).map(([k, v]) => [k, { ...v, fonte: 'prova', da: idProva, data: oggi() }]));
     const box = elemento('div', '', 'esito-prova');
     box.append(elemento('strong', 'Risultato: '), spiegaEsito(idProva, esito));
-    const qui = elemento('button', `Salva nel terreno della ${aiuola.id}`, 'pulsante');
+    const qui = elemento('button', `Salva nel terreno della ${nomeId(aiuola.id)}`, 'pulsante');
     const tutte = elemento('button', 'Salva per tutte le aiuole', 'pulsante secondario');
     const rifai = elemento('button', 'Rifai la prova', 'pulsante secondario');
     for (const b of [qui, tutte, rifai]) b.type = 'button';
@@ -2559,7 +2569,7 @@ export function paginaAnalisi(dati, aiuola) {
   });
 
   const sezione = document.createElement('section');
-  sezione.append(link(`← Terreno della ${aiuola.id}`, `#/aiuola/${aiuola.id}/terreno`, 'indietro'), elemento('h2', 'Analisi del terreno'), modulo);
+  sezione.append(link(`← Terreno della ${nomeId(aiuola.id)}`, `#/aiuola/${aiuola.id}/terreno`, 'indietro'), elemento('h2', 'Analisi del terreno'), modulo);
   return sezione;
 }
 
@@ -2577,7 +2587,7 @@ function riepilogoTerreno() {
     const s = suoloDi(a);
     const tr = elemento('tr');
     const nome = elemento('td');
-    nome.append(link(a.id, `#/aiuola/${a.id}/terreno`, 'aiuola-terreno'));
+    nome.append(link(nomeId(a.id), `#/aiuola/${a.id}/terreno`, 'aiuola-terreno'));
     const tess = elemento('td');
     tess.append(elemento('span', '', `pallino-fonte fonte-${s.tessitura.fonte}`), TESSITURE[s.tessitura.valore] ?? 'Non so');
     tr.append(nome, tess, elemento('td', testoValore('ph', s.ph)),
@@ -3314,6 +3324,7 @@ export function paginaOrti() {
     if (orti.length === 0) elenco.append(elemento('p', 'Nessun orto trovato.', 'nota-terreno'));
   });
   sezione.append(elenco, avviso, link('Persone dell\'orto', '#/orti/persone', 'pulsante secondario'));
+  if (puoDisegnare()) sezione.append(link('Disegna l\'orto', '#/disegna', 'pulsante secondario'));
 
   // Nome dell'orto attuale (solo il gestore)
   if (attuale.ruolo === 'gestore') {
@@ -3552,4 +3563,324 @@ export function paginaSolaLettura() {
 function modificaDati(el) {
   el.classList.add('modifica-dati');
   return el;
+}
+
+// ---- Disegna l'orto: terreno, aiuole e vialetti su una griglia da 10 cm (solo il gestore, o senza account) ----
+
+const GRIGLIA = 10;   // cm
+const aGriglia = v => Math.round(v / GRIGLIA) * GRIGLIA;
+const NOMI_ANGOLO = { ne: 'in alto a destra', no: 'in alto a sinistra', se: 'in basso a destra', so: 'in basso a sinistra' };
+
+export function puoDisegnare() {
+  if (inArcade() || soloLettura()) return false;
+  const orto = ortoAttuale();
+  return !orto || inProva() || orto.ruolo === 'gestore';
+}
+
+// Un'aiuola ha colture, voci o task: si può spostare e cambiare, ma non eliminare (resta lo storico)
+function aiuolaUsata(dati, id) {
+  return [...dati.colture, ...dati.registro, ...dati.task].some(x => x.aiuoleIds?.includes(id));
+}
+
+export function paginaDisegna(originali) {
+  const dati = structuredClone(originali);
+  const t = dati.terreno[0];
+  let scelto = null;      // { tipo: 'aiuola' | 'vialetto', id }
+  let azione = null;      // trascinamento in corso: { tipo: 'sposta' | 'misura', ... }
+
+  const sezione = document.createElement('section');
+  sezione.className = 'disegna';
+  sezione.append(link('← Mappa', '#/', 'indietro'), elemento('h2', 'Disegna l\'orto'),
+    elemento('p', 'In alto c\'è il fondo, in basso il davanti. Tocca un\'aiuola o un vialetto per sceglierlo, trascinalo per spostarlo, usa il quadratino giallo per cambiarne le misure. Tutto si aggancia a una griglia da 10 cm.', 'nota-terreno'));
+
+  // Misure del terreno e staccionata
+  const terreno = document.createElement('form');
+  terreno.className = 'modulo modulo-terreno-orto';
+  terreno.noValidate = true;
+  terreno.innerHTML = `
+    <div class="due-colonne">
+      <label class="senza-margine">Larghezza (cm)<input type="number" name="larghezza" min="100" max="5000" step="10" inputmode="numeric"></label>
+      <label class="senza-margine">Lunghezza (cm)<input type="number" name="lunghezza" min="100" max="5000" step="10" inputmode="numeric"></label>
+    </div>
+    <label class="opzione-tutte"><input type="checkbox" name="staccionata"> Staccionata davanti</label>`;
+  terreno.elements.larghezza.value = t.larghezza;
+  terreno.elements.lunghezza.value = t.lunghezza;
+  terreno.elements.staccionata.checked = t.staccionata !== false;
+  terreno.addEventListener('input', () => {
+    const l = Number(terreno.elements.larghezza.value), u = Number(terreno.elements.lunghezza.value);
+    if (l >= 100 && l <= 5000) t.larghezza = aGriglia(l);
+    if (u >= 100 && u <= 5000) t.lunghezza = aGriglia(u);
+    t.staccionata = terreno.elements.staccionata.checked;
+    disegnaTela();
+  });
+
+  const tela = elemento('div', '', 'tela-disegno');
+  const attrezzi = elemento('div', '', 'attrezzi-disegno');
+  const pannello = elemento('div', '', 'pannello-disegno');
+  const avviso = elemento('p', '', 'errore');
+  avviso.hidden = true;
+
+  const aggiungi = (testo, crea) => {
+    const b = elemento('button', testo, 'attrezzo');
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      const nuovo = crea();
+      scelto = { tipo: nuovo.tipo, id: nuovo.id };
+      disegnaTela();
+      disegnaPannello();
+    });
+    attrezzi.append(b);
+  };
+  const nuovaAiuola = (forma, w, h, extra = {}) => {
+    const n = dati.aiuole.length + 1;
+    let nome = String(n);
+    for (let k = n; dati.aiuole.some(a => a.nome === nome); k++) nome = String(k + 1);
+    const a = { id: nuovoId('a'), nome, settore: 1, forma, x: aGriglia(t.larghezza / 2), y: aGriglia(t.lunghezza / 2), w, h, rot: 0, note: '', ...extra };
+    dati.aiuole.push(a);
+    return { tipo: 'aiuola', id: a.id };
+  };
+  aggiungi('+ Aiuola', () => nuovaAiuola('rettangolo', 180, 120));
+  aggiungi('+ Rotonda', () => nuovaAiuola('ellisse', 120, 120));
+  aggiungi('+ A L', () => nuovaAiuola('elle', 180, 160, { taglio: { w: 80, h: 70, angolo: 'ne' } }));
+  aggiungi('+ Vialetto', () => {
+    const v = { id: nuovoId('v'), x: aGriglia(t.larghezza / 2), y: aGriglia(t.lunghezza / 2), w: 40, h: 200, rot: 0 };
+    dati.vialetti.push(v);
+    return { tipo: 'vialetto', id: v.id };
+  });
+
+  const elementoScelto = () => scelto && (scelto.tipo === 'aiuola' ? dati.aiuole : dati.vialetti).find(x => x.id === scelto.id);
+  const scala = () => tela.clientWidth / t.larghezza;
+  // Dal punto dello schermo alle coordinate dell'orto (cm)
+  const inOrto = evento => {
+    const r = tela.getBoundingClientRect();
+    return { x: (evento.clientX - r.left) / scala(), y: (evento.clientY - r.top) / scala() };
+  };
+
+  function disegnaTela() {
+    tela.style.aspectRatio = `${t.larghezza} / ${t.lunghezza}`;
+    tela.style.setProperty('--passo-x', `${50 / t.larghezza * 100}%`);
+    tela.style.setProperty('--passo-y', `${50 / t.lunghezza * 100}%`);
+    tela.replaceChildren();
+    const sel = elementoScelto();
+    for (const v of dati.vialetti) {
+      const via = elemento('div', '', `vialetto-libero elemento-disegno${sel === v ? ' scelto' : ''}`);
+      inPercentuale(via, { x: v.x - v.w / 2, y: v.y - v.h / 2, w: v.w, h: v.h }, t);
+      if (v.rot) via.style.transform = `rotate(${v.rot}deg)`;
+      via.dataset.tipo = 'vialetto';
+      via.dataset.id = v.id;
+      tela.append(via);
+    }
+    for (const a of dati.aiuole) {
+      const el = elemento('div', '', `aiuola-forma elemento-disegno${sel === a ? ' scelto' : ''}`);
+      el.innerHTML = sagomaAiuola(a);
+      el.append(cartellino(a));
+      inPercentuale(el, ingombro(a), t);
+      el.dataset.tipo = 'aiuola';
+      el.dataset.id = a.id;
+      tela.append(el);
+    }
+    // L'elemento scelto sta sopra gli altri, così si vede e si prende anche se è sotto un'aiuola
+    const elScelto = sel && tela.querySelector(`.elemento-disegno[data-id="${sel.id}"]`);
+    if (elScelto) tela.append(elScelto);
+    // Quadratino per le misure: all'angolo in basso a destra dell'ingombro dell'elemento scelto
+    if (sel) {
+      const b = scelto.tipo === 'aiuola' ? ingombro(sel) : ingombro({ ...sel, forma: 'rettangolo' });
+      const m = elemento('span', '', 'maniglia-disegno');
+      m.style.left = `${(b.x + b.w) / t.larghezza * 100}%`;
+      m.style.top = `${(b.y + b.h) / t.lunghezza * 100}%`;
+      m.setAttribute('aria-label', 'Trascina per cambiare le misure');
+      tela.append(m);
+      const misura = elemento('span', `${sel.w} × ${sel.h} cm`, 'misura-disegno');
+      misura.style.left = `${(b.x + b.w / 2) / t.larghezza * 100}%`;
+      misura.style.top = `${(b.y + b.h) / t.lunghezza * 100}%`;
+      tela.append(misura);
+    }
+  }
+
+  tela.addEventListener('pointerdown', evento => {
+    const p = inOrto(evento);
+    if (evento.target.closest('.maniglia-disegno')) {
+      azione = { tipo: 'misura' };
+    } else {
+      const el = evento.target.closest('.elemento-disegno');
+      if (!el) {
+        scelto = null;
+        disegnaTela();
+        disegnaPannello();
+        return;
+      }
+      const cambiato = !scelto || scelto.id !== el.dataset.id;
+      scelto = { tipo: el.dataset.tipo, id: el.dataset.id };
+      const x = elementoScelto();
+      azione = { tipo: 'sposta', da: p, x0: x.x, y0: x.y };
+      if (cambiato) {
+        disegnaTela();
+        disegnaPannello();
+      }
+    }
+    tela.setPointerCapture(evento.pointerId);
+    evento.preventDefault();
+  });
+  tela.addEventListener('pointermove', evento => {
+    if (!azione) return;
+    const x = elementoScelto();
+    const p = inOrto(evento);
+    if (azione.tipo === 'sposta') {
+      x.x = Math.min(t.larghezza, Math.max(0, aGriglia(azione.x0 + p.x - azione.da.x)));
+      x.y = Math.min(t.lunghezza, Math.max(0, aGriglia(azione.y0 + p.y - azione.da.y)));
+    } else {
+      // Misure simmetriche attorno al centro, nel verso dell'elemento (anche se è girato)
+      const r = (x.rot ?? 0) * Math.PI / 180;
+      const dx = p.x - x.x, dy = p.y - x.y;
+      const u = dx * Math.cos(r) + dy * Math.sin(r), v = -dx * Math.sin(r) + dy * Math.cos(r);
+      x.w = Math.max(30, aGriglia(2 * Math.abs(u)));
+      x.h = Math.max(30, aGriglia(2 * Math.abs(v)));
+      sistemaTaglio(x);
+    }
+    disegnaTela();
+  });
+  const fine = () => {
+    if (!azione) return;
+    azione = null;
+    disegnaPannello();
+  };
+  tela.addEventListener('pointerup', fine);
+  tela.addEventListener('pointercancel', fine);
+
+  // Il taglio della L deve lasciare almeno 30 cm per lato
+  function sistemaTaglio(a) {
+    if (a.forma !== 'elle' || !a.taglio) return;
+    a.taglio.w = Math.min(Math.max(20, a.taglio.w), a.w - 30);
+    a.taglio.h = Math.min(Math.max(20, a.taglio.h), a.h - 30);
+  }
+
+  function disegnaPannello() {
+    pannello.replaceChildren();
+    const x = elementoScelto();
+    if (!x) {
+      pannello.append(elemento('p', 'Tocca un\'aiuola o un vialetto per cambiarlo, oppure aggiungine uno con i pulsanti qui sopra.', 'nota-terreno'));
+      return;
+    }
+    const campo = (etichetta, valore, cambia, attributi = {}) => {
+      const label = elemento('label', etichetta);
+      const input = elemento('input');
+      Object.assign(input, { type: 'number', step: 10, inputMode: 'numeric', value: valore, ...attributi });
+      input.addEventListener('input', () => {
+        const n = Number(input.value);
+        if (input.value !== '' && Number.isFinite(n)) {
+          cambia(n);
+          disegnaTela();
+        }
+      });
+      label.append(input);
+      return label;
+    };
+    const scelta = (etichetta, opzioni, valore, cambia) => {
+      const label = elemento('label', etichetta);
+      const select = elemento('select');
+      for (const [v, testo] of opzioni) {
+        const o = elemento('option', testo);
+        o.value = v;
+        select.append(o);
+      }
+      select.value = valore;
+      select.addEventListener('change', () => {
+        cambia(select.value);
+        disegnaTela();
+        disegnaPannello();
+      });
+      label.append(select);
+      return label;
+    };
+    const griglia = elemento('div', '', 'campi-disegno');
+    if (scelto.tipo === 'aiuola') {
+      pannello.append(elemento('h3', 'Aiuola scelta'));
+      const nome = elemento('label', 'Nome');
+      const inputNome = elemento('input');
+      Object.assign(inputNome, { type: 'text', maxLength: 20, value: x.nome ?? '', autocomplete: 'off' });
+      inputNome.addEventListener('input', () => {
+        x.nome = inputNome.value.trim();
+        disegnaTela();
+      });
+      nome.append(inputNome);
+      griglia.append(nome,
+        campo('Settore', x.settore, n => { x.settore = Math.max(1, Math.round(n)); }, { step: 1, min: 1, max: 20 }),
+        scelta('Forma', [['rettangolo', 'Rettangolo'], ['ellisse', 'Rotonda'], ['elle', 'A L']], x.forma, v => {
+          x.forma = v;
+          if (v === 'elle' && !x.taglio) x.taglio = { w: aGriglia(x.w / 2), h: aGriglia(x.h / 2), angolo: 'ne' };
+          if (v !== 'elle') delete x.taglio;
+          sistemaTaglio(x);
+        }));
+    } else {
+      pannello.append(elemento('h3', 'Vialetto scelto'));
+    }
+    griglia.append(
+      campo('Larghezza ↔ (cm)', x.w, n => { if (n >= 30) { x.w = aGriglia(n); sistemaTaglio(x); } }, { min: 30 }),
+      campo('Lunghezza ↕ (cm)', x.h, n => { if (n >= 30) { x.h = aGriglia(n); sistemaTaglio(x); } }, { min: 30 }),
+      campo('Inclinazione (gradi)', x.rot ?? 0, n => { x.rot = ((Math.round(n / 5) * 5) % 360 + 360) % 360; }, { step: 5, min: 0, max: 355 }));
+    if (scelto.tipo === 'aiuola' && x.forma === 'elle') {
+      griglia.append(
+        campo('Taglio ↔ (cm)', x.taglio.w, n => { x.taglio.w = aGriglia(n); sistemaTaglio(x); }, { min: 20 }),
+        campo('Taglio ↕ (cm)', x.taglio.h, n => { x.taglio.h = aGriglia(n); sistemaTaglio(x); }, { min: 20 }),
+        scelta('Angolo tagliato', Object.entries(NOMI_ANGOLO), x.taglio.angolo, v => { x.taglio.angolo = v; }));
+    }
+    pannello.append(griglia);
+
+    const gira = elemento('button', '↻ Gira di 90°', 'pulsante secondario');
+    gira.type = 'button';
+    gira.addEventListener('click', () => {
+      // Per le forme dritte basta scambiare le misure; le altre si girano davvero
+      if ((x.rot ?? 0) % 180 === 0 && x.forma !== 'elle') [x.w, x.h] = [x.h, x.w];
+      else x.rot = ((x.rot ?? 0) + 90) % 360;
+      disegnaTela();
+      disegnaPannello();
+    });
+    const elimina = elemento('button', scelto.tipo === 'aiuola' ? 'Elimina aiuola' : 'Elimina vialetto', 'pulsante pericolo');
+    elimina.type = 'button';
+    const usata = scelto.tipo === 'aiuola' && aiuolaUsata(dati, x.id);
+    elimina.disabled = usata;
+    elimina.addEventListener('click', () => {
+      const lista = scelto.tipo === 'aiuola' ? dati.aiuole : dati.vialetti;
+      lista.splice(lista.indexOf(x), 1);
+      scelto = null;
+      disegnaTela();
+      disegnaPannello();
+    });
+    const comandi = elemento('div', '', 'comandi-disegno');
+    comandi.append(gira, elimina);
+    pannello.append(comandi);
+    if (usata) pannello.append(elemento('p', 'Questa aiuola ha colture, voci di registro o task: puoi spostarla, rinominarla e cambiarne la forma, ma non eliminarla, così il suo storico resta.', 'nota-terreno'));
+  }
+
+  const salvaOrto = elemento('button', 'Salva il disegno', 'pulsante');
+  salvaOrto.type = 'button';
+  salvaOrto.addEventListener('click', () => {
+    avviso.hidden = true;
+    const nomi = dati.aiuole.map(a => a.nome?.trim() ?? '');
+    const errori = [];
+    if (dati.aiuole.length === 0) errori.push('Serve almeno un\'aiuola.');
+    if (nomi.some(n => !n)) errori.push('Ogni aiuola deve avere un nome.');
+    const doppi = nomi.filter((n, i) => n && nomi.indexOf(n) !== i);
+    if (doppi.length) errori.push(`Due aiuole si chiamano "${doppi[0]}": cambia uno dei due nomi.`);
+    if (errori.length) {
+      avviso.textContent = errori.join('\n');
+      avviso.hidden = false;
+      return;
+    }
+    try {
+      salva(dati);
+      location.hash = '#/';
+    } catch (e) {
+      avviso.textContent = e.message;
+      avviso.hidden = false;
+    }
+  });
+  const annulla = link('Annulla', '#/', 'pulsante secondario');
+  const azioni = elemento('div', '', 'azioni-disegno');
+  azioni.append(salvaOrto, annulla);
+
+  sezione.append(elemento('h3', 'Il terreno'), terreno, attrezzi, tela, pannello, avviso, azioni);
+  disegnaTela();
+  disegnaPannello();
+  return sezione;
 }

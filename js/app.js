@@ -5,7 +5,8 @@ import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto,
-  paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaOrti, paginaPersone, paginaSolaLettura, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaOrti, paginaPersone, paginaSolaLettura,
+  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -34,6 +35,8 @@ function schermata() {
     || (pagina === 'task' && id === 'nuovo') || (pagina === 'registro' && id === 'nuova-voce')
     || (pagina === 'aiuola' && sotto === 'terreno' && altro))) return paginaSolaLettura();
   const dati = carica();
+  impostaNomiAiuole(dati);
+  if (pagina === 'disegna') return puoDisegnare() ? paginaDisegna(dati) : paginaSolaLettura();
   if (pagina === 'task') {
     if (id === 'nuovo') return moduloTask(dati);
     if (id === 'fatti') return listaTask(dati, true);

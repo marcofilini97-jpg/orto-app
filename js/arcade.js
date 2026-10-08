@@ -73,7 +73,7 @@ function tappaDelSettore(dati, settore, y, y0) {
     if (a < y && (!ultima || a > ultima.anno)) ultima = { anno: a, tappa: s.tappa };
   }
   if (ultima) return GIRO[(GIRO.indexOf(ultima.tappa) + y - ultima.anno) % 4];
-  return GIRO[(GIRO.indexOf(PARTENZA[settore]) + y - y0) % 4];
+  return GIRO[(GIRO.indexOf(PARTENZA[settore] ?? GIRO[(settore - 1) % 4]) + y - y0) % 4];
 }
 
 // Colture da aggiungere dal giorno `dal` per `anni` anni dell'orto. preferenze: { preferite, escluse, obiettivo }
@@ -93,7 +93,7 @@ export function pianoAutomatico(dati, { dal, anni = 4, preferenze = {}, nuovoId 
   });
 
   for (let y = y0; y < y0 + anni; y++) {
-    for (const settore of [1, 2, 3, 4]) {
+    for (const settore of [...new Set(dati.aiuole.map(a => a.settore))].sort((x, z) => x - z)) {
       const tappa = tappaDelSettore({ ...dati, colture }, settore, y, y0);
       const aiuole = dati.aiuole.filter(a => a.settore === settore).sort((x, z) => x.y - z.y || x.x - z.x);
       for (const momento of MOMENTI[tappa]) {
