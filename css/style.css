@@ -870,3 +870,15 @@ body:not(.arcade) .nome-barra::after { content: ' ▾'; }
 .ora-sole { padding: 0 5px; font-size: .7rem; font-weight: 800; color: var(--testo); background: rgb(255 248 231 / .9); border-radius: 5px; }
 .lettera-bussola { position: absolute; transform: translate(-50%, -50%); width: 22px; height: 22px; display: grid; place-items: center; font-size: .8rem; font-weight: 800; color: var(--testo); background: var(--crema); border: 2px solid var(--marrone-scuro); border-radius: 50%; }
 .lettera-bussola.nord { color: #fff; background: #c0392b; }
+
+/* Alberi: sopra le aiuole, tagliati dai bordi dello schermo; trasparenti quando si preme un'aiuola */
+main { overflow-x: clip; }
+.albero { position: absolute; z-index: 20; pointer-events: none; transition: opacity .2s; filter: drop-shadow(0 3px 2px rgb(0 0 0 / .3)); }
+.albero svg { display: block; width: 100%; height: 100%; }
+.ombra-albero { position: absolute; z-index: 15; pointer-events: none; background: rgb(20 40 10 / .28); border-radius: 50%; filter: blur(3px); transition: opacity .2s; }
+.alberi-trasparenti .albero, .alberi-trasparenti .ombra-albero { opacity: .12; }
+.tela-disegno .albero.elemento-disegno { pointer-events: none; opacity: .8; }
+.tela-disegno .albero.scelto { outline: 3px solid #f2c230; outline-offset: 2px; border-radius: 50%; opacity: .95; }
+.tela-disegno .tronco { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; pointer-events: auto; cursor: grab; background: #7a4f2a; border: 3px solid #2a1e12; border-radius: 50%; box-shadow: 0 0 0 3px rgb(255 248 231 / .8); }
+header { position: relative; z-index: 30; }
+.tela-disegno { overflow: clip; overflow-clip-margin: 18px; }
