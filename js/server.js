@@ -1,6 +1,6 @@
 // Collegamento a Supabase (database online), solo con fetch: nessuna libreria esterna.
 // La chiave pubblica è fatta per stare nel codice: i dati sono protetti dalle regole del database
-// (leggono e scrivono solo i membri dopo il login).
+// (ognuno legge solo gli orti di cui fa parte; chi è in sola lettura non scrive).
 
 const URL_SERVER = 'https://mmjbkxznbjazhakbxdmg.supabase.co';
 const CHIAVE_PUBBLICA = 'sb_publishable_HYLjUlG1oGqefZRofSOybA_swQ5_o2v';
@@ -56,9 +56,46 @@ export async function accedi(email, password) {
   try {
     await ottieniAccesso({ email, password }, 'password');
   } catch (errore) {
+    if (errore.stato === 400 && /confirm/i.test(errore.message)) throw new Error("Prima conferma l'email: apri il link che ti abbiamo mandato.");
     if (errore.stato === 400) throw new Error('Email o password sbagliate.');
     throw errore;
   }
+}
+
+// Dove torna chi apre il link dell'email (conferma dell'iscrizione o nuova password): questa stessa pagina
+function indirizzoRitorno() {
+  return encodeURIComponent(location.origin + location.pathname);
+}
+
+// Nuovo account: Supabase manda un'email con il link di conferma
+export async function iscriviti(email, password) {
+  await chiedi(`/auth/v1/signup?redirect_to=${indirizzoRitorno()}`, { method: 'POST', body: JSON.stringify({ email, password }) });
+}
+
+// Email con il link per scegliere una nuova password
+export async function recuperaPassword(email) {
+  await chiedi(`/auth/v1/recover?redirect_to=${indirizzoRitorno()}`, { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+export async function cambiaPassword(password) {
+  await chiedi('/auth/v1/user', { method: 'PUT', headers: await intestazioneAccesso(), body: JSON.stringify({ password }) });
+}
+
+// Chi apre il link dell'email arriva con l'accesso nell'indirizzo (#access_token=…&type=signup|recovery).
+// Salva l'accesso e restituisce il tipo di link, oppure null se l'indirizzo è normale
+export async function accessoDaLink() {
+  const parti = new URLSearchParams(location.hash.slice(1));
+  if (parti.get('error_description')) throw new Error(`Link non valido o scaduto: ${parti.get('error_description')}`);
+  if (!parti.get('access_token')) return null;
+  const accesso = parti.get('access_token');
+  const utente = await chiedi('/auth/v1/user', { headers: { Authorization: `Bearer ${accesso}` } });
+  localStorage.setItem(CHIAVE_SESSIONE, JSON.stringify({
+    email: utente.email,
+    accesso,
+    rinnovo: parti.get('refresh_token'),
+    scade: Date.now() + Number(parti.get('expires_in') ?? 3600) * 1000,
+  }));
+  return parti.get('type') ?? 'accesso';
 }
 
 export function esci() {
@@ -80,17 +117,27 @@ async function intestazioneAccesso() {
   return { Authorization: `Bearer ${sessione().accesso}` };
 }
 
-// Le righe ricevute dal server dopo l'ora "dopo" (tutte, se dopo è null), dalla più vecchia
-export async function scaricaNovita(dopo) {
-  const filtro = dopo ? `&ricevuto=gt.${encodeURIComponent(dopo)}` : '';
-  return chiedi(`/rest/v1/elementi?select=*&order=ricevuto.asc${filtro}`, { headers: await intestazioneAccesso() });
+// Gli orti di cui si fa parte: [{ id, nome, ruolo }], dal più vecchio
+export async function mieiOrti() {
+  return chiedi('/rest/v1/rpc/miei_orti', { method: 'POST', headers: await intestazioneAccesso(), body: '{}' });
 }
 
-// Aggiunge o aggiorna le righe (in base all'id)
-export async function inviaModifiche(righe) {
-  await chiedi('/rest/v1/elementi?on_conflict=id', {
+// Nuovo orto (chi lo crea ne è il gestore); restituisce l'id
+export async function creaOrto(nome) {
+  return chiedi('/rest/v1/rpc/crea_orto', { method: 'POST', headers: await intestazioneAccesso(), body: JSON.stringify({ nome_orto: nome }) });
+}
+
+// Le righe dell'orto ricevute dal server dopo l'ora "dopo" (tutte, se dopo è null), dalla più vecchia
+export async function scaricaNovita(ortoId, dopo) {
+  const filtro = dopo ? `&ricevuto=gt.${encodeURIComponent(dopo)}` : '';
+  return chiedi(`/rest/v1/elementi?select=*&orto_id=eq.${ortoId}&order=ricevuto.asc${filtro}`, { headers: await intestazioneAccesso() });
+}
+
+// Aggiunge o aggiorna le righe dell'orto (in base all'id)
+export async function inviaModifiche(ortoId, righe) {
+  await chiedi('/rest/v1/elementi?on_conflict=orto_id,id', {
     method: 'POST',
     headers: { ...await intestazioneAccesso(), Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(righe.map(({ id, tipo, dati, modificato, eliminato }) => ({ id, tipo, dati, modificato, eliminato }))),
+    body: JSON.stringify(righe.map(({ id, tipo, dati, modificato, eliminato }) => ({ orto_id: ortoId, id, tipo, dati, modificato, eliminato }))),
   });
 }

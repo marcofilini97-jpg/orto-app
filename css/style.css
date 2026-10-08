@@ -774,3 +774,11 @@ body[data-stagione="inverno"] { background-image: radial-gradient(#ffffff 1.8px,
 .voce-glossario { display: block; width: 100%; padding: 7px 12px; font: inherit; color: var(--testo); text-align: left; background: #fff; border: 2px solid #e5d3b0; border-radius: 10px; cursor: pointer; }
 .voce-glossario[hidden] { display: none; }
 .voce-glossario small { display: block; font-size: .8rem; color: var(--marrone-scuro); }
+
+/* Entra / Iscriviti */
+.schede-accesso { display: flex; margin-bottom: 4px; border-bottom: 3px solid var(--legno); }
+.schede-accesso button { flex: 1; padding: 8px; font: inherit; font-weight: 800; color: var(--testo); background: none; border: 0; border-radius: 10px 10px 0 0; cursor: pointer; }
+.schede-accesso button[aria-selected="true"] { color: var(--crema); background: var(--verde); }
+.fatto-accesso { padding: 8px 10px; font-weight: 700; color: #2b4a1f; background: #dbe9cc; border-radius: 8px; }
+.modulo-accesso .dimenticata { display: block; margin: 6px auto 0; font: inherit; background: none; border: 0; cursor: pointer; }
+.modulo-accesso label[hidden], .modulo-accesso .dimenticata[hidden] { display: none; }

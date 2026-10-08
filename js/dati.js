@@ -1,7 +1,8 @@
 // Unico file che sa dove e come sono salvati i dati: sul telefono (localStorage) e,
 // se collegato, su Supabase (tramite server.js). Le schermate usano solo carica() e salva().
 
-import { collegato, emailCollegata, accedi, esci, scaricaNovita, inviaModifiche } from './server.js';
+import { collegato, emailCollegata, accedi, esci, scaricaNovita, inviaModifiche, mieiOrti, creaOrto } from './server.js';
+export { iscriviti, recuperaPassword, cambiaPassword, accessoDaLink } from './server.js';
 
 const CHIAVE = 'orto-dati';
 const CHIAVE_PROVA = 'orto-dati-prova';      // copia separata per la modalità prova
@@ -197,7 +198,7 @@ export function inizioOrtoReale() {
 // sul telefono aspettano in daInviare finché il server non le riceve. Vince la modifica più recente.
 
 function nuovoStato() {
-  return { orari: {}, daInviare: {}, ultimoRicevuto: null, ultimaSync: null, errore: null };
+  return { orari: {}, daInviare: {}, ultimoRicevuto: null, ultimaSync: null, errore: null, orto: null };
 }
 
 function statoSync() {
@@ -255,6 +256,23 @@ function programmaSincronizzazione() {
   attesa = setTimeout(sincronizza, 2000);
 }
 
+// L'orto del server a cui è legato il telefono ({ id, nome, ruolo }). Se non c'è ancora (telefoni collegati
+// prima che esistessero più orti, o account nuovi) prende il primo orto dell'account, o ne crea uno
+async function ortoCollegato() {
+  const stato = statoSync();
+  if (stato.orto) return stato.orto;
+  let orti = await mieiOrti();
+  if (orti.length === 0) {
+    await creaOrto('Il mio orto');
+    orti = await mieiOrti();
+  }
+  const orto = orti[0];
+  const aggiornato = statoSync();
+  aggiornato.orto = orto;
+  scriviStato(aggiornato);
+  return orto;
+}
+
 let inCorso = null;
 // Scarica le novità e invia le modifiche. Se è già in corso, non ne parte una seconda
 export function sincronizza() {
@@ -265,8 +283,9 @@ export function sincronizza() {
 async function eseguiSincronizzazione() {
   if (inProva() || !collegato()) return;
   try {
+    const orto = await ortoCollegato();
     // 1. Scarica ciò che il server ha ricevuto dall'ultima volta
-    const righe = await scaricaNovita(statoSync().ultimoRicevuto);
+    const righe = await scaricaNovita(orto.id, statoSync().ultimoRicevuto);
     const stato = statoSync();          // riletto: nel frattempo potrebbero esserci stati salvataggi
     const dati = leggiDa(CHIAVE);
     let arrivato = false;
@@ -283,9 +302,9 @@ async function eseguiSincronizzazione() {
     if (arrivato) localStorage.setItem(CHIAVE, JSON.stringify(dati));
     scriviStato(stato);
 
-    // 2. Invia le modifiche in attesa
-    const daInviare = Object.values(stato.daInviare);
-    if (daInviare.length > 0) await inviaModifiche(daInviare);
+    // 2. Invia le modifiche in attesa (chi è in sola lettura non invia niente)
+    const daInviare = orto.ruolo === 'lettore' ? [] : Object.values(stato.daInviare);
+    if (daInviare.length > 0) await inviaModifiche(orto.id, daInviare);
     const dopo = statoSync();
     for (const r of daInviare) {
       if (dopo.daInviare[r.id]?.modificato === r.modificato) delete dopo.daInviare[r.id];
@@ -305,8 +324,16 @@ async function eseguiSincronizzazione() {
 // sul server ci sono già dati: true = prendi i dati del server, false = unisci quelli del telefono
 export async function collegaTelefono(email, password, chiediSostituzione) {
   await accedi(email, password);
-  const righe = await scaricaNovita(null);
+  await completaCollegamento(chiediSostituzione);
+}
+
+// Dopo l'accesso (con la password o dal link di conferma dell'email): sceglie l'orto e allinea i dati
+export async function completaCollegamento(chiediSostituzione) {
+  scriviStato(nuovoStato());
+  const orto = await ortoCollegato();
+  const righe = await scaricaNovita(orto.id, null);
   const stato = nuovoStato();
+  stato.orto = orto;
   if (righe.length > 0 && chiediSostituzione()) {
     const dati = { versione: VERSIONE, aiuole: [], colture: [], registro: [], task: [] };
     for (const riga of righe) {
@@ -342,6 +369,7 @@ export function statoSincronizzazione() {
   return {
     collegato: collegato(),
     email: emailCollegata(),
+    orto: stato.orto,
     ultimaSync: stato.ultimaSync,
     errore: stato.errore,
     inAttesa: Object.keys(stato.daInviare).length,

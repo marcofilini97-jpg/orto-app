@@ -1,10 +1,10 @@
-import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva } from './dati.js';
+import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva, accessoDaLink, completaCollegamento } from './dati.js';
 import { CATALOGO } from './catalogo.js';
 import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto,
-  paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -14,6 +14,7 @@ function schermata() {
   const [, pagina, id, sotto, altro] = location.hash.split('/');
   // Impostazioni non legge i dati: così si può ripristinare un backup anche se sono danneggiati
   if (pagina === 'impostazioni') return impostazioni();
+  if (pagina === 'nuova-password') return paginaNuovaPassword();
   // Il catalogo è conoscenza generale: non legge i dati dell'orto
   if (pagina === 'impara') {
     if (id === 'mese') return paginaMese(sotto);
@@ -117,6 +118,27 @@ try {
 } catch {
   // dati danneggiati: se ne occupa la schermata (messaggio di errore)
 }
+
+// Link dell'email di Supabase (conferma dell'iscrizione o nuova password): l'accesso arriva nell'indirizzo
+async function linkDellEmail() {
+  try {
+    const tipo = await accessoDaLink();
+    if (!tipo) return;
+    history.replaceState(null, '', location.pathname);
+    if (tipo === 'recovery') {
+      location.replace('#/nuova-password');
+      return;
+    }
+    await completaCollegamento(chiediSostituzione);
+    alert('Account confermato: questo telefono è collegato.');
+    location.replace('#/impostazioni');
+  } catch (errore) {
+    history.replaceState(null, '', location.pathname);
+    alert(errore instanceof TypeError ? 'Server non raggiungibile: riprova più tardi.' : errore.message);
+    location.replace('#/impostazioni');
+  }
+}
+if (/[#&](access_token|error_description)=/.test(location.hash)) await linkDellEmail();
 
 window.addEventListener('hashchange', mostra);
 // Dopo una modifica che non cambia schermata (es. spuntare un task) si ridisegna restando dove si è

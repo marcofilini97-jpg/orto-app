@@ -4,6 +4,7 @@ import {
   carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio, orarioPerUtente,
   inProva, attivaProva, disattivaProva, ricominciaProva,
   sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione, cancellaDatiTelefono,
+  iscriviti, recuperaPassword, cambiaPassword,
   elencoSimulazioni, leggiSimulazione, salvaSimulazione, eliminaSimulazione, entraArcade, inArcade,
   simulazioneAttiva, impostaGiornoArcade, datiPerSimulazione, inizioOrtoReale, oggiVero,
 } from './dati.js';
@@ -517,6 +518,122 @@ function pulsanteCancellaTutto() {
   return pulsante;
 }
 
+const NOMI_RUOLO = { gestore: 'gestore', membro: 'membro', lettore: 'sola lettura' };
+
+// Domanda del primo collegamento, se sul server l'orto ha già dei dati
+export function chiediSostituzione() {
+  return confirm('Sul server ci sono già i dati dell\'orto.\n\n' +
+    'OK = usa i dati del server su questo telefono (consigliato)\n' +
+    'Annulla = unisci i dati di questo telefono a quelli del server');
+}
+
+// Entra / Iscriviti / Password dimenticata
+function moduloAccesso() {
+  let modo = 'entra';
+  const modulo = document.createElement('form');
+  modulo.className = 'modulo modulo-accesso';
+  modulo.noValidate = true;
+  modulo.innerHTML = `
+    <div class="schede-accesso" role="tablist">
+      <button type="button" role="tab" data-modo="entra">Entra</button>
+      <button type="button" role="tab" data-modo="iscriviti">Iscriviti</button>
+    </div>
+    <p class="spiega-accesso"></p>
+    <label>Email<input type="email" name="email" autocomplete="username"></label>
+    <label class="campo-password">Password<input type="password" name="password" autocomplete="current-password"></label>
+    <p class="errore" role="alert" hidden></p>
+    <p class="fatto-accesso" role="status" hidden></p>
+    <button type="submit" class="pulsante"></button>
+    <button type="button" class="link-info dimenticata">Password dimenticata?</button>`;
+  const c = modulo.elements;
+  const avviso = modulo.querySelector('.errore');
+  const fatto = modulo.querySelector('.fatto-accesso');
+  const invia = modulo.querySelector('[type="submit"]');
+  const TESTI = {
+    entra: ["Entra con il tuo account: i dati dell'orto si salvano anche online e si condividono con le persone dell'orto.", 'Entra'],
+    iscriviti: ["Crea un account: ti mandiamo un'email con il link per confermarlo. Senza account l'app funziona lo stesso, con i dati solo su questo telefono.", 'Iscriviti'],
+    recupera: ["Scrivi la tua email: ti mandiamo un link per scegliere una nuova password.", 'Mandami il link'],
+  };
+  const mostra = m => {
+    modo = m;
+    for (const b of modulo.querySelectorAll('[data-modo]')) b.setAttribute('aria-selected', String(b.dataset.modo === m));
+    modulo.querySelector('.spiega-accesso').textContent = TESTI[m][0];
+    invia.textContent = TESTI[m][1];
+    modulo.querySelector('.campo-password').hidden = m === 'recupera';
+    modulo.querySelector('.dimenticata').hidden = m !== 'entra';
+    c.password.autocomplete = m === 'iscriviti' ? 'new-password' : 'current-password';
+    avviso.hidden = true;
+    fatto.hidden = true;
+  };
+  for (const b of modulo.querySelectorAll('[data-modo]')) b.addEventListener('click', () => mostra(b.dataset.modo));
+  modulo.querySelector('.dimenticata').addEventListener('click', () => mostra('recupera'));
+  mostra('entra');
+
+  modulo.addEventListener('submit', async evento => {
+    evento.preventDefault();
+    const email = c.email.value.trim().toLowerCase();
+    const password = c.password.value;
+    const errore = testo => { avviso.textContent = testo; avviso.hidden = false; };
+    avviso.hidden = true;
+    fatto.hidden = true;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return errore("Scrivi un'email valida.");
+    if (modo !== 'recupera' && password.length < 8) return errore('La password deve avere almeno 8 caratteri.');
+    invia.disabled = true;
+    const testo = invia.textContent;
+    invia.textContent = 'Un momento…';
+    try {
+      if (modo === 'entra') {
+        await collegaTelefono(email, password, chiediSostituzione);
+        document.dispatchEvent(new Event('dati-cambiati'));
+        return;
+      }
+      if (modo === 'iscriviti') await iscriviti(email, password);
+      else await recuperaPassword(email);
+      fatto.textContent = modo === 'iscriviti'
+        ? `Fatto! Ti abbiamo mandato un'email a ${email}: apri il link per confermare l'account (guarda anche nello spam).`
+        : `Se esiste un account con ${email}, ti è arrivata un'email con il link per la nuova password.`;
+      fatto.hidden = false;
+    } catch (e) {
+      errore(e instanceof TypeError ? 'Server non raggiungibile: controlla la connessione.' : e.message);
+    }
+    invia.disabled = false;
+    invia.textContent = testo;
+  });
+  return modulo;
+}
+
+// Pagina del link "nuova password" dell'email
+export function paginaNuovaPassword() {
+  const sezione = document.createElement('section');
+  const modulo = document.createElement('form');
+  modulo.className = 'modulo';
+  modulo.noValidate = true;
+  modulo.innerHTML = `
+    <label>Nuova password<input type="password" name="password" autocomplete="new-password"></label>
+    <p class="errore" role="alert" hidden></p>
+    <button type="submit" class="pulsante">Salva la nuova password</button>`;
+  modulo.addEventListener('submit', async evento => {
+    evento.preventDefault();
+    const avviso = modulo.querySelector('.errore');
+    const password = modulo.elements.password.value;
+    if (password.length < 8) {
+      avviso.textContent = 'La password deve avere almeno 8 caratteri.';
+      avviso.hidden = false;
+      return;
+    }
+    try {
+      await cambiaPassword(password);
+      alert('Password cambiata.');
+      location.replace('#/impostazioni');
+    } catch (e) {
+      avviso.textContent = e instanceof TypeError ? 'Server non raggiungibile: controlla la connessione.' : e.message;
+      avviso.hidden = false;
+    }
+  });
+  sezione.append(elemento('h2', 'Nuova password'), modulo);
+  return sezione;
+}
+
 // Login, stato e pulsanti della sincronizzazione con il server
 function sezioneSincronizzazione() {
   const box = elemento('div');
@@ -526,41 +643,13 @@ function sezioneSincronizzazione() {
   }
   const stato = statoSincronizzazione();
   if (!stato.collegato) {
-    const modulo = document.createElement('form');
-    modulo.className = 'modulo';
-    modulo.noValidate = true;
-    modulo.innerHTML = `
-      <p>Collegando il telefono, i dati dell'orto si salvano anche online e si condividono con l'altro telefono.</p>
-      <label>Email<input type="email" name="email" autocomplete="username"></label>
-      <label>Password<input type="password" name="password" autocomplete="current-password"></label>
-      <p class="errore" role="alert" hidden></p>
-      <button type="submit" class="pulsante">Collega questo telefono</button>
-    `;
-    modulo.addEventListener('submit', async evento => {
-      evento.preventDefault();
-      const avviso = modulo.querySelector('.errore');
-      const pulsante = modulo.querySelector('button');
-      pulsante.disabled = true;
-      pulsante.textContent = 'Collegamento in corso…';
-      try {
-        await collegaTelefono(modulo.elements.email.value.trim(), modulo.elements.password.value, () => confirm(
-          'Sul server ci sono già i dati dell\'orto.\n\n' +
-          'OK = usa i dati del server su questo telefono (consigliato)\n' +
-          'Annulla = unisci i dati di questo telefono a quelli del server'));
-        document.dispatchEvent(new Event('dati-cambiati'));
-      } catch (errore) {
-        avviso.textContent = errore instanceof TypeError ? 'Server non raggiungibile: controlla la connessione.' : errore.message;
-        avviso.hidden = false;
-        pulsante.disabled = false;
-        pulsante.textContent = 'Collega questo telefono';
-      }
-    });
-    box.append(modulo);
+    box.append(moduloAccesso());
     return box;
   }
 
   box.append(
     riga('Collegato come', stato.email ?? '—'),
+    riga('Orto', stato.orto ? `${stato.orto.nome} · ${NOMI_RUOLO[stato.orto.ruolo]}` : '—'),
     riga('Ultima sincronizzazione', stato.ultimaSync ? orarioPerUtente(stato.ultimaSync) : 'mai'),
   );
   if (stato.inAttesa > 0) box.append(riga('Modifiche in attesa di invio', String(stato.inAttesa)));
