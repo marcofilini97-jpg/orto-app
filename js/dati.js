@@ -64,6 +64,10 @@ export function normalizza(dati) {
     Object.assign(a, { nome: a.nome ?? base.nome, forma: base.forma, x: base.x, y: base.y, w: base.w, h: base.h, rot: base.rot });
     a.settore ??= base.settore ?? 1;
   }
+  // Esposizione: prima una lettera (N, E, S, O), ora i gradi verso cui guarda il fondo
+  for (const t of dati.terreno) {
+    if (typeof t.esposizione === 'string') t.esposizione = { N: 0, E: 90, S: 180, O: 270 }[t.esposizione] ?? null;
+  }
   if (dati.terreno.length === 0) {
     dati.terreno.push({ ...TERRENO });
     if (dati.vialetti.length === 0 && dati.aiuole.every(a => partenza.has(a.id))) dati.vialetti.push(...VIALETTI.map(v => ({ ...v })));

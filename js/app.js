@@ -6,7 +6,7 @@ import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto,
   paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaOrti, paginaPersone, paginaSolaLettura,
-  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaOrto, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaOrto, paginaTerrenoOrto, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -21,7 +21,6 @@ function schermata() {
     location.replace('#/impostazioni');
     return document.createElement('section');
   }
-  if (pagina === 'orto') return paginaOrto();
   if (pagina === 'nuova-password') return paginaNuovaPassword();
   if (pagina === 'orti') return id === 'persone' ? paginaPersone() : paginaOrti();
   // Il catalogo è conoscenza generale: non legge i dati dell'orto
@@ -42,7 +41,8 @@ function schermata() {
     || (pagina === 'aiuola' && sotto === 'terreno' && altro))) return paginaSolaLettura();
   const dati = carica();
   impostaNomiAiuole(dati);
-  if (pagina === 'disegna') return puoDisegnare() ? paginaDisegna(dati) : paginaSolaLettura();
+  if (pagina === 'disegna') return puoDisegnare() ? paginaDisegna(dati, { nuovo: id === 'nuovo' }) : paginaSolaLettura();
+  if (pagina === 'orto') return id === 'terreno' ? paginaTerrenoOrto(dati) : paginaOrto(dati);
   if (pagina === 'task') {
     if (id === 'nuovo') return moduloTask(dati);
     if (id === 'fatti') return listaTask(dati, true);

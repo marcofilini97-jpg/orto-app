@@ -16,7 +16,7 @@ import {
   spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
 } from './terreno.js';
 import { GUIDE, LAVORI } from './impara.js';
-import { dentro as dentroForma, quadratoDentro, toccaRettangoli, ingombro, ingombroZona, posti, puntoEtichetta, tracciato, misure } from './geometria.js';
+import { area, dentro as dentroForma, quadratoDentro, toccaRettangoli, ingombro, ingombroZona, posti, puntoEtichetta, tracciato, misure } from './geometria.js';
 import { pianoAutomatico, resaColtura, kgTra, inRaccolta, fineSovescio } from './arcade.js';
 
 const TIPI = {
@@ -256,7 +256,7 @@ function aiuolaMappa(dati, a) {
 function terrenoMappa(dati) {
   const box = terrenoOrto(dati, a => aiuolaMappa(dati, a));
   alberiSulTerreno(box, dati);
-  if (dati.terreno[0].esposizione) box.append(bussola(dati.terreno[0].esposizione));
+  if (dati.terreno[0].esposizione != null) box.append(bussola(dati.terreno[0].esposizione));
   const segno = segnoTask(dati.task.filter(t => tuttoOrto(dati, t)));
   if (segno) {
     const p = puntino(segno);
@@ -619,18 +619,57 @@ function link(testo, href, classe) {
 }
 
 // L'orto: forma (Disegna l'orto) e terreno delle aiuole, dall'icona dell'aiuola con la lente
-export function paginaOrto() {
+export function paginaOrto(dati) {
+  const t = dati.terreno[0];
+  const coltivata = dati.aiuole.reduce((s, a) => s + area(a), 0) / 10000;
+  const m2 = n => `${String(Math.round(n * 10) / 10).replace('.', ',')} m²`;
   const sezione = document.createElement('section');
   sezione.append(
     link('← Mappa', '#/', 'indietro'),
     elemento('h2', 'L\'orto'),
     elemento('h3', 'Forma dell\'orto'),
+    riga('Terreno', `largo ${t.larghezza} cm, lungo ${t.lunghezza} cm (${m2(t.larghezza * t.lunghezza / 10000)})`),
+    riga('Aiuole', `${dati.aiuole.length}, coltivabili ${m2(coltivata)}`),
+    riga('Vialetti e alberi', `${dati.vialetti.length} ${dati.vialetti.length === 1 ? 'vialetto' : 'vialetti'}, ${dati.alberi.length} ${dati.alberi.length === 1 ? 'albero' : 'alberi'}`),
+    riga('Esposizione', t.esposizione == null ? 'non indicata' : `il fondo guarda verso ${nomeVerso(t.esposizione)}`),
     puoDisegnare()
-      ? link('Disegna l\'orto', '#/disegna', 'pulsante')
+      ? link(ortoDisegnato(dati) ? 'Modifica orto' : 'Disegna l\'orto', '#/disegna', 'pulsante')
       : elemento('p', 'Solo chi gestisce l\'orto può cambiarne la forma.', 'nota-terreno'),
     elemento('h3', 'Il terreno dell\'orto'),
     riepilogoTerreno(),
+    link('Modifica il terreno', '#/orto/terreno', 'pulsante secondario'),
   );
+  return sezione;
+}
+
+// Modifica del terreno: per tutto l'orto (una prova vale per tutte le aiuole) o per una sola aiuola
+export function paginaTerrenoOrto(dati) {
+  const sezione = document.createElement('section');
+  sezione.append(link('← L\'orto', '#/orto', 'indietro'), elemento('h2', 'Modifica il terreno'));
+  const prima = dati.aiuole[0];
+  if (!prima) {
+    sezione.append(elemento('p', 'Prima disegna almeno un\'aiuola.'));
+    return sezione;
+  }
+  sezione.append(elemento('h3', 'Tutto l\'orto'),
+    elemento('p', 'Fai una prova in un punto qualsiasi dell\'orto; alla fine scegli "Salva per tutte le aiuole".', 'nota-terreno'));
+  const prove = elemento('div', '', 'elenco-guide');
+  for (const [id, p] of Object.entries(PROVE)) {
+    const voce = link('', `#/aiuola/${prima.id}/terreno/${id}`, 'voce-guida');
+    const testo = elemento('span');
+    testo.append(elemento('strong', p.nome), elemento('small', p.misura ?? ''));
+    voce.append(testo, elemento('span', '›', 'freccia-salvata'));
+    prove.append(voce);
+  }
+  sezione.append(prove, link('Scrivi i risultati di un\'analisi', `#/aiuola/${prima.id}/terreno/analisi`, 'pulsante secondario'),
+    elemento('h3', 'Una sola aiuola'));
+  const aiuole = elemento('div', '', 'elenco-guide');
+  for (const a of [...dati.aiuole].sort((x, y) => (x.nome ?? '').localeCompare(y.nome ?? '', 'it', { numeric: true }))) {
+    const voce = link('', `#/aiuola/${a.id}/terreno`, 'voce-guida');
+    voce.append(elemento('strong', `Aiuola ${a.nome ?? a.id}`), elemento('span', '›', 'freccia-salvata'));
+    aiuole.append(voce);
+  }
+  sezione.append(aiuole);
   return sezione;
 }
 
@@ -2507,7 +2546,7 @@ export function paginaProva(dati, aiuola, idProva) {
       }
     };
     qui.addEventListener('click', () => salvaE(false));
-    tutte.addEventListener('click', () => { if (confirm('Salvare questo risultato in tutte le 8 aiuole?')) salvaE(true); });
+    tutte.addEventListener('click', () => { if (confirm(`Salvare questo risultato in tutte le ${dati.aiuole.length} aiuole?`)) salvaE(true); });
     rifai.addEventListener('click', () => { indice = 0; for (const k of Object.keys(risposte)) delete risposte[k]; mostra(); });
     corpo.replaceChildren(box, qui, tutte, rifai);
   }
@@ -3348,7 +3387,7 @@ export function paginaOrti() {
     if (orti.length === 0) elenco.append(elemento('p', 'Nessun orto trovato.', 'nota-terreno'));
   });
   sezione.append(elenco, avviso, link('Persone dell\'orto', '#/orti/persone', 'pulsante secondario'));
-  if (puoDisegnare()) sezione.append(link('Disegna l\'orto', '#/disegna', 'pulsante secondario'));
+  if (puoDisegnare()) sezione.append(link('L\'orto: forma e terreno', '#/orto', 'pulsante secondario'));
 
   // Nome dell'orto attuale (solo il gestore)
   if (attuale.ruolo === 'gestore') {
@@ -3362,7 +3401,7 @@ export function paginaOrti() {
   // Nuovo orto
   const nuovo = moduloNome('Nome', '', '+ Crea il nuovo orto', async nome => {
     await nuovoOrto(nome);
-    location.hash = '#/disegna';
+    location.hash = '#/disegna/nuovo';
   });
   sezione.append(elemento('h3', 'Nuovo orto'),
     elemento('p', 'Ne sarai il gestore. Parte con le 8 aiuole di base: la forma dell\'orto si potrà disegnare più avanti.', 'nota-terreno'),
@@ -3589,11 +3628,15 @@ function modificaDati(el) {
   return el;
 }
 
-// ---- Disegna l'orto: terreno, aiuole e vialetti su una griglia da 10 cm (solo il gestore, o senza account) ----
+// ---- Disegna / modifica l'orto: sulla mappa grande, a passi (terreno, vialetto principale, aiuole e alberi,
+// esposizione, terreno delle aiuole). Solo il gestore, o senza account ----
 
 const GRIGLIA = 10;   // cm
 const aGriglia = v => Math.round(v / GRIGLIA) * GRIGLIA;
+const a5 = g => ((Math.round(g / 5) * 5) % 360 + 360) % 360;
 const NOMI_ANGOLO = { ne: 'in alto a destra', no: 'in alto a sinistra', se: 'in basso a destra', so: 'in basso a sinistra' };
+const CATEGORIE = { aiuola: 'Aiuole', vialetto: 'Vialetti', albero: 'Alberi' };
+const ALBERO_NUOVO = 150;   // cm di chioma di un albero appena aggiunto: piccolo, facile da spostare
 
 export function puoDisegnare() {
   if (inArcade() || soloLettura()) return false;
@@ -3606,166 +3649,172 @@ function aiuolaUsata(dati, id) {
   return [...dati.colture, ...dati.registro, ...dati.task].some(x => x.aiuoleIds?.includes(id));
 }
 
-export function paginaDisegna(originali) {
+// L'orto è già stato disegnato? (altrimenti il pulsante è "Disegna l'orto")
+export function ortoDisegnato(dati) {
+  return dati.aiuole.length > 0;
+}
+
+export function paginaDisegna(originali, { nuovo = false } = {}) {
   const dati = structuredClone(originali);
   const t = dati.terreno[0];
-  let scelto = null;      // { tipo: 'aiuola' | 'vialetto', id }
-  let azione = null;      // trascinamento in corso: { tipo: 'sposta' | 'misura', ... }
+  // Orto nuovo: si parte dal prato vuoto (le aiuole di base, mai usate, si tolgono)
+  if (nuovo) {
+    dati.aiuole = dati.aiuole.filter(a => aiuolaUsata(dati, a.id));
+    dati.vialetti = [];
+    dati.alberi = [];
+  }
+  const vialettiDiPrima = structuredClone(dati.vialetti);
+  let categoria = 'aiuola';
+  let scelto = null;      // id dell'elemento scelto (della categoria attuale)
+  let modo = 'misure';    // cosa fa il quadratino giallo: 'misure' o 'inclina'
+  let azione = null;      // trascinamento in corso
+  let tocchiAltri = [];   // tocchi su cose di un'altra categoria (per l'avviso)
 
   const sezione = document.createElement('section');
-  sezione.className = 'disegna';
-  sezione.append(link('← Mappa', '#/', 'indietro'), elemento('h2', 'Disegna l\'orto'),
-    elemento('p', 'In alto c\'è il fondo, in basso il davanti. Tocca un\'aiuola o un vialetto per sceglierlo, trascinalo per spostarlo, usa il quadratino giallo per cambiarne le misure. Tutto si aggancia a una griglia da 10 cm.', 'nota-terreno'));
+  sezione.className = 'mappa disegna';
+  const titolo = nuovo || !ortoDisegnato(originali) ? 'Disegna l\'orto' : 'Modifica orto';
+  const testa = elemento('div', '', 'testa-disegna');
+  testa.append(link('← Annulla', '#/orto', 'indietro-tempo'), elemento('strong', titolo, 'titolo-tempo'));
 
-  // Misure del terreno e staccionata
-  const terreno = document.createElement('form');
-  terreno.className = 'modulo modulo-terreno-orto';
-  terreno.noValidate = true;
-  terreno.innerHTML = `
-    <div class="due-colonne">
-      <label class="senza-margine">Larghezza (cm)<input type="number" name="larghezza" min="100" max="5000" step="10" inputmode="numeric"></label>
-      <label class="senza-margine">Lunghezza (cm)<input type="number" name="lunghezza" min="100" max="5000" step="10" inputmode="numeric"></label>
-    </div>
-    <label class="opzione-tutte"><input type="checkbox" name="staccionata"> Staccionata davanti</label>`;
-  terreno.elements.larghezza.value = t.larghezza;
-  terreno.elements.lunghezza.value = t.lunghezza;
-  terreno.elements.staccionata.checked = t.staccionata !== false;
-  terreno.addEventListener('input', () => {
-    const l = Number(terreno.elements.larghezza.value), u = Number(terreno.elements.lunghezza.value);
-    if (l >= 100 && l <= 5000) t.larghezza = aGriglia(l);
-    if (u >= 100 && u <= 5000) t.lunghezza = aGriglia(u);
-    t.staccionata = terreno.elements.staccionata.checked;
-    disegnaTela();
-  });
-
-  // Esposizione: cosa c'è in alto sulla mappa
-  const valoriEsposizione = [null, 'N', 'E', 'S', 'O'];
-  const spiegaEsposizione = elemento('p', testoEsposizione(t.esposizione), 'nota-terreno spiega-esposizione');
-  const rotellaEsposizione = creaRotella(['Non lo so', 'Nord', 'Est', 'Sud', 'Ovest'], Math.max(0, valoriEsposizione.indexOf(t.esposizione ?? null)), i => {
-    t.esposizione = valoriEsposizione[i];
-    spiegaEsposizione.textContent = testoEsposizione(t.esposizione);
-    disegnaTela();
-  });
-  const esposizione = elemento('div', '', 'blocco-esposizione');
-  esposizione.append(elemento('span', 'In alto (al fondo dell\'orto) c\'è:', 'titolo-esposizione'), rotellaEsposizione.elemento);
-  // La rotella mostra il valore salvato appena è sullo schermo
-  const mostraEsposizione = () => (esposizione.isConnected ? rotellaEsposizione.mostraIniziale() : setTimeout(mostraEsposizione, 30));
-  setTimeout(mostraEsposizione, 0);
-
+  const sopra = etichetta('');
+  const sotto = etichetta('');
   const tela = elemento('div', '', 'tela-disegno');
-  const attrezzi = elemento('div', '', 'attrezzi-disegno');
+  const recinto = elemento('div');
+  const legenda = elemento('div', '', 'legenda-disegno');
   const pannello = elemento('div', '', 'pannello-disegno');
+  const aggiunte = elemento('div', '', 'attrezzi-disegno');
   const avviso = elemento('p', '', 'errore');
   avviso.hidden = true;
+  const fumetto = elemento('div', '', 'fumetto-disegno');
+  fumetto.hidden = true;
 
-  const aggiungi = (testo, crea) => {
-    const b = elemento('button', testo, 'attrezzo');
-    b.type = 'button';
-    b.addEventListener('click', () => {
-      const nuovo = crea();
-      scelto = { tipo: nuovo.tipo, id: nuovo.id };
-      disegnaTela();
-      disegnaPannello();
-    });
-    attrezzi.append(b);
-  };
-  const nuovaAiuola = (forma, w, h, extra = {}) => {
-    const n = dati.aiuole.length + 1;
-    let nome = String(n);
-    for (let k = n; dati.aiuole.some(a => a.nome === nome); k++) nome = String(k + 1);
-    const a = { id: nuovoId('a'), nome, settore: 1, forma, x: aGriglia(t.larghezza / 2), y: aGriglia(t.lunghezza / 2), w, h, rot: 0, note: '', ...extra };
-    dati.aiuole.push(a);
-    return { tipo: 'aiuola', id: a.id };
-  };
-  aggiungi('+ Aiuola', () => nuovaAiuola('rettangolo', 180, 120));
-  aggiungi('+ Rotonda', () => nuovaAiuola('ellisse', 120, 120));
-  aggiungi('+ A L', () => nuovaAiuola('elle', 180, 160, { taglio: { w: 80, h: 70, angolo: 'ne' } }));
-  aggiungi('+ Albero', () => {
-    // Il primo posto libero lungo i bordi del terreno (mai su un'aiuola)
-    const candidati = [];
-    for (let k = 0; k <= 10; k++) {
-      const fx = aGriglia(t.larghezza * k / 10), fy = aGriglia(t.lunghezza * k / 10);
-      candidati.push([fx, 30], [t.larghezza - 30, fy], [fx, t.lunghezza - 30], [30, fy]);
-    }
-    const [x, y] = candidati.find(([px, py]) => !sullAiuola(dati, px, py)) ?? [aGriglia(t.larghezza / 2), 30];
-    const al = { id: nuovoId('b'), tipo: 'melo', x, y, diametro: TIPI_ALBERO.melo.d, altezza: TIPI_ALBERO.melo.h };
-    dati.alberi.push(al);
-    return { tipo: 'albero', id: al.id };
-  });
-  aggiungi('+ Vialetto', () => {
-    const v = { id: nuovoId('v'), x: aGriglia(t.larghezza / 2), y: aGriglia(t.lunghezza / 2), w: 40, h: 200, rot: 0 };
-    dati.vialetti.push(v);
-    return { tipo: 'vialetto', id: v.id };
-  });
-
-  const elementoScelto = () => scelto && { aiuola: dati.aiuole, vialetto: dati.vialetti, albero: dati.alberi }[scelto.tipo].find(x => x.id === scelto.id);
+  const lista = c => ({ aiuola: dati.aiuole, vialetto: dati.vialetti, albero: dati.alberi })[c];
+  const elementoScelto = () => scelto && lista(categoria).find(x => x.id === scelto);
   const scala = () => tela.clientWidth / t.larghezza;
-  // Dal punto dello schermo alle coordinate dell'orto (cm)
   const inOrto = evento => {
     const r = tela.getBoundingClientRect();
     return { x: (evento.clientX - r.left) / scala(), y: (evento.clientY - r.top) / scala() };
   };
+  let timerFumetto = null;
+  const avvisa = testo => {
+    fumetto.textContent = testo;
+    fumetto.hidden = false;
+    clearTimeout(timerFumetto);
+    timerFumetto = setTimeout(() => { fumetto.hidden = true; }, 3000);
+  };
+
+  // Ingombro dell'elemento sulla mappa (cm)
+  const ingombroDi = (c, x) => c === 'aiuola' ? ingombro(x)
+    : c === 'vialetto' ? ingombro({ ...x, forma: 'rettangolo' })
+    : { x: x.x - x.diametro / 2, y: x.y - x.diametro, w: x.diametro, h: x.diametro * 116 / 104 };
 
   function disegnaTela() {
+    sopra.textContent = estremo(dati, 'Fondo');
+    sotto.textContent = estremo(dati, 'Davanti');
     tela.style.aspectRatio = `${t.larghezza} / ${t.lunghezza}`;
     tela.style.setProperty('--passo-x', `${50 / t.larghezza * 100}%`);
     tela.style.setProperty('--passo-y', `${50 / t.lunghezza * 100}%`);
     tela.replaceChildren();
     const sel = elementoScelto();
+    const segna = (el, c, x) => {
+      el.classList.add('elemento-disegno');
+      if (c !== categoria) el.classList.add('bloccato');
+      if (x === sel) el.classList.add('scelto');
+      el.dataset.tipo = c;
+      el.dataset.id = x.id;
+    };
     for (const v of dati.vialetti) {
-      const via = elemento('div', '', `vialetto-libero elemento-disegno${sel === v ? ' scelto' : ''}`);
+      const via = elemento('div', '', 'vialetto-libero');
       inPercentuale(via, { x: v.x - v.w / 2, y: v.y - v.h / 2, w: v.w, h: v.h }, t);
       if (v.rot) via.style.transform = `rotate(${v.rot}deg)`;
-      via.dataset.tipo = 'vialetto';
-      via.dataset.id = v.id;
+      segna(via, 'vialetto', v);
       tela.append(via);
     }
     for (const a of dati.aiuole) {
-      const el = elemento('div', '', `aiuola-forma elemento-disegno${sel === a ? ' scelto' : ''}`);
+      const el = elemento('div', '', 'aiuola-forma');
       el.innerHTML = sagomaAiuola(a);
       el.append(cartellino(a));
       inPercentuale(el, ingombro(a), t);
-      el.dataset.tipo = 'aiuola';
-      el.dataset.id = a.id;
+      segna(el, 'aiuola', a);
       tela.append(el);
     }
     for (const al of dati.alberi) {
       const ombra = ombraAlbero(al, t);
       if (ombra) tela.append(ombra);
     }
-    for (const al of dati.alberi) {
+    for (const al of [...dati.alberi].sort((p, q) => p.y - q.y)) {
       const el = elementoAlbero(al, t);
-      el.classList.add('elemento-disegno');
-      if (sel === al) el.classList.add('scelto');
-      el.dataset.tipo = 'albero';
-      el.dataset.id = al.id;
-      // Si prende dal tronco: la chioma lascia toccare le aiuole sotto
+      segna(el, 'albero', al);
+      // Si prende dal tronco: la chioma lascia toccare quello che c'è sotto
       el.append(elemento('span', '', 'tronco'));
       tela.append(el);
     }
-    if (t.esposizione) tela.append(percorsoSole(t.esposizione));
-    // L'elemento scelto sta sopra gli altri, così si vede e si prende anche se è sotto un'aiuola
+    if (t.esposizione != null) tela.append(percorsoSole(t.esposizione));
     const elScelto = sel && tela.querySelector(`.elemento-disegno[data-id="${sel.id}"]`);
     if (elScelto) tela.append(elScelto);
-    // Quadratino per le misure: all'angolo in basso a destra dell'ingombro dell'elemento scelto
-    if (sel && scelto.tipo !== 'albero') {
-      const b = scelto.tipo === 'aiuola' ? ingombro(sel) : ingombro({ ...sel, forma: 'rettangolo' });
-      const m = elemento('span', '', 'maniglia-disegno');
+    if (sel) {
+      const b = ingombroDi(categoria, sel);
+      // Misure sopra il lato in alto, quadratino giallo in basso a destra
+      const misura = elemento('span', categoria === 'albero' ? `chioma ${sel.diametro} cm` : `${sel.w} × ${sel.h} cm`, 'misura-disegno');
+      misura.style.left = `${(b.x + b.w / 2) / t.larghezza * 100}%`;
+      misura.style.top = `${b.y / t.lunghezza * 100}%`;
+      const inclina = modo === 'inclina' && categoria !== 'albero';
+      const m = elemento('span', inclina ? '↻' : '⤡', 'maniglia-disegno');
       m.style.left = `${(b.x + b.w) / t.larghezza * 100}%`;
       m.style.top = `${(b.y + b.h) / t.lunghezza * 100}%`;
-      m.setAttribute('aria-label', 'Trascina per cambiare le misure');
-      tela.append(m);
-      const misura = elemento('span', `${sel.w} × ${sel.h} cm`, 'misura-disegno');
-      misura.style.left = `${(b.x + b.w / 2) / t.larghezza * 100}%`;
-      misura.style.top = `${(b.y + b.h) / t.lunghezza * 100}%`;
-      tela.append(misura);
+      m.setAttribute('aria-label', inclina ? 'Trascina per inclinare' : 'Trascina per cambiare le misure');
+      tela.append(misura, m);
     }
+    recinto.replaceChildren(staccionata(dati));
+    disegnaLegenda();
   }
 
+  function disegnaLegenda() {
+    legenda.replaceChildren();
+    const schede = elemento('div', '', 'categorie-disegno');
+    for (const [c, nome] of Object.entries(CATEGORIE)) {
+      const b = elemento('button', nome);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(c === categoria));
+      b.addEventListener('click', () => {
+        categoria = c;
+        scelto = null;
+        modo = 'misure';
+        disegnaTela();
+        disegnaPannello();
+      });
+      schede.append(b);
+    }
+    legenda.append(schede);
+    const sel = elementoScelto();
+    const riga = elemento('div', '', 'comandi-legenda');
+    if (!sel) {
+      riga.append(elemento('span', `Tocca ${categoria === 'aiuola' ? 'un\'aiuola' : categoria === 'vialetto' ? 'un vialetto' : 'un albero'} per sceglierlo, oppure aggiungine uno qui sotto.`, 'info-legenda'));
+    } else {
+      const info = categoria === 'aiuola' ? `${sel.nome || '?'} · ${sel.w} × ${sel.h} cm${sel.rot ? ` · ${sel.rot}°` : ''}`
+        : categoria === 'vialetto' ? `${sel === dati.vialetti[0] ? 'Vialetto principale' : 'Vialetto'} · ${sel.w} × ${sel.h} cm`
+        : `${TIPI_ALBERO[sel.tipo]?.nome ?? 'Albero'} · chioma ${sel.diametro} cm`;
+      riga.append(elemento('strong', info, 'info-legenda'));
+      const pulsanteModo = (m, testo) => {
+        const b = elemento('button', testo, 'modo-legenda');
+        b.type = 'button';
+        b.setAttribute('aria-pressed', String(modo === m));
+        b.addEventListener('click', () => { modo = m; disegnaTela(); });
+        riga.append(b);
+      };
+      pulsanteModo('misure', 'Misure ⤡');
+      if (categoria !== 'albero') pulsanteModo('inclina', 'Inclinazione ↻');
+    }
+    legenda.append(riga);
+  }
+
+  // Tocchi e trascinamenti sulla tela
   tela.addEventListener('pointerdown', evento => {
     const p = inOrto(evento);
-    if (evento.target.closest('.maniglia-disegno')) {
-      azione = { tipo: 'misura' };
+    const sel = elementoScelto();
+    if (evento.target.closest('.maniglia-disegno') && sel) {
+      const inclina = modo === 'inclina' && categoria !== 'albero';
+      azione = inclina ? { tipo: 'inclina', a0: Math.atan2(p.x - sel.x, sel.y - p.y) * 180 / Math.PI, rot0: sel.rot ?? 0 } : { tipo: 'misura' };
     } else {
       const el = evento.target.closest('.elemento-disegno');
       if (!el) {
@@ -3774,11 +3823,19 @@ export function paginaDisegna(originali) {
         disegnaPannello();
         return;
       }
-      const cambiato = !scelto || scelto.id !== el.dataset.id;
-      scelto = { tipo: el.dataset.tipo, id: el.dataset.id };
+      if (el.dataset.tipo !== categoria) {
+        // Un'altra categoria non si sposta per sbaglio; dopo qualche tocco si spiega come fare
+        const ora = Date.now();
+        tocchiAltri = [...tocchiAltri.filter(x => ora - x < 2000), ora];
+        if (tocchiAltri.length >= 2) avvisa('Seleziona aiuola, vialetto o albero nella legenda in fondo per spostare');
+        return;
+      }
+      const cambiato = scelto !== el.dataset.id;
+      scelto = el.dataset.id;
       const x = elementoScelto();
       azione = { tipo: 'sposta', da: p, x0: x.x, y0: x.y };
       if (cambiato) {
+        modo = 'misure';
         disegnaTela();
         disegnaPannello();
       }
@@ -3789,20 +3846,25 @@ export function paginaDisegna(originali) {
   tela.addEventListener('pointermove', evento => {
     if (!azione) return;
     const x = elementoScelto();
+    if (!x) return;
     const p = inOrto(evento);
     if (azione.tipo === 'sposta') {
       const nx = Math.min(t.larghezza, Math.max(0, aGriglia(azione.x0 + p.x - azione.da.x)));
       const ny = Math.min(t.lunghezza, Math.max(0, aGriglia(azione.y0 + p.y - azione.da.y)));
-      if (scelto.tipo === 'albero' && sullAiuola(dati, nx, ny)) return;   // gli alberi non vanno sulle aiuole
+      if (categoria === 'albero' && sullAiuola(dati, nx, ny)) return;   // gli alberi non vanno sulle aiuole
       x.x = nx;
       x.y = ny;
+    } else if (azione.tipo === 'inclina') {
+      const a = Math.atan2(p.x - x.x, x.y - p.y) * 180 / Math.PI;
+      x.rot = a5(azione.rot0 + a - azione.a0);
+    } else if (categoria === 'albero') {
+      x.diametro = Math.min(3000, Math.max(50, aGriglia(2 * Math.max(Math.abs(p.x - x.x), Math.abs(p.y - x.y)))));
     } else {
       // Misure simmetriche attorno al centro, nel verso dell'elemento (anche se è girato)
       const r = (x.rot ?? 0) * Math.PI / 180;
       const dx = p.x - x.x, dy = p.y - x.y;
-      const u = dx * Math.cos(r) + dy * Math.sin(r), v = -dx * Math.sin(r) + dy * Math.cos(r);
-      x.w = Math.max(30, aGriglia(2 * Math.abs(u)));
-      x.h = Math.max(30, aGriglia(2 * Math.abs(v)));
+      x.w = Math.max(30, aGriglia(2 * Math.abs(dx * Math.cos(r) + dy * Math.sin(r))));
+      x.h = Math.max(30, aGriglia(2 * Math.abs(-dx * Math.sin(r) + dy * Math.cos(r))));
       sistemaTaglio(x);
     }
     disegnaTela();
@@ -3822,13 +3884,15 @@ export function paginaDisegna(originali) {
     a.taglio.h = Math.min(Math.max(20, a.taglio.h), a.h - 30);
   }
 
+  // Pannello sotto la legenda: tutte le modifiche dell'elemento scelto
   function disegnaPannello() {
     pannello.replaceChildren();
     const x = elementoScelto();
     if (!x) {
-      pannello.append(elemento('p', 'Tocca un\'aiuola o un vialetto per cambiarlo, oppure aggiungine uno con i pulsanti qui sopra.', 'nota-terreno'));
+      pannello.hidden = true;
       return;
     }
+    pannello.hidden = false;
     const campo = (etichetta, valore, cambia, attributi = {}) => {
       const label = elemento('label', etichetta);
       const input = elemento('input');
@@ -3860,32 +3924,35 @@ export function paginaDisegna(originali) {
       label.append(select);
       return label;
     };
-    const griglia = elemento('div', '', 'campi-disegno');
-    if (scelto.tipo === 'albero') {
-      pannello.append(elemento('h3', 'Albero scelto'));
-      griglia.append(
-        scelta('Tipo', Object.entries(TIPI_ALBERO).map(([k, tipo]) => [k, tipo.nome]), x.tipo, v => {
-          x.tipo = v;
-          x.diametro = TIPI_ALBERO[v].d;
-          x.altezza = TIPI_ALBERO[v].h;
-        }),
-        campo('Chioma larga (cm)', x.diametro, n => { if (n >= 50 && n <= 3000) x.diametro = aGriglia(n); }, { min: 50, max: 3000 }),
-        campo('Altezza (m)', x.altezza, n => { if (n > 0 && n <= 40) x.altezza = n; }, { step: 0.5, min: 0.5, max: 40 }));
-      pannello.append(griglia);
-      const elimina = elemento('button', 'Elimina albero', 'pulsante pericolo');
-      elimina.type = 'button';
-      elimina.addEventListener('click', () => {
-        dati.alberi.splice(dati.alberi.indexOf(x), 1);
+    const elimina = (testo, toglibile = true) => {
+      const b = elemento('button', testo, 'pulsante pericolo');
+      b.type = 'button';
+      b.disabled = !toglibile;
+      b.addEventListener('click', () => {
+        const l = lista(categoria);
+        l.splice(l.indexOf(x), 1);
         scelto = null;
         disegnaTela();
         disegnaPannello();
       });
-      pannello.append(elimina, elemento('p', t.esposizione
-        ? 'Trascinalo dal tronco. Non può stare sulle aiuole, ma la chioma sì. L\'ombra è quella di mezzogiorno in primavera e in autunno: d\'estate è più corta, d\'inverno più lunga.'
-        : 'Trascinalo dal tronco. Non può stare sulle aiuole, ma la chioma sì. Scegli l\'esposizione per vedere la sua ombra.', 'nota-terreno'));
+      return b;
+    };
+    const griglia = elemento('div', '', 'campi-disegno');
+    if (categoria === 'albero') {
+      pannello.append(elemento('h3', 'Albero scelto'));
+      griglia.append(
+        scelta('Tipo', Object.entries(TIPI_ALBERO).map(([k, tipo]) => [k, tipo.nome]), x.tipo, v => {
+          x.tipo = v;
+          x.altezza = TIPI_ALBERO[v].h;
+        }),
+        campo('Chioma larga (cm)', x.diametro, n => { if (n >= 50 && n <= 3000) x.diametro = aGriglia(n); }, { min: 50, max: 3000 }),
+        campo('Altezza (m)', x.altezza, n => { if (n > 0 && n <= 40) x.altezza = n; }, { step: 0.5, min: 0.5, max: 40 }));
+      pannello.append(griglia, elimina('Elimina albero'), elemento('p', t.esposizione != null
+        ? 'Trascinalo dal tronco. Non può stare sulle aiuole, ma la chioma sì. L\'ombra è quella di mezzogiorno in primavera e in autunno.'
+        : 'Trascinalo dal tronco. Non può stare sulle aiuole, ma la chioma sì. Con l\'esposizione vedrai anche la sua ombra.', 'nota-terreno'));
       return;
     }
-    if (scelto.tipo === 'aiuola') {
+    if (categoria === 'aiuola') {
       pannello.append(elemento('h3', 'Aiuola scelta'));
       const nome = elemento('label', 'Nome');
       const inputNome = elemento('input');
@@ -3904,49 +3971,256 @@ export function paginaDisegna(originali) {
           sistemaTaglio(x);
         }));
     } else {
-      pannello.append(elemento('h3', 'Vialetto scelto'));
+      pannello.append(elemento('h3', x === dati.vialetti[0] ? 'Vialetto principale' : 'Vialetto scelto'));
     }
     griglia.append(
       campo('Larghezza ↔ (cm)', x.w, n => { if (n >= 30) { x.w = aGriglia(n); sistemaTaglio(x); } }, { min: 30 }),
       campo('Lunghezza ↕ (cm)', x.h, n => { if (n >= 30) { x.h = aGriglia(n); sistemaTaglio(x); } }, { min: 30 }),
-      campo('Inclinazione (gradi)', x.rot ?? 0, n => { x.rot = ((Math.round(n / 5) * 5) % 360 + 360) % 360; }, { step: 5, min: 0, max: 355 }));
-    if (scelto.tipo === 'aiuola' && x.forma === 'elle') {
+      campo('Inclinazione (gradi)', x.rot ?? 0, n => { x.rot = a5(n); }, { step: 5, min: 0, max: 355 }));
+    if (categoria === 'aiuola' && x.forma === 'elle') {
       griglia.append(
         campo('Taglio ↔ (cm)', x.taglio.w, n => { x.taglio.w = aGriglia(n); sistemaTaglio(x); }, { min: 20 }),
         campo('Taglio ↕ (cm)', x.taglio.h, n => { x.taglio.h = aGriglia(n); sistemaTaglio(x); }, { min: 20 }),
         scelta('Angolo tagliato', Object.entries(NOMI_ANGOLO), x.taglio.angolo, v => { x.taglio.angolo = v; }));
     }
     pannello.append(griglia);
-
     const gira = elemento('button', '↻ Gira di 90°', 'pulsante secondario');
     gira.type = 'button';
     gira.addEventListener('click', () => {
       // Per le forme dritte basta scambiare le misure; le altre si girano davvero
       if ((x.rot ?? 0) % 180 === 0 && x.forma !== 'elle') [x.w, x.h] = [x.h, x.w];
-      else x.rot = ((x.rot ?? 0) + 90) % 360;
+      else x.rot = a5((x.rot ?? 0) + 90);
       disegnaTela();
       disegnaPannello();
     });
-    const elimina = elemento('button', scelto.tipo === 'aiuola' ? 'Elimina aiuola' : 'Elimina vialetto', 'pulsante pericolo');
-    elimina.type = 'button';
-    const usata = scelto.tipo === 'aiuola' && aiuolaUsata(dati, x.id);
-    elimina.disabled = usata;
-    elimina.addEventListener('click', () => {
-      const lista = scelto.tipo === 'aiuola' ? dati.aiuole : dati.vialetti;
-      lista.splice(lista.indexOf(x), 1);
-      scelto = null;
-      disegnaTela();
-      disegnaPannello();
-    });
+    const usata = categoria === 'aiuola' && aiuolaUsata(dati, x.id);
     const comandi = elemento('div', '', 'comandi-disegno');
-    comandi.append(gira, elimina);
+    comandi.append(gira, elimina(categoria === 'aiuola' ? 'Elimina aiuola' : 'Elimina vialetto', !usata));
     pannello.append(comandi);
     if (usata) pannello.append(elemento('p', 'Questa aiuola ha colture, voci di registro o task: puoi spostarla, rinominarla e cambiarne la forma, ma non eliminarla, così il suo storico resta.', 'nota-terreno'));
   }
 
-  const salvaOrto = elemento('button', 'Salva il disegno', 'pulsante');
-  salvaOrto.type = 'button';
-  salvaOrto.addEventListener('click', () => {
+  // Pulsanti per aggiungere (il nuovo elemento è scelto, e la legenda passa alla sua categoria)
+  const aggiungi = (testo, c, crea) => {
+    const b = elemento('button', testo, 'attrezzo');
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      const x = crea();
+      lista(c).push(x);
+      categoria = c;
+      scelto = x.id;
+      modo = 'misure';
+      disegnaTela();
+      disegnaPannello();
+      tela.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    aggiunte.append(b);
+  };
+  const centro = () => ({ x: aGriglia(t.larghezza / 2), y: aGriglia(t.lunghezza / 2) });
+  const nuovoNome = () => {
+    let k = dati.aiuole.length + 1;
+    while (dati.aiuole.some(a => a.nome === String(k))) k++;
+    return String(k);
+  };
+  aggiungi('+ Aiuola', 'aiuola', () => ({ id: nuovoId('a'), nome: nuovoNome(), settore: 1, forma: 'rettangolo', ...centro(), w: 180, h: 120, rot: 0, note: '' }));
+  aggiungi('+ Albero', 'albero', () => {
+    // Il primo posto libero lungo i bordi del terreno (mai su un'aiuola)
+    const candidati = [];
+    for (let k = 0; k <= 10; k++) {
+      const fx = aGriglia(t.larghezza * k / 10), fy = aGriglia(t.lunghezza * k / 10);
+      candidati.push([fx, 30], [t.larghezza - 30, fy], [fx, t.lunghezza - 30], [30, fy]);
+    }
+    const [x, y] = candidati.find(([px, py]) => !sullAiuola(dati, px, py)) ?? [centro().x, 30];
+    return { id: nuovoId('b'), tipo: 'melo', x, y, diametro: ALBERO_NUOVO, altezza: TIPI_ALBERO.melo.h };
+  });
+  aggiungi('+ Vialetto', 'vialetto', () => ({ id: nuovoId('v'), ...centro(), w: 40, h: 200, rot: 0 }));
+
+  // ---- I passi, in un pop-up al centro dello schermo (dietro la mappa cambia mentre si sceglie) ----
+  const velo = elemento('div', '', 'velo-disegno');
+  const finestra = elemento('div', '', 'finestra-disegno');
+  finestra.setAttribute('role', 'dialog');
+  const chiudiPasso = () => { velo.remove(); finestra.remove(); };
+  function apriPasso(numero, titoloPasso, ...contenuto) {
+    finestra.className = `finestra-disegno${numero === 4 ? ' grande' : ''}`;
+    const passi = elemento('div', '', 'passi-disegno');
+    for (let i = 1; i <= 5; i++) passi.append(elemento('i', '', i <= numero ? 'fatto' : ''));
+    finestra.replaceChildren(passi, elemento('h3', `${numero} · ${titoloPasso}`), ...contenuto);
+    if (!velo.isConnected) document.body.append(velo, finestra);
+  }
+  const bottone = (testo, classe, azione) => {
+    const b = elemento('button', testo, classe);
+    b.type = 'button';
+    b.addEventListener('click', azione);
+    return b;
+  };
+  const scelte = (opzioni, valore, cambia) => {
+    const box = elemento('div', '', 'scelte-passo');
+    for (const [v, testo] of opzioni) {
+      const b = bottone(testo, 'scelta-passo', () => {
+        for (const x of box.children) x.setAttribute('aria-pressed', String(x === b));
+        cambia(v);
+      });
+      b.setAttribute('aria-pressed', String(v === valore));
+      box.append(b);
+    }
+    return box;
+  };
+  const campoCm = (etichetta, valore, cambia) => {
+    const label = elemento('label', '', 'campo-cm');
+    const input = elemento('input');
+    Object.assign(input, { type: 'number', min: 100, max: 5000, step: 10, inputMode: 'numeric', value: valore });
+    input.addEventListener('input', () => {
+      const n = Number(input.value);
+      if (n >= 100 && n <= 5000) cambia(aGriglia(n));
+    });
+    label.append(`${etichetta}: `, input, ' cm');
+    return label;
+  };
+  const vaiAlleAiuole = (c = 'aiuola', id = null) => {
+    chiudiPasso();
+    categoria = c;
+    scelto = id;
+    disegnaTela();
+    disegnaPannello();
+  };
+
+  // 1 · Il terreno: dimensioni attuali o personalizzate, staccionata
+  function passoTerreno() {
+    const prima = { larghezza: t.larghezza, lunghezza: t.lunghezza };
+    const misure = elemento('div', '', 'misure-passo');
+    misure.append(
+      campoCm('Largo', t.larghezza, n => { t.larghezza = n; disegnaTela(); }),
+      campoCm('Lungo', t.lunghezza, n => { t.lunghezza = n; disegnaTela(); }));
+    misure.hidden = true;
+    apriPasso(1, 'Il terreno',
+      scelte([['attuali', `Dimensioni attuali (largo ${prima.larghezza} cm, lungo ${prima.lunghezza} cm)`], ['personali', 'Dimensioni personalizzate']], 'attuali', v => {
+        misure.hidden = v !== 'personali';
+        if (v === 'attuali') Object.assign(t, prima);
+        disegnaTela();
+      }),
+      misure,
+      elemento('p', 'Staccionata davanti?', 'domanda-passo'),
+      scelte([[true, 'Sì'], [false, 'No']], t.staccionata !== false, v => { t.staccionata = v; disegnaTela(); }),
+      azioniPasso(() => vaiAlleAiuole(), passoVialetto));
+  }
+
+  // 2 · Il vialetto principale: scelte rapide, o "Personalizza" per sistemarlo sulla mappa
+  function passoVialetto() {
+    let largo = dati.vialetti[0]?.w && dati.vialetti[0].w < dati.vialetti[0].h ? dati.vialetti[0].w : 40;
+    let forma = dati.vialetti.length ? 'com-e' : 'centro-verticale';
+    const metti = () => {
+      const { larghezza: W, lunghezza: L } = t;
+      const principale = { id: dati.vialetti[0]?.id ?? 'vialetto', x: W / 2, y: L / 2, rot: 0 };
+      const vie = {
+        'com-e': structuredClone(vialettiDiPrima),
+        'centro-verticale': [{ ...principale, w: largo, h: L }],
+        'centro-orizzontale': [{ ...principale, w: W, h: largo }],
+        croce: [{ ...principale, w: largo, h: L }, { id: nuovoId('v'), x: W / 2, y: L / 2, w: W, h: largo, rot: 0 }],
+        nessuno: [],
+      };
+      dati.vialetti = vie[forma];
+      disegnaTela();
+    };
+    const opzioni = [
+      ...(vialettiDiPrima.length ? [['com-e', 'Lascia com\'è']] : []),
+      ['centro-verticale', 'Al centro, dal fondo al davanti'],
+      ['centro-orizzontale', 'Al centro, da sinistra a destra'],
+      ['croce', 'A croce'],
+      ['nessuno', 'Nessun vialetto'],
+    ];
+    const larghezza = elemento('label', '', 'campo-cm');
+    const input = elemento('input');
+    Object.assign(input, { type: 'number', min: 20, max: 300, step: 10, inputMode: 'numeric', value: largo });
+    input.addEventListener('input', () => {
+      const n = Number(input.value);
+      if (n >= 20 && n <= 300) {
+        largo = aGriglia(n);
+        if (forma === 'com-e') forma = 'centro-verticale';
+        metti();
+      }
+    });
+    larghezza.append('Largo: ', input, ' cm');
+    metti();
+    apriPasso(2, 'Il vialetto principale',
+      elemento('p', 'Il vialetto principale è quello che attraversa l\'orto; quelli laterali li puoi aggiungere dopo, se ci sono.', 'nota-terreno'),
+      scelte(opzioni, forma, v => { forma = v; metti(); }),
+      larghezza,
+      bottone('Personalizza sulla mappa', 'pulsante secondario', () => {
+        if (!dati.vialetti.length) {
+          forma = 'centro-verticale';
+          metti();
+        }
+        vaiAlleAiuole('vialetto', dati.vialetti[0]?.id ?? null);
+        avvisa('Trascina il vialetto principale; il quadratino giallo cambia le misure. Poi passa ad "Aiuole" nella legenda');
+      }),
+      azioniPasso(() => vaiAlleAiuole(), () => {
+        vaiAlleAiuole();
+        avvisa('Ora le aiuole: tocca per scegliere, trascina per spostare, il quadratino giallo per le misure');
+      }));
+  }
+
+  function azioniPasso(salta, conferma, testoConferma = 'Conferma ›') {
+    const riga = elemento('div', '', 'azioni-passo');
+    riga.append(bottone('Salta', 'pulsante secondario', salta), bottone(testoConferma, 'pulsante', conferma));
+    return riga;
+  }
+
+  // 4 · Esposizione: l'orto resta dritto, si gira la bussola con il dito (passi di 5°)
+  function passoEsposizione() {
+    const quadrante = elemento('div', '', 'quadrante-esposizione');
+    const orto = terrenoOrto(dati, a => {
+      const el = elemento('div', '', 'aiuola-forma');
+      el.innerHTML = sagomaAiuola(a);
+      return el;
+    }, 'terreno orto-esposizione');
+    const bussolaEl = elemento('div', '', 'bussola-grande');
+    bussolaEl.innerHTML = BUSSOLA_GRANDE;
+    const testoVerso = elemento('p', '', 'verso-esposizione');
+    const spiega = elemento('p', '', 'nota-terreno');
+    const aggiornaBussola = () => {
+      const nord = t.esposizione == null ? 0 : (360 - t.esposizione) % 360;
+      bussolaEl.style.transform = `rotate(${nord}deg)`;
+      // Le lettere restano dritte mentre l'anello gira
+      for (const g of bussolaEl.querySelectorAll('.lettera-g')) g.setAttribute('transform', `rotate(${-nord} ${g.dataset.x} ${g.dataset.y})`);
+      bussolaEl.classList.toggle('spenta', t.esposizione == null);
+      testoVerso.textContent = t.esposizione == null ? 'Gira la bussola con il dito: la N rossa va dove c\'è il Nord.'
+        : `Il fondo dell'orto guarda verso ${nomeVerso(t.esposizione)} (${t.esposizione}°)`;
+      spiega.textContent = testoEsposizione(t.esposizione);
+      disegnaTela();
+    };
+    const etFondo = elemento('span', 'Fondo', 'estremo-esposizione fondo');
+    const etDavanti = elemento('span', 'Davanti', 'estremo-esposizione davanti');
+    quadrante.append(bussolaEl, orto, etFondo, etDavanti);
+    let presa = null;
+    const angolo = evento => {
+      const r = quadrante.getBoundingClientRect();
+      return Math.atan2(evento.clientX - (r.left + r.width / 2), (r.top + r.height / 2) - evento.clientY) * 180 / Math.PI;
+    };
+    quadrante.addEventListener('pointerdown', evento => {
+      presa = { a0: angolo(evento), nord0: t.esposizione == null ? 0 : (360 - t.esposizione) % 360 };
+      quadrante.setPointerCapture(evento.pointerId);
+      evento.preventDefault();
+    });
+    quadrante.addEventListener('pointermove', evento => {
+      if (!presa) return;
+      const nord = presa.nord0 + angolo(evento) - presa.a0;
+      t.esposizione = a5(360 - nord);
+      aggiornaBussola();
+    });
+    const lascia = () => { presa = null; };
+    quadrante.addEventListener('pointerup', lascia);
+    quadrante.addEventListener('pointercancel', lascia);
+    const riga = elemento('div', '', 'azioni-passo');
+    riga.append(
+      bottone('Non lo so', 'pulsante secondario', () => { t.esposizione = null; aggiornaBussola(); }),
+      bottone('Salva il disegno ✓', 'pulsante', salvaTutto));
+    apriPasso(4, 'Esposizione', quadrante, testoVerso, spiega, avviso, riga,
+      bottone('‹ Torna alle aiuole', 'link-info indietro-passo', () => vaiAlleAiuole(categoria, scelto)));
+    aggiornaBussola();
+  }
+
+  // Salva, poi 5 · il terreno delle aiuole (sempre si può saltare)
+  function salvaTutto() {
     avviso.hidden = true;
     const nomi = dati.aiuole.map(a => a.nome?.trim() ?? '');
     const errori = [];
@@ -3961,33 +4235,70 @@ export function paginaDisegna(originali) {
     }
     try {
       salva(dati);
-      location.hash = '#/';
     } catch (e) {
       avviso.textContent = e.message;
       avviso.hidden = false;
+      return;
     }
-  });
-  const annulla = link('Annulla', '#/', 'pulsante secondario');
-  const azioni = elemento('div', '', 'azioni-disegno');
-  azioni.append(salvaOrto, annulla);
+    const riga = elemento('div', '', 'azioni-passo');
+    riga.append(
+      bottone('Salta', 'pulsante secondario', () => { chiudiPasso(); location.hash = '#/'; }),
+      bottone('Fai più tardi', 'pulsante secondario', () => { chiudiPasso(); location.hash = '#/'; }));
+    apriPasso(5, 'Il terreno delle aiuole',
+      elemento('p', 'Disegno salvato! Ultima cosa: com\'è il terreno? Tessitura, calcare, pH, drenaggio e lombrichi aiutano l\'app a darti consigli giusti. Bastano alcune prove semplici, con le mani, un po\' d\'aceto e un barattolo.'),
+      bottone('Sì, descrivo il terreno ora', 'pulsante', () => { chiudiPasso(); location.hash = '#/orto/terreno'; }),
+      riga);
+  }
 
-  sezione.append(elemento('h3', 'Il terreno'), terreno, elemento('h3', 'Esposizione'), esposizione, spiegaEsposizione,
-    elemento('h3', 'Aiuole e vialetti'), attrezzi, tela, pannello, avviso, azioni);
+  const avanti = bottone('Avanti: esposizione ›', 'pulsante', passoEsposizione);
+  const azioni = elemento('div', '', 'azioni-disegno');
+  azioni.append(avanti, link('Annulla', '#/orto', 'pulsante secondario'));
+
+  sezione.append(testa, sopra, tela, recinto, sotto, fumetto, legenda, pannello,
+    elemento('p', 'Aggiungi:', 'titolo-aggiunte'), aggiunte, azioni);
   disegnaTela();
   disegnaPannello();
+  // Uscendo dalla pagina (anche con "indietro") il pop-up si chiude
+  window.addEventListener('hashchange', chiudiPasso, { once: true });
+  setTimeout(passoTerreno, 0);
   return sezione;
 }
 
-// ---- Esposizione: cosa c'è in alto sulla mappa (al fondo) e come si muove il sole sopra l'orto ----
+// Bussola grande dell'esposizione: anello d'ottone con le tacche e una piccola rosa dei venti
+const BUSSOLA_GRANDE = (() => {
+  const tacche = (r1, r2, n, w) => Array.from({ length: n }, (_, i) => {
+    const a = i * 2 * Math.PI / n;
+    return `<line x1="${100 + Math.sin(a) * r1}" y1="${100 - Math.cos(a) * r1}" x2="${100 + Math.sin(a) * r2}" y2="${100 - Math.cos(a) * r2}" stroke="#5c3d22" stroke-width="${w}"/>`;
+  }).join('');
+  const lettere = ['N', 'E', 'S', 'O'].map((l, i) => {
+    const a = i * Math.PI / 2, x = 100 + Math.sin(a) * 87, y = 100 - Math.cos(a) * 87;
+    return `<g class="lettera-g" data-x="${x}" data-y="${y}"><circle cx="${x}" cy="${y}" r="9.5" fill="${l === 'N' ? '#c0392b' : '#fff8e7'}" stroke="#5c3d22" stroke-width="1.5"/>
+      <text x="${x}" y="${y + 4.5}" text-anchor="middle" font-size="12.5" font-weight="700" font-family="Fredoka, sans-serif" fill="${l === 'N' ? '#fff' : '#5c3d22'}">${l}</text></g>`;
+  }).join('');
+  const punte = [0, 90, 180, 270].map(r => `<path d="M100 30 L108 90 L100 100 L92 90 Z" transform="rotate(${r} 100 100)" fill="${r === 0 ? '#c0392b' : '#d9a86c'}" stroke="#5c3d22" stroke-width="1.4"/>`).join('')
+    + [45, 135, 225, 315].map(r => `<path d="M100 50 L105 94 L100 100 L95 94 Z" transform="rotate(${r} 100 100)" fill="#f2c230" stroke="#5c3d22" stroke-width="1.1"/>`).join('');
+  return `<svg viewBox="0 0 200 200" aria-hidden="true">
+    <circle cx="100" cy="100" r="98" fill="#b8862f" stroke="#5c3d22" stroke-width="3"/>
+    <circle cx="100" cy="100" r="91" fill="#f3d27a"/><circle cx="100" cy="100" r="79" fill="none" stroke="#8a6420" stroke-width="2"/>
+    ${tacche(80, 90, 72, 0.8)}${tacche(78, 90, 8, 2)}${lettere}
+    <g opacity=".95">${punte}<circle cx="100" cy="100" r="5" fill="#fff8e7" stroke="#5c3d22" stroke-width="1.5"/></g>
+  </svg>`;
+})();
 
-const DIREZIONI = ['N', 'E', 'S', 'O'];
-const NOMI_DIREZIONE = { N: 'Nord', E: 'Est', S: 'Sud', O: 'Ovest' };
-const POSTO_SULLA_MAPPA = { 0: 'in alto (al fondo)', 90: 'a destra', 180: 'in basso (davanti)', 270: 'a sinistra' };
+// ---- Esposizione: verso dove guarda il fondo dell'orto (gradi: 0 = Nord, 90 = Est, 180 = Sud, 270 = Ovest) ----
 
-// Angolo (gradi, in senso orario dall'alto della mappa) della direzione d, se in alto c'è `alto`
+const AZIMUT = { N: 0, E: 90, S: 180, O: 270 };
+const NOMI_VERSO = ['Nord', 'Nord-Est', 'Est', 'Sud-Est', 'Sud', 'Sud-Ovest', 'Ovest', 'Nord-Ovest'];
+const POSTI_SULLA_MAPPA = ['in alto (al fondo)', 'in alto a destra', 'a destra', 'in basso a destra', 'in basso (davanti)', 'in basso a sinistra', 'a sinistra', 'in alto a sinistra'];
+
+// Angolo (gradi, in senso orario dall'alto della mappa) della direzione d ('N', 'E', 'S', 'O'),
+// se il fondo dell'orto guarda verso `alto` gradi
 function angoloDirezione(alto, d) {
-  return ((DIREZIONI.indexOf(d) - DIREZIONI.indexOf(alto)) * 90 + 360) % 360;
+  return ((AZIMUT[d] - alto) % 360 + 360) % 360;
 }
+const otto = g => Math.round((((g % 360) + 360) % 360) / 45) % 8;
+const nomeVerso = g => NOMI_VERSO[otto(g)];
+const postoSullaMappa = angolo => POSTI_SULLA_MAPPA[otto(angolo)];
 
 // Punto in percentuale del terreno, nella direzione dell'angolo, a distanza r dal centro (50 = bordo)
 function puntoVerso(angolo, r) {
@@ -3995,23 +4306,23 @@ function puntoVerso(angolo, r) {
   return { x: 50 + r * Math.sin(a), y: 50 - r * Math.cos(a) };
 }
 
-// "Fondo · Nord" / "Davanti · Sud" se l'esposizione è nota
+// "Fondo · Nord-Ovest" / "Davanti · Sud-Est" se l'esposizione è nota
 function estremo(dati, testo) {
   const esp = dati.terreno[0]?.esposizione;
-  if (!esp) return testo;
-  const d = testo === 'Fondo' ? esp : DIREZIONI[(DIREZIONI.indexOf(esp) + 2) % 4];
-  return `${testo} · ${NOMI_DIREZIONE[d]}`;
+  if (esp == null) return testo;
+  return `${testo} · ${nomeVerso(testo === 'Fondo' ? esp : esp + 180)}`;
 }
 
-// Piccola bussola: la freccia punta verso il Nord vero
+// Piccola bussola sulla mappa: la freccia punta verso il Nord vero
 function bussola(esposizione) {
   const el = elemento('span', '', 'bussola');
-  el.title = `Il Nord è ${POSTO_SULLA_MAPPA[angoloDirezione(esposizione, 'N')]}`;
+  const nord = angoloDirezione(esposizione, 'N');
+  el.title = `Il Nord è ${postoSullaMappa(nord)}`;
   // Solo disegno fisso, girato con lo stile
-  el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" style="transform: rotate(${angoloDirezione(esposizione, 'N')}deg)">
-    <circle cx="12" cy="12" r="11" fill="#fff8e7" stroke="#5c3d22" stroke-width="1.5"/>
-    <path d="M12 3 L15.5 12 H8.5 Z" fill="#c0392b"/><path d="M12 21 L8.5 12 H15.5 Z" fill="#9aa3a8"/>
-    <text x="12" y="10.2" text-anchor="middle" font-size="5.5" font-weight="700" fill="#fff" font-family="sans-serif">N</text></svg>`;
+  el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" style="transform: rotate(${nord}deg)">
+    <circle cx="12" cy="12" r="11" fill="#f3d27a" stroke="#5c3d22" stroke-width="1.5"/><circle cx="12" cy="12" r="8.5" fill="#fff8e7"/>
+    <path d="M12 3.5 L15 12 H9 Z" fill="#c0392b"/><path d="M12 20.5 L9 12 H15 Z" fill="#9aa3a8"/>
+    <text x="12" y="10.2" text-anchor="middle" font-size="5" font-weight="700" fill="#fff" font-family="sans-serif">N</text></svg>`;
   return el;
 }
 
@@ -4037,7 +4348,7 @@ function percorsoSole(esposizione) {
   lungo(0.04, 'alba');
   lungo(0.5, 'mezzogiorno');
   lungo(0.96, 'tramonto');
-  for (const d of DIREZIONI) {
+  for (const d of Object.keys(AZIMUT)) {
     const p = puntoVerso(angoloDirezione(esposizione, d), 50);
     const lettera = elemento('span', d, `lettera-bussola${d === 'N' ? ' nord' : ''}`);
     lettera.style.left = `${p.x}%`;
@@ -4049,68 +4360,70 @@ function percorsoSole(esposizione) {
 
 // Spiegazione: dove sorge e tramonta il sole e dove mettere le colture alte
 function testoEsposizione(esposizione) {
-  if (!esposizione) return 'Scegli cosa c\'è in alto sulla mappa (al fondo dell\'orto): vedrai come si muove il sole sopra l\'orto. Se non lo sai, guarda dove sorge il sole al mattino (Est) o usa la bussola del telefono.';
-  const dove = d => POSTO_SULLA_MAPPA[angoloDirezione(esposizione, d)];
-  return `Il sole sorge ${dove('E')}, a mezzogiorno è ${dove('S')} e tramonta ${dove('O')}. Le colture alte (pomodori, mais, fagioli rampicanti) stanno meglio ${dove('N')}, cioè verso Nord: così non fanno ombra alle altre. D'estate il sole sorge e tramonta un po' più a Nord, d'inverno un po' più a Sud.`;
+  if (esposizione == null) return 'Se non sai dov\'è il Nord, guarda dove sorge il sole al mattino (Est) o usa la bussola del telefono.';
+  const dove = d => postoSullaMappa(angoloDirezione(esposizione, d));
+  return `Il sole sorge ${dove('E')}, a mezzogiorno è ${dove('S')} e tramonta ${dove('O')}. Le colture alte (pomodori, mais, fagioli rampicanti) stanno meglio ${dove('N')}, cioè verso Nord: così non fanno ombra alle altre.`;
 }
 
-// ---- Alberi: sul verde (mai sulle aiuole), visti dall'alto, con l'ombra di mezzogiorno verso Nord ----
+// ---- Alberi: sul verde (mai sulle aiuole), in stile cartone di tre quarti, con l'ombra di mezzogiorno verso Nord ----
 
-// d = larghezza della chioma (cm), h = altezza (m) di partenza
+// h = altezza di partenza (m). Colori: chioma, parte in ombra, riflessi, frutti
 const TIPI_ALBERO = {
-  melo: { nome: 'Melo', chioma: '#6aa83a', chiaro: '#8cc45a', frutto: '#e2412b', d: 400, h: 4 },
-  pero: { nome: 'Pero', chioma: '#5f9e3a', chiaro: '#86bd5a', frutto: '#c9d14a', d: 400, h: 5 },
-  pesco: { nome: 'Pesco', chioma: '#78b048', chiaro: '#9ccc6a', frutto: '#f59a5c', d: 350, h: 3.5 },
-  albicocco: { nome: 'Albicocco', chioma: '#6aa83a', chiaro: '#8fc65e', frutto: '#f2a23a', d: 400, h: 4 },
-  ciliegio: { nome: 'Ciliegio', chioma: '#5a9a36', chiaro: '#7fb857', frutto: '#a3141f', d: 500, h: 6 },
-  susino: { nome: 'Susino', chioma: '#5f9a3c', chiaro: '#84b85c', frutto: '#6b3a8e', d: 400, h: 4 },
-  fico: { nome: 'Fico', chioma: '#4f8a2b', chiaro: '#73a84a', frutto: '#7a3d6e', d: 450, h: 4 },
-  cachi: { nome: 'Cachi', chioma: '#5a8f34', chiaro: '#7fae55', frutto: '#f07f1a', d: 450, h: 6 },
-  noce: { nome: 'Noce', chioma: '#3f7a2e', chiaro: '#5f9a48', frutto: null, d: 800, h: 12 },
-  olivo: { nome: 'Olivo', chioma: '#8fa77a', chiaro: '#b3c79f', frutto: '#3b3b2e', d: 400, h: 5 },
-  conifera: { nome: 'Conifera (pino, abete…)', chioma: '#2f6b4a', chiaro: '#47896a', frutto: null, d: 300, h: 10, aghi: true },
-  generico: { nome: 'Altro albero', chioma: '#4f8a2b', chiaro: '#73a84a', frutto: null, d: 500, h: 8 },
+  melo: { nome: 'Melo', base: '#4f9a33', scuro: '#3a7a26', chiaro: '#7cc152', frutto: '#e2412b', h: 4 },
+  pero: { nome: 'Pero', base: '#4a9535', scuro: '#356f27', chiaro: '#78bb55', frutto: '#d3d84a', h: 5 },
+  pesco: { nome: 'Pesco', base: '#58a23c', scuro: '#3f7d2b', chiaro: '#86c760', frutto: '#f59a5c', h: 3.5 },
+  albicocco: { nome: 'Albicocco', base: '#4f9a33', scuro: '#3a7a26', chiaro: '#80c158', frutto: '#f2a23a', h: 4 },
+  ciliegio: { nome: 'Ciliegio', base: '#4b9033', scuro: '#346a25', chiaro: '#74b452', frutto: '#a3141f', h: 6 },
+  susino: { nome: 'Susino', base: '#4c9234', scuro: '#366c26', chiaro: '#76b454', frutto: '#6b3a8e', h: 4 },
+  fico: { nome: 'Fico', base: '#3f8a2b', scuro: '#2c6620', chiaro: '#66aa48', frutto: '#7a3d6e', h: 4 },
+  cachi: { nome: 'Cachi', base: '#4c8b30', scuro: '#356524', chiaro: '#73ac4e', frutto: '#f07f1a', h: 6 },
+  noce: { nome: 'Noce', base: '#3e7f2c', scuro: '#2b5e20', chiaro: '#5f9e46', frutto: null, h: 12 },
+  olivo: { nome: 'Olivo', base: '#8aa676', scuro: '#667f57', chiaro: '#b2c79f', frutto: '#3b3b2e', h: 5 },
+  conifera: { nome: 'Conifera (pino, abete…)', aghi: true, h: 10 },
+  generico: { nome: 'Altro albero', base: '#47913a', scuro: '#316b28', chiaro: '#6fb055', frutto: null, h: 8 },
 };
 
-// Chioma vista dall'alto (viewBox -50..50): ciuffi tondi con un po' di luce e i frutti
+// Disegno (viewBox 104 × 116): la base del tronco è in (52, 104)
 function svgAlbero(tipo) {
   const t = TIPI_ALBERO[tipo] ?? TIPI_ALBERO.generico;
-  let corpo;
+  const ombra = '<ellipse cx="52" cy="106" rx="34" ry="7" fill="#1d3311" opacity=".35"/>';
   if (t.aghi) {
-    const punte = Array.from({ length: 24 }, (_, i) => {
-      const a = i * Math.PI / 12, r = i % 2 ? 34 : 47;
-      return `${(Math.sin(a) * r).toFixed(1)},${(-Math.cos(a) * r).toFixed(1)}`;
-    }).join(' ');
-    corpo = `<polygon points="${punte}" fill="${t.chioma}" stroke="#1d2e1a" stroke-width="2"/>
-      <circle r="24" fill="${t.chiaro}" stroke="#1d2e1a" stroke-width="1.5"/><circle r="9" fill="${t.chioma}"/>`;
-  } else {
-    const ciuffi = [[0, -30], [26, -15], [26, 15], [0, 30], [-26, 15], [-26, -15]]
-      .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="22"/>`).join('');
-    const frutti = t.frutto ? [[-14, -20], [16, -24], [24, 6], [6, 18], [-20, 12], [-4, -4], [30, -22], [-30, -4]]
-      .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.2" fill="${t.frutto}" stroke="#2a1e12" stroke-width="1.2"/>`).join('') : '';
-    corpo = `<g fill="${t.chioma}" stroke="#1d2e1a" stroke-width="2.4">${ciuffi}<circle r="30"/></g>
-      <g fill="${t.chioma}">${ciuffi}<circle r="30"/></g>
-      <g fill="${t.chiaro}" opacity=".9"><circle cx="-10" cy="-14" r="14"/><circle cx="14" cy="-8" r="10"/><circle cx="-18" cy="8" r="8"/></g>${frutti}`;
+    const strato = (y, w, h) => `<path d="M52 ${y} L${52 + w} ${y + h} C${52 + w / 2} ${y + h + 5} ${52 - w / 2} ${y + h + 5} ${52 - w} ${y + h} Z" fill="#2f6b4a" stroke="#14261a" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M52 ${y + 4} L${52 + w * .55} ${y + h * .8} C${52 + w * .2} ${y + h * .9} ${52 - w * .3} ${y + h * .85} ${52 - w * .6} ${y + h * .8} Z" fill="#47896a"/>`;
+    return `<svg viewBox="0 0 104 116" aria-hidden="true">${ombra}
+      <rect x="46" y="86" width="12" height="18" rx="2" fill="#8a5a32" stroke="#2a1e12" stroke-width="2.5"/>
+      ${strato(46, 38, 42)}${strato(26, 30, 36)}${strato(6, 22, 30)}</svg>`;
   }
-  return `<svg viewBox="-52 -52 104 104" aria-hidden="true">${corpo}</svg>`;
+  const frutti = t.frutto ? [[30, 34], [54, 26], [72, 38], [40, 54], [64, 56], [82, 52], [24, 50]]
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.3" fill="${t.frutto}" stroke="#1d2414" stroke-width="1.4"/><circle cx="${x - 1.3}" cy="${y - 1.4}" r="1.3" fill="#fff" opacity=".7"/>`).join('') : '';
+  return `<svg viewBox="0 0 104 116" aria-hidden="true">${ombra}
+    <path d="M44 104 C46 92 46 80 44 68 H60 C58 80 58 92 62 104 C56 107 50 107 44 104 Z" fill="#8a5a32" stroke="#2a1e12" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M50 70 V100" stroke="#6b4325" stroke-width="2.5"/><path d="M40 105 L46 100 M64 105 L58 100" stroke="#2a1e12" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M18 64 C4 62 2 44 14 38 C10 22 26 12 38 18 C44 4 66 4 70 20 C84 14 98 28 90 42 C102 50 96 68 80 66 C74 76 58 76 52 70 C42 78 24 76 18 64 Z" fill="${t.scuro}" stroke="#1d2414" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M14 38 C10 22 26 12 38 18 C44 4 66 4 70 20 C84 14 98 28 90 42 C82 50 70 46 64 52 C54 58 42 50 34 54 C22 56 12 50 14 38 Z" fill="${t.base}"/>
+    <path d="M22 30 C24 20 34 18 40 24 C46 12 60 12 64 22 C56 22 52 28 46 28 C38 32 30 26 22 30 Z" fill="${t.chiaro}"/>
+    <path d="M70 26 C78 24 86 30 84 38 C80 34 74 34 70 26 Z" fill="${t.chiaro}"/>
+    <path d="M24 60 C32 64 40 62 46 66" stroke="#1d2414" stroke-width="2" fill="none" stroke-linecap="round" opacity=".55"/>
+    ${frutti}</svg>`;
 }
 
-// Ombra di mezzogiorno (in primavera e autunno il sole a Bologna è alto circa 45°: l'ombra lunga quanto
-// l'altezza della chioma, qui un po' meno), verso Nord. Solo se l'esposizione è nota
+// Ombra di mezzogiorno (in primavera e autunno il sole a Bologna è alto circa 45°), verso Nord.
+// Solo se l'esposizione è nota
 function ombraAlbero(albero, t) {
-  if (!t.esposizione) return null;
+  if (t.esposizione == null) return null;
   const a = angoloDirezione(t.esposizione, 'N') * Math.PI / 180;
   const lunga = (albero.altezza ?? 4) * 100 * 0.6;
-  const cx = albero.x + Math.sin(a) * lunga, cy = albero.y - Math.cos(a) * lunga;
   const d = albero.diametro;
+  const cx = albero.x + Math.sin(a) * lunga, cy = albero.y - d * 0.45 - Math.cos(a) * lunga;
   const ombra = elemento('div', '', 'ombra-albero');
-  inPercentuale(ombra, { x: cx - d / 2, y: cy - d / 2, w: d, h: d }, t);
+  inPercentuale(ombra, { x: cx - d / 2, y: cy - d * 0.35, w: d, h: d * 0.7 }, t);
   return ombra;
 }
 
 function elementoAlbero(albero, t) {
   const el = elemento('div', '', 'albero');
-  inPercentuale(el, { x: albero.x - albero.diametro / 2, y: albero.y - albero.diametro / 2, w: albero.diametro, h: albero.diametro }, t);
+  const d = albero.diametro;
+  inPercentuale(el, { x: albero.x - d / 2, y: albero.y - d, w: d, h: d * 116 / 104 }, t);
   el.innerHTML = svgAlbero(albero.tipo);
   el.title = TIPI_ALBERO[albero.tipo]?.nome ?? 'Albero';
   return el;
@@ -4123,7 +4436,7 @@ function alberiSulTerreno(box, dati) {
     const ombra = ombraAlbero(al, t);
     if (ombra) box.append(ombra);
   }
-  for (const al of dati.alberi) box.append(elementoAlbero(al, t));
+  for (const al of [...dati.alberi].sort((p, q) => p.y - q.y)) box.append(elementoAlbero(al, t));
   if (dati.alberi.length === 0) return;
   // Premendo un'aiuola o un ortaggio gli alberi diventano trasparenti, per vedere tutta l'aiuola
   let timer = null;
