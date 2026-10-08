@@ -3,7 +3,8 @@ import { CATALOGO } from './catalogo.js';
 import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
-  listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto,
+  paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -14,6 +15,13 @@ function schermata() {
   // Impostazioni non legge i dati: così si può ripristinare un backup anche se sono danneggiati
   if (pagina === 'impostazioni') return impostazioni();
   // Il catalogo è conoscenza generale: non legge i dati dell'orto
+  if (pagina === 'impara') {
+    if (id === 'mese') return paginaMese(sotto);
+    if (id === 'guide') return paginaGuide();
+    if (id === 'guida') return paginaGuida(sotto);
+    if (id === 'glossario') return paginaGlossario();
+    return paginaImpara();
+  }
   if (pagina === 'catalogo') {
     const scheda = CATALOGO.find(c => c.id === id);
     return scheda ? schedaCatalogo(scheda) : paginaCatalogo();

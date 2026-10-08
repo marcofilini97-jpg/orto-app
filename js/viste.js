@@ -13,6 +13,7 @@ import {
   PROVE, TESSITURE, NOMI_PROPRIETA, suoloDi, suoloDiPartenza, testoValore, giudizioDrenaggio, classeDaPercentuali,
   spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
 } from './terreno.js';
+import { GUIDE, LAVORI } from './impara.js';
 import { pianoAutomatico, resaColtura, kgTra, inRaccolta, fineSovescio } from './arcade.js';
 
 const TIPI = {
@@ -2896,5 +2897,145 @@ export function paginaArcade(id) {
     });
     sezione.append(elimina);
   }
+  return sezione;
+}
+
+// ---- Impara: questo mese, guide brevi, catalogo e glossario (conoscenza generale, non legge i dati dell'orto) ----
+
+const ICONE_IMPARA = {
+  mese: '<rect x="6" y="9" width="36" height="33" rx="5" fill="#fff8e7" stroke="#2a1e12" stroke-width="2.4"/><rect x="6" y="9" width="36" height="9" rx="4" fill="#e9933a" stroke="#2a1e12" stroke-width="2.4"/><path d="M15 5v8M33 5v8" stroke="#2a1e12" stroke-width="3" stroke-linecap="round"/><path d="M16 34c0-6 4-9 8-9-1 5-4 8-8 9z" fill="#6aa83a" stroke="#2a1e12" stroke-width="1.8"/><path d="M24 25v12" stroke="#2a1e12" stroke-width="1.8"/>',
+  guide: '<path d="M10 40L34 12" stroke="#a87444" stroke-width="5" stroke-linecap="round"/><path d="M30 8l12 8-4 4-11-7z" fill="#9aa3a8" stroke="#2a1e12" stroke-width="2" stroke-linejoin="round"/>',
+  catalogo: '<path d="M4 12c6-3 13-3 20 2 7-5 14-5 20-2v26c-6-3-13-3-20 2-7-5-14-5-20-2z" fill="#fff8e7" stroke="#2a1e12" stroke-width="2.4" stroke-linejoin="round"/><path d="M24 14v26" stroke="#2a1e12" stroke-width="2.4"/><path d="M18 19c-5 0-8 3-8 8 5 0 8-3 8-8z" fill="#6aa83a" stroke="#2a1e12" stroke-width="1.8"/>',
+  glossario: '<path d="M6 10h36v22H22l-9 8v-8H6z" fill="#fff8e7" stroke="#2a1e12" stroke-width="2.4" stroke-linejoin="round"/><text x="24" y="27" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="600" font-size="14" fill="#3f6b2e">A–Z</text>',
+};
+
+function cartaImpara(href, icona, titolo, testo, classe = '') {
+  const carta = link('', href, `carta-impara ${classe}`.trim());
+  carta.innerHTML = `<svg viewBox="0 0 48 48" aria-hidden="true">${ICONE_IMPARA[icona]}</svg>`;
+  const t = elemento('span');
+  t.append(elemento('strong', titolo), elemento('small', testo));
+  carta.append(t);
+  return carta;
+}
+
+export function paginaImpara() {
+  const sezione = document.createElement('section');
+  const mese = oggiVero().slice(5, 7);
+  sezione.append(
+    link('← Mappa', '#/', 'indietro'),
+    elemento('h2', 'Impara'),
+    cartaImpara(`#/impara/mese/${mese}`, 'mese', `Questo mese: ${MESI_LUNGHI[Number(mese) - 1]}`, 'Cosa seminare, trapiantare e raccogliere a Bologna, e i lavori del mese', 'carta-mese'),
+    cartaImpara('#/impara/guide', 'guide', 'Guide brevi', `I lavori dell'orto spiegati in pochi passi, con un disegno (${GUIDE.length} guide)`),
+    cartaImpara('#/catalogo', 'catalogo', 'Catalogo delle colture', `${CATALOGO.length} schede: periodi, distanze, resa, consigli`),
+    cartaImpara('#/impara/glossario', 'glossario', 'Glossario', "Le parole dell'orto: rincalzare, sfemminellare, sovescio…"),
+  );
+  return sezione;
+}
+
+// Il periodo ['MM-GG', 'MM-GG'] tocca il mese mm? (anche a cavallo di capodanno)
+function periodoNelMese([dal, al], mm) {
+  const inizio = `${mm}-01`, fine = `${mm}-31`;
+  return dal <= al ? dal <= fine && al >= inizio : dal <= fine || al >= inizio;
+}
+
+function elencoMese(colture) {
+  const p = elemento('p', '', 'elenco-gruppo elenco-mese');
+  // Nomi fissi del catalogo, nessun testo dell'utente
+  p.innerHTML = colture.map(c => `<a href="#/catalogo/${c.id}">${iconaSvg(c.nome, 2)}${c.nome}</a>`).join('');
+  return p;
+}
+
+export function paginaMese(mm) {
+  const n = Number(mm);
+  if (!(n >= 1 && n <= 12)) return paginaImpara();
+  const due = x => String(x).padStart(2, '0');
+  const prima = due(n === 1 ? 12 : n - 1), dopo = due(n === 12 ? 1 : n + 1);
+  const sezione = document.createElement('section');
+  sezione.append(link('← Impara', '#/impara', 'indietro'), elemento('h2', `${MESI_LUNGHI[n - 1][0].toUpperCase()}${MESI_LUNGHI[n - 1].slice(1)} a Bologna`));
+  const gruppi = [
+    ['Si semina', CATALOGO.filter(c => c.s?.some(p => periodoNelMese(p, mm)))],
+    ['Si trapianta o si mette a dimora', CATALOGO.filter(c => c.t?.some(p => periodoNelMese(p, mm)))],
+    ['Si raccoglie', CATALOGO.filter(c => !['F', 'V'].includes(c.tappa) && c.r.some(p => periodoNelMese(p, mm)))],
+  ];
+  for (const [titolo, colture] of gruppi) {
+    sezione.append(elemento('h3', titolo), colture.length ? elencoMese(colture) : elemento('p', 'Niente in questo mese.', 'nota-terreno'));
+  }
+  sezione.append(elemento('h3', 'Lavori del mese'));
+  const lavori = elemento('ul', '', 'lavori-mese');
+  for (const [testo, guida] of LAVORI[mm]) {
+    const voce = elemento('li', testo);
+    if (guida) voce.append(' ', link(`→ ${GUIDE.find(g => g.id === guida).titolo}`, `#/impara/guida/${guida}`, 'link-guida'));
+    lavori.append(voce);
+  }
+  sezione.append(lavori, elemento('p', 'Periodi indicativi per la pianura bolognese: dipendono dall\'annata e dal meteo.', 'nota-terreno'));
+  const frecce = elemento('div', '', 'frecce-mese');
+  frecce.append(link(`◀ ${MESI_LUNGHI[Number(prima) - 1]}`, `#/impara/mese/${prima}`, 'pulsante secondario'),
+    link(`${MESI_LUNGHI[Number(dopo) - 1]} ▶`, `#/impara/mese/${dopo}`, 'pulsante secondario'));
+  sezione.append(frecce);
+  return sezione;
+}
+
+export function paginaGuide() {
+  const sezione = document.createElement('section');
+  sezione.append(link('← Impara', '#/impara', 'indietro'), elemento('h2', 'Guide brevi'));
+  const elenco = elemento('div', '', 'elenco-guide');
+  for (const g of GUIDE) {
+    const voce = link('', `#/impara/guida/${g.id}`, 'voce-guida');
+    const testo = elemento('span');
+    testo.append(elemento('strong', g.titolo), elemento('small', g.sottotitolo));
+    voce.append(testo, elemento('span', '›', 'freccia-salvata'));
+    elenco.append(voce);
+  }
+  sezione.append(elenco);
+  return sezione;
+}
+
+export function paginaGuida(id) {
+  const g = GUIDE.find(x => x.id === id);
+  if (!g) return paginaGuide();
+  const sezione = document.createElement('section');
+  sezione.className = 'guida evidenzia';
+  const colture = g.colture.map(c => CATALOGO.find(s => s.id === c)).filter(Boolean);
+  // Testi fissi delle guide, nessun testo dell'utente
+  sezione.innerHTML = `
+    <a href="#/impara/guide" class="indietro">← Guide</a>
+    <h2>${g.titolo}</h2>
+    <p class="sottotitolo-guida">${g.sottotitolo}</p>
+    <div class="disegno-guida">${g.disegno}</div>
+    <p>${conTermini(g.intro)}</p>
+    <h3>Come si fa</h3>
+    <ol class="passi">${g.passi.map(x => `<li>${conTermini(x)}</li>`).join('')}</ol>
+    <p class="quando-guida"><b>Quando:</b> ${conTermini(g.quando)}</p>
+    ${g.attenzione?.length ? `<h3>Attenzione a</h3><ul class="attenzione">${g.attenzione.map(x => `<li>${conTermini(x)}</li>`).join('')}</ul>` : ''}
+    ${colture.length ? `<h3>Colture</h3><p class="elenco-gruppo">${colture.map(c => `<a href="#/catalogo/${c.id}">${iconaSvg(c.nome, 2)}${c.nome}</a>`).join('')}</p>` : ''}
+    <p class="nota-terreno">Le parole evidenziate hanno una spiegazione: toccale.</p>`;
+  attivaParole(sezione);
+  return sezione;
+}
+
+export function paginaGlossario() {
+  const sezione = document.createElement('section');
+  sezione.append(link('← Impara', '#/impara', 'indietro'), elemento('h2', 'Glossario'));
+  const cerca = elemento('input', '', 'cerca-catalogo');
+  cerca.type = 'search';
+  cerca.placeholder = 'Cerca una parola';
+  cerca.setAttribute('aria-label', 'Cerca una parola');
+  cerca.autocomplete = 'off';
+  const elenco = elemento('div', '', 'elenco-glossario');
+  const voci = Object.entries(GLOSSARIO).sort(([, a], [, b]) => a.titolo.localeCompare(b.titolo, 'it'));
+  for (const [id, g] of voci) {
+    const b = elemento('button', '', 'voce-glossario');
+    b.type = 'button';
+    b.dataset.termine = id;
+    b.append(elemento('strong', g.titolo), elemento('small', g.tipo));
+    elenco.append(b);
+  }
+  const senza = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  cerca.addEventListener('input', () => {
+    const q = senza(cerca.value.trim());
+    for (const b of elenco.children) b.hidden = q !== '' && !senza(b.textContent).includes(q);
+  });
+  sezione.append(cerca, elenco);
+  attivaParole(sezione);
   return sezione;
 }

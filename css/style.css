@@ -750,3 +750,27 @@ body[data-stagione="inverno"] { background-image: radial-gradient(#ffffff 1.8px,
 /* Arcade: famiglie da controllare nella rotazione personalizzata */
 .scelte-famiglie { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 .scelte-famiglie small { display: block; font-size: .75rem; font-weight: 500; line-height: 1.2; }
+
+/* Impara */
+.carta-impara { display: flex; align-items: center; gap: 12px; margin: 8px 0; padding: 10px 12px; color: var(--testo); text-decoration: none; background: #fff; border: 2px solid #e5d3b0; border-radius: 12px; }
+.carta-impara svg { flex: none; width: 46px; height: 46px; }
+.carta-impara strong { display: block; font-size: 1.08rem; }
+.carta-impara small { display: block; font-size: .85rem; line-height: 1.25; color: var(--marrone-scuro); }
+.carta-mese { background: #fdf0d8; border-color: #e9933a; }
+.elenco-mese { gap: 6px; }
+.elenco-mese a { padding: 1px 10px 1px 4px; font-weight: 700; text-decoration: none; background: #fff; border: 2px solid #e5d3b0; border-radius: 999px; }
+.lavori-mese { margin: 4px 0 0; padding-left: 22px; }
+.lavori-mese li { margin-bottom: 6px; }
+.link-guida { font-weight: 700; color: var(--verde); white-space: nowrap; }
+.frecce-mese { display: flex; gap: 8px; margin-top: 12px; }
+.frecce-mese .pulsante { flex: 1; text-align: center; }
+.elenco-guide { display: grid; gap: 6px; }
+.voce-guida { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; color: var(--testo); text-decoration: none; background: #fff; border: 2px solid #e5d3b0; border-radius: 10px; }
+.voce-guida small { display: block; font-size: .85rem; color: var(--marrone-scuro); }
+.sottotitolo-guida { margin: -4px 0 8px; font-weight: 700; color: var(--marrone-scuro); }
+.disegno-guida svg { display: block; width: 100%; height: auto; margin-bottom: 8px; background: #fff; border: 2px solid #e5d3b0; border-radius: 10px; }
+.quando-guida { margin: 10px 0 0; padding: 8px 10px; background: #eef5e6; border-left: 4px solid #3f8a2e; border-radius: 6px; }
+.elenco-glossario { display: grid; gap: 6px; margin-top: 10px; }
+.voce-glossario { display: block; width: 100%; padding: 7px 12px; font: inherit; color: var(--testo); text-align: left; background: #fff; border: 2px solid #e5d3b0; border-radius: 10px; cursor: pointer; }
+.voce-glossario[hidden] { display: none; }
+.voce-glossario small { display: block; font-size: .8rem; color: var(--marrone-scuro); }

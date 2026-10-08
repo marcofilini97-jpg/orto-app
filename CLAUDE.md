@@ -40,6 +40,7 @@ orto-app/
 │   ├── catalogo.js       ← catalogo delle colture (conoscenza generale), calcolo di piante e resa
 │   ├── terreno.js        ← terreno delle aiuole: prove guidate, stime, avvisi
 │   ├── arcade.js         ← Arcade: riempimento automatico secondo rotazione e preferenze, calcolo del raccolto
+│   ├── impara.js         ← Impara: guide brevi (testi e disegni) e lavori di ogni mese
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
 ```
@@ -179,6 +180,13 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Le colture `stato: "pianificata"` di una versione di prova vengono convertite all'avvio (app.js) in attive con inizio futuro
 - Sulla mappa, le aiuole con una coltura in programma nei prossimi 30 giorni hanno in basso a sinistra un paletto di legno con il disegnino della coltura e i giorni che mancano ("12 g"); se sono più d'una, la prima che inizia
 - Da fare: scelta della regola di rotazione nelle Impostazioni (base, personalizzata con anni da 2 a 5 e famiglie, nessuna); il tasto per accelerare il tempo (Arcade)
+
+## Impara
+- Icona nella barra verde (cappello da studente), tra il libro del catalogo e l'ingranaggio → `#/impara`: quattro riquadri: "Questo mese" (in evidenza), "Guide brevi", "Catalogo delle colture" (`#/catalogo`), "Glossario"
+- `#/impara/mese/<MM>`: "<Mese> a Bologna", con le colture del catalogo che in quel mese si seminano, si trapiantano (o si mettono a dimora) e si raccolgono (fiori e sovesci esclusi dalla raccolta), come pastiglie che aprono la scheda; poi i "Lavori del mese" (`LAVORI` in impara.js, 4 per mese, con il collegamento alla guida) e le frecce mese prima/dopo. Il riquadro della pagina principale apre il mese di oggi (data vera)
+- `#/impara/guide` e `#/impara/guida/<id>`: 12 guide (`GUIDE` in impara.js: seminare, trapiantare, annaffiare, pacciamare, compost, concimare, rotazione, consociazioni, sovescio, difesa senza veleni, pomodori, inverno), ognuna con disegno SVG, introduzione, "Come si fa" (passi), "Quando", "Attenzione a" e colture collegate al catalogo. Nei testi `{id:testo}` = parola del `GLOSSARIO`, sempre evidenziata (tocco = pop-up)
+- `#/impara/glossario`: tutte le parole del `GLOSSARIO` in ordine alfabetico, con ricerca; tocco = pop-up
+- Numeri delle guide controllati con una ricerca sul web (ottobre 2026): acqua d'estate 20–35 l/m² a settimana, compost 2–4 kg/m², letame maturo 3–4 kg/m², pacciamatura 5–10 cm, cimatura dei pomodori fine luglio–inizio agosto, fosfato ferrico ammesso nel biologico. Le consociazioni sono presentate come consigli della tradizione (le fonti non concordano)
 
 ## Arcade (simulatore)
 - Fatto: pagina Simulazioni (`#/test`) con "Arcade", le simulazioni salvate e "+ Nuova simulazione Arcade". Parametri (`#/test/arcade/nuova` o `#/test/arcade/<id>`): nome (predefinito "Simulazione del gg/mm/aaaa"), mese e anno di partenza, rotazione (base, personalizzata con 2–5 anni, nessuna), partenza (orto vuoto o dall'orto reale a una data: errore se prima della prima coltura/voce dell'orto reale o nel futuro), terreno (quello reale delle aiuole o la stima). Cambiando partenza, data o terreno di una simulazione salvata, ricomincia da capo (con conferma)
