@@ -15,7 +15,7 @@ App per gestire un orto comunale, che curo insieme a mio padre.
 - Funziona offline (PWA)
 - Dati salvati nel browser, con esporta/importa JSON per il backup
 - Sincronizzazione e backup automatico su Supabase (piano gratuito, regione Francoforte), due account (io e mio padre). Esporta/importa JSON resta come riserva
-- Modalità prova (per me): copia separata dei dati, mai sincronizzata, scritta "PROVA" nella barra
+- Modalità prova (solo per me che sviluppo): copia separata dei dati, mai sincronizzata, scritta "PROVA" nella barra. Nelle Impostazioni compare solo se su quel telefono si è aperto una volta `#/sviluppatore` (accende/spegne, `orto-sviluppatore` in localStorage) o se è già attiva. Gli altri usano Test (orto nel tempo) e Arcade
 
 ## Stack
 - HTML + CSS + JavaScript puro (moduli ES), senza framework, senza npm, senza build
@@ -183,7 +183,7 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Avvisi del terreno per le colture (modulo coltura, sempre, e scheda coltura): carote in terreno argilloso o limoso-argilloso; drenaggio lento (< 2,5 cm/ora) per le colture che soffrono i ristagni; terreno sabbioso per le colture esigenti. Consigli generali (terreno pesante, calcareo, drenaggio lento, pochi lombrichi) nella pagina del terreno
 
 ## Catalogo nell'app
-- Pulsante nella barra verde, a sinistra dell'ingranaggio (icona: libro aperto con una foglia e la lente) → `#/catalogo`: casella "Cerca", colture raggruppate per gruppo della rotazione con la barra dei 12 mesi (semina marrone, trapianto verde, raccolta arancio) e la lente di ogni gruppo (pop-up "cos'hanno in comune")
+- Si apre da Impara (riquadro "Catalogo delle colture") → `#/catalogo`: casella "Cerca", colture raggruppate per gruppo della rotazione con la barra dei 12 mesi (semina marrone, trapianto verde, raccolta arancio) e la lente di ogni gruppo (pop-up "cos'hanno in comune")
 - `#/catalogo/<id>`: scheda della coltura come nell'anteprima approvata: lente in alto a destra (spenta = lente di legno; accesa = germoglio nel vetro con i raggi, fumetto di spiegazione) che evidenzia le parole del `GLOSSARIO` (tocco = pop-up), avviso, calendario, distanze, "Quanto spazio usi?" (aiuola intera, metà, misure a mano; lo spazio resta cambiando coltura) con disegno e resa, consigli, "Da tenere d'occhio"
 - Dalla scheda di una coltura dell'orto, se il nome è riconosciuto: pulsante "Scheda … nel catalogo"
 - Le pagine del catalogo non leggono i dati dell'orto (conoscenza generale)
@@ -202,6 +202,10 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Le colture `stato: "pianificata"` di una versione di prova vengono convertite all'avvio (app.js) in attive con inizio futuro
 - Sulla mappa, le aiuole con una coltura in programma nei prossimi 30 giorni hanno in basso a sinistra un paletto di legno con il disegnino della coltura e i giorni che mancano ("12 g"); se sono più d'una, la prima che inizia
 - Da fare: scelta della regola di rotazione nelle Impostazioni (base, personalizzata con anni da 2 a 5 e famiglie, nessuna); il tasto per accelerare il tempo (Arcade)
+
+## Barra verde e Impostazioni
+- Icone a destra nella barra verde: cappello da studente (Impara), aiuola con la lente (`#/orto` "L'orto": "Disegna l'orto" e "Il terreno dell'orto"; nascosta in Arcade), ingranaggio (Impostazioni). Il catalogo non è più nella barra: sta dentro Impara
+- Impostazioni, in ordine: Sincronizzazione (accesso, stato, "Sincronizza ora", "Scollega questo telefono", "I miei orti"), "Backup manuale" (→ `#/impostazioni/backup` con Esporta e Importa), modalità prova (solo sviluppo), Cancella dati
 
 ## Impara
 - Icona nella barra verde (cappello da studente), tra il libro del catalogo e l'ingranaggio → `#/impara`: quattro riquadri: "Questo mese" (in evidenza), "Guide brevi", "Catalogo delle colture" (`#/catalogo`), "Glossario"

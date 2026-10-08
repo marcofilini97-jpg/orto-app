@@ -11,6 +11,7 @@ const CHIAVE_MODO = 'orto-modo-prova';       // '1' se la modalità prova è att
 const CHIAVE_SYNC = 'orto-sync';             // stato della sincronizzazione
 const CHIAVE_ARCADE = 'orto-arcade';         // simulazioni Arcade (solo su questo telefono)
 const CHIAVE_ARCADE_ATTIVA = 'orto-arcade-attiva';   // id della simulazione in cui si sta giocando
+const CHIAVE_SVILUPPATORE = 'orto-sviluppatore';   // '1' su questo telefono chi sviluppa l'app vede la modalità prova
 const CHIAVE_ELENCO_ORTI = 'orto-elenco-orti';  // ultimo elenco degli orti dell'account (per vederlo anche offline)
 // Gli altri orti dell'account restano da parte sul telefono: 'orto-dati:<id>' e 'orto-sync:<id>'
 const DA_PARTE_DATI = 'orto-dati:';
@@ -151,6 +152,17 @@ export function nuovoId(prefisso) {
 }
 
 // ---- Modalità prova: una copia separata dei dati, che non si sincronizza ----
+
+export function sviluppatore() {
+  return localStorage.getItem(CHIAVE_SVILUPPATORE) === '1';
+}
+
+// Accende o spegne gli strumenti per chi sviluppa (modalità prova) su questo telefono
+export function cambiaSviluppatore() {
+  if (sviluppatore()) localStorage.removeItem(CHIAVE_SVILUPPATORE);
+  else localStorage.setItem(CHIAVE_SVILUPPATORE, '1');
+  return sviluppatore();
+}
 
 export function inProva() {
   return localStorage.getItem(CHIAVE_MODO) === '1';

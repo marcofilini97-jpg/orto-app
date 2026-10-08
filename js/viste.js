@@ -4,7 +4,7 @@ import {
   carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio, orarioPerUtente,
   inProva, attivaProva, disattivaProva, ricominciaProva,
   sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione, cancellaDatiTelefono,
-  iscriviti, recuperaPassword, cambiaPassword, ortoAttuale, elencoOrti, cambiaOrto, nuovoOrto, rinominaOrto,
+  iscriviti, recuperaPassword, cambiaPassword, sviluppatore, ortoAttuale, elencoOrti, cambiaOrto, nuovoOrto, rinominaOrto,
   personeOrto, aggiungiPersona, cambiaRuolo, togliPersona, eliminaOrto, esciDallOrto, soloLettura,
   elencoSimulazioni, leggiSimulazione, salvaSimulazione, eliminaSimulazione, entraArcade, inArcade,
   simulazioneAttiva, impostaGiornoArcade, datiPerSimulazione, inizioOrtoReale, oggiVero,
@@ -618,7 +618,23 @@ function link(testo, href, classe) {
   return a;
 }
 
-export function impostazioni() {
+// L'orto: forma (Disegna l'orto) e terreno delle aiuole, dall'icona dell'aiuola con la lente
+export function paginaOrto() {
+  const sezione = document.createElement('section');
+  sezione.append(
+    link('← Mappa', '#/', 'indietro'),
+    elemento('h2', 'L\'orto'),
+    elemento('h3', 'Forma dell\'orto'),
+    puoDisegnare()
+      ? link('Disegna l\'orto', '#/disegna', 'pulsante')
+      : elemento('p', 'Solo chi gestisce l\'orto può cambiarne la forma.', 'nota-terreno'),
+    elemento('h3', 'Il terreno dell\'orto'),
+    riepilogoTerreno(),
+  );
+  return sezione;
+}
+
+export function impostazioni(paginaBackup = false) {
   const esportaBtn = elemento('button', 'Esporta backup', 'pulsante');
   esportaBtn.type = 'button';
   esportaBtn.addEventListener('click', scaricaBackup);
@@ -634,23 +650,29 @@ export function impostazioni() {
   importaBtn.addEventListener('click', () => sceltaFile.click());
 
   const sezione = document.createElement('section');
+  sezione.append(link('← Mappa', '#/', 'indietro'), elemento('h2', 'Impostazioni'));
+  // Backup manuale: in una pagina a parte (#/impostazioni/backup)
+  if (paginaBackup) {
+    sezione.replaceChildren(
+      link('← Impostazioni', '#/impostazioni', 'indietro'),
+      elemento('h2', 'Backup manuale'),
+      elemento('p', 'Quando il telefono è collegato con un account, i dati dell\'orto si salvano da soli anche online. Il backup manuale è una copia di riserva in un file: serve se usi l\'app senza account, per sicurezza o per spostare i dati a mano su un altro telefono.'),
+      esportaBtn,
+      elemento('p', 'Importare un backup sostituisce tutti i dati attuali di questo telefono.'),
+      importaBtn,
+      sceltaFile,
+    );
+    return sezione;
+  }
   sezione.append(
-    link('← Mappa', '#/', 'indietro'),
-    elemento('h2', 'Impostazioni'),
-    elemento('h3', 'Backup'),
-    elemento('p', 'I dati sono salvati solo in questo browser. Esporta spesso un backup e conservalo in un posto sicuro: serve anche a passare i dati a un altro telefono.'),
-    esportaBtn,
-    elemento('p', 'Importare un backup sostituisce tutti i dati attuali.'),
-    importaBtn,
-    sceltaFile,
-    elemento('h3', "Forma dell'orto"),
-    puoDisegnare() ? link("Disegna l'orto", '#/disegna', 'pulsante secondario') : elemento('p', "Solo chi gestisce l'orto può cambiarne la forma.", 'nota-terreno'),
-    elemento('h3', "Il terreno dell'orto"),
-    riepilogoTerreno(),
     elemento('h3', 'Sincronizzazione'),
     sezioneSincronizzazione(),
-    elemento('h3', 'Modalità prova'),
-    sezioneProva(),
+    elemento('h3', 'Backup'),
+    link('Backup manuale', '#/impostazioni/backup', 'pulsante secondario'),
+  );
+  // La modalità prova serve solo a chi sviluppa l'app (si attiva aprendo #/sviluppatore)
+  if (sviluppatore() || inProva()) sezione.append(elemento('h3', 'Modalità prova'), sezioneProva());
+  sezione.append(
     elemento('h3', 'Cancella dati'),
     elemento('p', 'Cancella tutti i dati dell\'orto da questo telefono e lo scollega dal server. I dati sul server non vengono toccati: ricollegandoti li riscarichi.'),
     pulsanteCancellaTutto(),

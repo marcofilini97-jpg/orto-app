@@ -882,3 +882,4 @@ main { overflow-x: clip; }
 .tela-disegno .tronco { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; pointer-events: auto; cursor: grab; background: #7a4f2a; border: 3px solid #2a1e12; border-radius: 50%; box-shadow: 0 0 0 3px rgb(255 248 231 / .8); }
 header { position: relative; z-index: 30; }
 .tela-disegno { overflow: clip; overflow-clip-margin: 18px; }
+.arcade .orto-icona { display: none; }

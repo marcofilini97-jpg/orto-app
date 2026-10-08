@@ -1,12 +1,12 @@
 import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva, accessoDaLink, completaCollegamento, ortoAttuale,
-  soloLettura, MESSAGGIO_SOLA_LETTURA, aggiornaDatiSalvati } from './dati.js';
+  soloLettura, MESSAGGIO_SOLA_LETTURA, aggiornaDatiSalvati, cambiaSviluppatore } from './dati.js';
 import { CATALOGO } from './catalogo.js';
 import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto,
   paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaOrti, paginaPersone, paginaSolaLettura,
-  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaOrto, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -15,7 +15,13 @@ const contenuto = document.getElementById('contenuto');
 function schermata() {
   const [, pagina, id, sotto, altro] = location.hash.split('/');
   // Impostazioni non legge i dati: così si può ripristinare un backup anche se sono danneggiati
-  if (pagina === 'impostazioni') return impostazioni();
+  if (pagina === 'impostazioni') return impostazioni(id === 'backup');
+  if (pagina === 'sviluppatore') {
+    alert(cambiaSviluppatore() ? 'Strumenti per lo sviluppo accesi su questo telefono: la modalità prova è nelle Impostazioni.' : 'Strumenti per lo sviluppo spenti.');
+    location.replace('#/impostazioni');
+    return document.createElement('section');
+  }
+  if (pagina === 'orto') return paginaOrto();
   if (pagina === 'nuova-password') return paginaNuovaPassword();
   if (pagina === 'orti') return id === 'persone' ? paginaPersone() : paginaOrti();
   // Il catalogo è conoscenza generale: non legge i dati dell'orto
