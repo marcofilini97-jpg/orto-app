@@ -989,3 +989,12 @@ header { position: relative; z-index: 30; }
 .meteo-giorno .pioggia { font-size: .85rem; color: #3d6fa8; text-align: right; }
 .fonte-meteo { margin-top: 14px; font-size: .8rem; color: var(--marrone-scuro); }
 .raccolta-prevista { margin: 6px 0; padding: 6px 10px; font-weight: 700; color: #6b3a10; background: #fdf0d8; border-left: 4px solid #e9933a; border-radius: 6px; }
+
+/* Avvisi meteo */
+.avviso-meteo { display: block; max-width: 600px; margin: 0 auto 8px; padding: 6px 12px; font-size: .92rem; color: var(--testo); text-decoration: none; background: var(--crema); border-left: 6px solid #e9933a; border-radius: 10px; box-shadow: 0 2px 0 rgb(0 0 0 / .2); }
+.mappa .avviso-meteo { width: 100%; }
+.avviso-gelo { border-left-color: #4a90c2; background: #eef6fc; }
+.avviso-caldo { border-left-color: #c0392b; background: #fdeeea; }
+.avviso-pioggia { border-left-color: #3d6fa8; }
+.avviso-secco { border-left-color: #c49a3a; }
+.icona-avviso { margin-right: 6px; }

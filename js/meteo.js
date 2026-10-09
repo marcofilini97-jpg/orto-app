@@ -194,3 +194,56 @@ export function spostaFine(fineCalendario, previsione) {
 export function giorniMeteo() {
   return meteo()?.giorni ?? {};
 }
+
+// ---- Avvisi meteo per l'orto (le stesse regole sono nella funzione del server supabase/functions/avvisi-meteo) ----
+
+const NOMI_GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+function quando(iso, oggi) {
+  const n = giorniTra(oggi, iso);
+  if (n === 0) return 'oggi';
+  if (n === 1) return 'domani';
+  return NOMI_GIORNI[new Date(`${iso}T12:00:00Z`).getUTCDay()];
+}
+
+// Avvisi dei prossimi giorni: [{ chiave, tipo, titolo, testo }]. colture = nomi delle colture attive nell'orto,
+// delicate = nomi di quelle che temono il gelo (da caldo o appena trapiantate)
+export function avvisiMeteo({ colture, delicate }) {
+  if (!meteoPronto() || colture.length === 0) return [];
+  const oggi = oggiVero();
+  const avvisi = [];
+  const prossimi = [0, 1, 2, 3].map(i => piu(oggi, i)).map(d => ({ d, t: tempoDel(d) })).filter(x => x.t && !x.t.media);
+  const gelo = prossimi.find(x => x.t.minima <= 1);
+  if (gelo && delicate.length) {
+    avvisi.push({ chiave: `gelo-${gelo.d}`, tipo: 'gelo', titolo: `Gelata ${quando(gelo.d, oggi)}`,
+      testo: `Minima prevista ${Math.round(gelo.t.minima)} °C: copri con il tessuto non tessuto ${delicate.slice(0, 4).join(', ')}${delicate.length > 4 ? '…' : ''}.` });
+  }
+  const caldo = prossimi.find(x => x.t.massima >= 33);
+  if (caldo) {
+    avvisi.push({ chiave: `caldo-${caldo.d}`, tipo: 'caldo', titolo: `Caldo forte ${quando(caldo.d, oggi)}`,
+      testo: `Massima prevista ${Math.round(caldo.t.massima)} °C: annaffia la sera o al mattino presto e pacciama.` });
+  }
+  const pioggia = prossimi.slice(0, 2).find(x => x.t.pioggia >= 10);
+  if (pioggia) {
+    avvisi.push({ chiave: `pioggia-${pioggia.d}`, tipo: 'pioggia', titolo: `Pioggia ${quando(pioggia.d, oggi)}`,
+      testo: `Previsti circa ${Math.round(pioggia.t.pioggia)} mm: puoi saltare l'annaffiatura.` });
+  }
+  const mese = Number(oggi.slice(5, 7));
+  if (mese >= 4 && mese <= 9) {
+    const ultimi = [1, 2, 3, 4, 5, 6, 7].map(i => tempoDel(piu(oggi, -i)));
+    const asciutti = ultimi.every(t => t && !t.media) && ultimi.reduce((s, t) => s + t.pioggia, 0) < 2
+      && prossimi.reduce((s, x) => s + x.t.pioggia, 0) < 2;
+    if (asciutti) {
+      avvisi.push({ chiave: `secco-${oggi.slice(0, 8)}${Number(oggi.slice(8)) < 15 ? 'a' : 'b'}`, tipo: 'secco', titolo: 'Niente pioggia da una settimana',
+        testo: 'E non ne è prevista: controlla la terra con un dito e annaffia a fondo dove è asciutta.' });
+    }
+  }
+  return avvisi;
+}
+
+// Colture attive dell'orto e quelle delicate (temono il gelo): da caldo, oppure iniziate da meno di 3 settimane
+export function coltureAttive(dati, colturaDaNome) {
+  const oggi = oggiVero();
+  const attive = dati.colture.filter(c => c.stato === 'attiva' && c.dataInizio <= oggi && !c.dataFine);
+  const delicate = attive.filter(c => CALDE.has(colturaDaNome(c.nome)?.id) || giorniTra(c.dataInizio, oggi) <= 21);
+  return { colture: [...new Set(attive.map(c => c.nome))], delicate: [...new Set(delicate.map(c => c.nome.toLowerCase()))] };
+}

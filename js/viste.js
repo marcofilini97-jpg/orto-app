@@ -4,7 +4,7 @@ import {
   carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio, orarioPerUtente,
   inProva, attivaProva, disattivaProva, ricominciaProva,
   sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione, cancellaDatiTelefono,
-  iscriviti, recuperaPassword, cambiaPassword, sviluppatore, ortoAttuale, elencoOrti, cambiaOrto, nuovoOrto, rinominaOrto,
+  iscriviti, recuperaPassword, cambiaPassword, sviluppatore, ortoAttuale, CHIAVE_NOTIFICHE, salvaIscrizioneNotifiche, togliIscrizioneNotifiche, elencoOrti, cambiaOrto, nuovoOrto, rinominaOrto,
   personeOrto, aggiungiPersona, cambiaRuolo, togliPersona, eliminaOrto, esciDallOrto, soloLettura,
   elencoSimulazioni, leggiSimulazione, salvaSimulazione, eliminaSimulazione, entraArcade, inArcade,
   simulazioneAttiva, impostaGiornoArcade, datiPerSimulazione, inizioOrtoReale, oggiVero,
@@ -16,7 +16,7 @@ import {
   spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
 } from './terreno.js';
 import { GUIDE, LAVORI } from './impara.js';
-import { aggiornaMeteo, meteoPronto, tempoDel, mediaDel, raccoltaPrevista, spostaFine } from './meteo.js';
+import { aggiornaMeteo, meteoPronto, tempoDel, mediaDel, raccoltaPrevista, spostaFine, avvisiMeteo, coltureAttive } from './meteo.js';
 import { posizioneSole, ombraAlberoAlSole, oreDiSole, oreMedie, mesiTra, fattoreSoleAiuola, soleNoto } from './sole.js';
 import { area, misureLibere, RAGGIO_TRONCO, dentro as dentroForma, quadratoDentro, toccaRettangoli, ingombro, ingombroZona, posti, puntoEtichetta, tracciato, misure } from './geometria.js';
 import { pianoAutomatico, resaColtura, kgTra, inRaccolta, fineSovescio } from './arcade.js';
@@ -95,6 +95,12 @@ export function mappa(dati) {
   if (inArcade()) return mappaArcade(dati);
   const mappa = document.createElement('section');
   mappa.className = 'mappa';
+  // Avvisi meteo dei prossimi giorni (gelo, caldo, pioggia, secco): tocco = pagina del meteo
+  for (const a of avvisiMeteo(coltureAttive(dati, colturaDaNome))) {
+    const striscia = link('', '#/orto/meteo', `avviso-meteo avviso-${a.tipo}`);
+    striscia.append(elemento('span', ICONE_AVVISO[a.tipo], 'icona-avviso'), elemento('strong', `${a.titolo}: `), a.testo);
+    mappa.append(striscia);
+  }
   mappa.append(etichetta(estremo(dati, 'Fondo')), terrenoMappa(dati), staccionata(dati), etichetta(estremo(dati, 'Davanti')));
   const scorciatoie = elemento('div', '', 'scorciatoie');
   const daFare = scorciatoia('Da fare', '#/task', 'task');
@@ -741,6 +747,8 @@ export function impostazioni(paginaBackup = false) {
   sezione.append(
     elemento('h3', 'Sincronizzazione'),
     sezioneSincronizzazione(),
+    elemento('h3', 'Notifiche'),
+    sezioneNotifiche(),
     elemento('h3', 'Backup'),
     link('Backup manuale', '#/impostazioni/backup', 'pulsante secondario'),
   );
@@ -4806,6 +4814,8 @@ function iconaTempo(codice, pioggia) {
 const gradiTesto = n => `${String(Math.round(n * 10) / 10).replace('.', ',')}°`;
 const NOMI_GIORNO = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
 
+const ICONE_AVVISO = { gelo: '🥶', caldo: '🥵', pioggia: '🌧️', secco: '💧' };
+
 export function paginaMeteo() {
   const sezione = document.createElement('section');
   sezione.append(link('← L\'orto', '#/orto', 'indietro'), elemento('h2', 'Il meteo di Bologna'));
@@ -4861,6 +4871,15 @@ export function paginaMeteo() {
     riga('Da gennaio', `pioggia ${Math.round(anno.pioggia)} mm (di solito ${Math.round(anno.pioggiaMedia)})`),
   );
 
+  const avvisi = avvisiMeteo(coltureAttive(carica(), colturaDaNome));
+  if (avvisi.length) {
+    sezione.append(elemento('h3', 'Avvisi per l\'orto'));
+    for (const a of avvisi) {
+      const p = elemento('p', '', `avviso-meteo avviso-${a.tipo}`);
+      p.append(elemento('span', ICONE_AVVISO[a.tipo], 'icona-avviso'), elemento('strong', `${a.titolo}: `), a.testo);
+      sezione.append(p);
+    }
+  }
   sezione.append(oggiBox, elemento('h3', 'Prossimi giorni'), prossimi, elemento('h3', 'Quest\'anno rispetto alla media'), righe,
     elemento('p', 'Con il caldo vero di quest\'anno, le previsioni e le medie degli ultimi 30 anni l\'app stima quando le colture saranno pronte da raccogliere (gradi giorno): la vedi nelle schede delle colture.', 'nota-terreno'));
   const fonte = elemento('p', '', 'fonte-meteo');
@@ -4877,4 +4896,63 @@ function testoRaccoltaPrevista(scheda, inizio, metodo) {
     : p.scarto < 0 ? `${-p.scarto} ${p.scarto === -1 ? 'giorno' : 'giorni'} prima del calendario, per il caldo`
     : `${p.scarto} ${p.scarto === 1 ? 'giorno' : 'giorni'} dopo il calendario, per il fresco`;
   return `Raccolta prevista: da circa il ${dataPerUtente(p.data)} (${quando})`;
+}
+
+// ---- Notifiche sul telefono: avvisi meteo anche ad app chiusa (le manda ogni sera una funzione di Supabase) ----
+
+const chiaveInByte = b64 => {
+  const s = atob((b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(s, c => c.charCodeAt(0));
+};
+
+function sezioneNotifiche() {
+  const box = elemento('div');
+  const orto = ortoAttuale();
+  const supportate = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  if (!orto) {
+    box.append(elemento('p', 'Entra con un account per ricevere sul telefono gli avvisi del meteo (gelate, caldo forte, pioggia, giorni senza pioggia).', 'nota-terreno'));
+    return box;
+  }
+  if (!supportate) {
+    box.append(elemento('p', 'Questo browser non riceve notifiche. Su iPhone funzionano solo se l\'app è installata sulla schermata Home (Condividi → Aggiungi alla schermata Home) e aperta da lì.', 'nota-terreno'));
+    return box;
+  }
+  const stato = elemento('p', 'Controllo…', 'nota-terreno');
+  const pulsante = elemento('button', '', 'pulsante');
+  pulsante.type = 'button';
+  pulsante.hidden = true;
+  const avviso = elemento('p', '', 'errore');
+  avviso.hidden = true;
+  box.append(elemento('p', 'Ogni sera, se per l\'orto ci sono gelate, caldo forte, tanta pioggia o una settimana senza pioggia in arrivo, ti arriva una notifica anche ad app chiusa.', 'nota-terreno'), stato, pulsante, avviso);
+
+  const mostra = async () => {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    stato.textContent = Notification.permission === 'denied'
+      ? 'Le notifiche sono bloccate nelle impostazioni del browser per questa app: sbloccale da lì.'
+      : sub ? `Attive su questo telefono, per l'orto "${orto.nome}".` : 'Spente su questo telefono.';
+    pulsante.textContent = sub ? 'Spegni le notifiche' : 'Attiva le notifiche';
+    pulsante.hidden = Notification.permission === 'denied';
+    pulsante.onclick = async () => {
+      pulsante.disabled = true;
+      avviso.hidden = true;
+      try {
+        if (sub) {
+          await togliIscrizioneNotifiche(sub.endpoint).catch(() => {});
+          await sub.unsubscribe();
+        } else {
+          if (await Notification.requestPermission() !== 'granted') throw new Error('Permesso negato: senza il permesso il telefono non può mostrare le notifiche.');
+          const nuova = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chiaveInByte(CHIAVE_NOTIFICHE) });
+          await salvaIscrizioneNotifiche(orto.id, statoSincronizzazione().email.toLowerCase(), nuova.toJSON());
+        }
+      } catch (e) {
+        avviso.textContent = e instanceof TypeError ? 'Server non raggiungibile: controlla la connessione.' : e.message;
+        avviso.hidden = false;
+      }
+      pulsante.disabled = false;
+      mostra();
+    };
+  };
+  mostra();
+  return box;
 }

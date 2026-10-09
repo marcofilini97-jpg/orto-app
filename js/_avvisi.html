@@ -1,0 +1,23 @@
+<!doctype html><meta charset="utf-8">
+<script type="module">
+import { aggiornaMeteo } from './meteo.js';
+localStorage.clear();
+await aggiornaMeteo();
+// Gelata finta domani e oggi pioggia forte
+const m = JSON.parse(localStorage.getItem('orto-meteo'));
+const oggi = new Date().toISOString().slice(0, 10);
+const domani = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+m.giorni[domani] = [8, -1, 0, 0, true];
+m.giorni[oggi] = [12, 4, 14, 61, false];
+localStorage.setItem('orto-meteo', JSON.stringify(m));
+const A = [['1A',1,90,60],['1B',1,90,190],['2A',2,300,60],['2B',2,300,190]];
+localStorage.setItem('orto-dati', JSON.stringify({ versione: 1,
+  aiuole: A.map(([id, settore, x, y]) => ({ id, nome: id, settore, forma: 'rettangolo', x, y, w: 180, h: 120, rot: 0, note: '' })),
+  colture: [{ id: 'c1', nome: 'Lattuga', aiuoleIds: ['1A'], parti: {}, dataInizio: oggi, metodo: 'trapianto', stato: 'attiva', dataFine: null, note: '' }],
+  registro: [], task: [], terreno: [{ id: 'terreno', larghezza: 390, lunghezza: 260, staccionata: true, esposizione: 0 }], vialetti: [], alberi: [] }));
+if (new URLSearchParams(location.search).get('collegato')) {
+  localStorage.setItem('orto-sessione', JSON.stringify({ email: 'prova@esempio.it', accesso: 'x', rinnovo: 'x', scade: Date.now() + 9e9 }));
+  localStorage.setItem('orto-sync', JSON.stringify({ orari: {}, daInviare: {}, ultimoRicevuto: null, ultimaSync: null, errore: null, orto: { id: '00000000-0000-0000-0000-000000000001', nome: 'Il mio orto', ruolo: 'gestore' } }));
+}
+location.replace('../#/' + (new URLSearchParams(location.search).get('p') ?? ''));
+</script>

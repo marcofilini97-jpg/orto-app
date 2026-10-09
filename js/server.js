@@ -5,6 +5,8 @@
 const URL_SERVER = 'https://mmjbkxznbjazhakbxdmg.supabase.co';
 const CHIAVE_PUBBLICA = 'sb_publishable_HYLjUlG1oGqefZRofSOybA_swQ5_o2v';
 const CHIAVE_SESSIONE = 'orto-sessione';
+// Chiave pubblica per le notifiche (VAPID): quella segreta sta solo nei Secrets delle Edge Functions di Supabase
+export const CHIAVE_NOTIFICHE = 'BCAFSaWf9DSde_18Li8EuYSJy2ebcwjZeW2nUBpMEVFu5yJdyyo5jODaWS-W64NY2j0RRtKJuqV3oVQlt4XfdOM';
 
 function sessione() {
   try {
@@ -167,6 +169,19 @@ export async function togliPersona(ortoId, email) {
 // Elimina l'orto con tutti i suoi dati (solo il gestore)
 export async function eliminaOrtoServer(ortoId) {
   await chiedi('/rest/v1/rpc/elimina_orto', { method: 'POST', headers: await intestazioneAccesso(), body: JSON.stringify({ o: ortoId }) });
+}
+
+// Iscrizione di questo telefono alle notifiche dell'orto (sub = PushSubscription in JSON)
+export async function salvaIscrizioneNotifiche(ortoId, email, sub) {
+  await chiedi('/rest/v1/iscrizioni_notifiche?on_conflict=endpoint', {
+    method: 'POST',
+    headers: { ...await intestazioneAccesso(), Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ orto_id: ortoId, email, endpoint: sub.endpoint, dati: sub }),
+  });
+}
+
+export async function togliIscrizioneNotifiche(endpoint) {
+  await chiedi(`/rest/v1/iscrizioni_notifiche?endpoint=eq.${encodeURIComponent(endpoint)}`, { method: 'DELETE', headers: await intestazioneAccesso() });
 }
 
 // Le righe dell'orto ricevute dal server dopo l'ora "dopo" (tutte, se dopo è null), dalla più vecchia
