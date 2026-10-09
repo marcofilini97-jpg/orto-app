@@ -17,6 +17,7 @@ import {
 } from './terreno.js';
 import { GUIDE, LAVORI } from './impara.js';
 import { aggiornaMeteo, meteoPronto, tempoDel, mediaDel, raccoltaPrevista, spostaFine, avvisiMeteo, coltureAttive, scaricaAnnata, impostaMeteoSimulato } from './meteo.js';
+import { bilancioAcqua } from './acqua.js';
 import { posizioneSole, ombraAlberoAlSole, oreDiSole, oreMedie, mesiTra, fattoreSoleAiuola, soleNoto } from './sole.js';
 import { area, misureLibere, RAGGIO_TRONCO, dentro as dentroForma, quadratoDentro, toccaRettangoli, ingombro, ingombroZona, posti, puntoEtichetta, tracciato, misure } from './geometria.js';
 import { pianoAutomatico, resaColtura, kgTra, inRaccolta, fineSovescio } from './arcade.js';
@@ -528,6 +529,7 @@ export function schedaAiuola(dati, aiuola) {
     elencoColture(attive, 'Nessuna coltura attiva.'),
     elemento('h3', 'In programma'),
     elencoColture(inProgramma, 'Niente in programma.'),
+    ...[rigaAcqua(dati, aiuola)].filter(Boolean),
     link('Aggiungi coltura', `#/aiuola/${aiuola.id}/nuova-coltura`, 'pulsante'),
     elemento('h3', 'Da fare'),
     elencoTask(dati, ordinaTask(dati.task.filter(t => !t.fatto && t.aiuoleIds.includes(aiuola.id))), 'Niente da fare.'),
@@ -679,6 +681,7 @@ export function paginaOrto(dati) {
     link('Il terreno', '#/orto/terreno', 'pulsante secondario'),
     link('L\'esposizione', '#/orto/sole', 'pulsante secondario'),
     link('Il meteo', '#/orto/meteo', 'pulsante secondario'),
+    link('L\'acqua', '#/orto/acqua', 'pulsante secondario'),
   );
   return sezione;
 }
@@ -5006,4 +5009,74 @@ function sezioneNotifiche() {
   };
   mostra();
   return box;
+}
+
+// ---- L'acqua: quanta ne serve a ogni aiuola (fabbisogno delle colture meno la pioggia utile) ----
+
+const litri = n => `${Math.round(n)} L`;
+let periodoAcqua = 'prossimi';
+
+export function paginaAcqua(dati) {
+  const sezione = document.createElement('section');
+  sezione.append(link('← L\'orto', '#/orto', 'indietro'), elemento('h2', 'L\'acqua'));
+  if (!meteoPronto()) {
+    sezione.append(elemento('p', 'Servono i dati meteo: apri l\'app con la connessione e riprova.', 'nota-terreno'));
+    aggiornaMeteo();
+    return sezione;
+  }
+  const oggi = oggiVero();
+  const piuGiorniIso = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const scelte = elemento('div', '', 'scelte-arcade');
+  const posto = elemento('div');
+  for (const [k, testo] of [['prossimi', 'Prossimi 7 giorni'], ['ultimi', 'Ultimi 7 giorni']]) {
+    const label = elemento('label');
+    const input = elemento('input');
+    Object.assign(input, { type: 'radio', name: 'periodo-acqua', checked: k === periodoAcqua });
+    input.addEventListener('change', () => { periodoAcqua = k; mostra(); });
+    label.append(input, elemento('span', testo));
+    scelte.append(label);
+  }
+  function mostra() {
+    const [da, a] = periodoAcqua === 'prossimi' ? [oggi, piuGiorniIso(oggi, 7)] : [piuGiorniIso(oggi, -7), oggi];
+    const righe = dati.aiuole.map(ai => ({ ai, b: bilancioAcqua(dati, ai, da, a) })).filter(x => x.b.colture.length)
+      .sort((x, y) => (x.ai.nome ?? '').localeCompare(y.ai.nome ?? '', 'it', { numeric: true }));
+    const tabella = elemento('table', '', 'tabella-terreno tabella-acqua');
+    tabella.innerHTML = '<thead><tr><th>Aiuola</th><th>Serve</th><th>Pioggia</th><th>Da dare</th></tr></thead>';
+    const corpo = elemento('tbody');
+    let tot = { fabbisogno: 0, pioggia: 0, daDare: 0 };
+    for (const { ai, b } of righe) {
+      const tr = elemento('tr');
+      const nome = elemento('td');
+      nome.append(link(nomeId(ai.id), `#/aiuola/${ai.id}`, 'aiuola-terreno'), elemento('small', b.colture.join(', '), 'colture-acqua'));
+      tr.append(nome, elemento('td', litri(b.fabbisogno)), elemento('td', litri(b.pioggia)), elemento('td', litri(b.daDare), 'da-dare'));
+      corpo.append(tr);
+      tot = { fabbisogno: tot.fabbisogno + b.fabbisogno, pioggia: tot.pioggia + b.pioggia, daDare: tot.daDare + b.daDare };
+    }
+    tabella.append(corpo);
+    const contenuto = [];
+    if (!righe.length) contenuto.push(elemento('p', 'Nessuna coltura nell\'orto in questo periodo: niente da annaffiare.', 'nota-terreno'));
+    else {
+      contenuto.push(tabella,
+        elemento('p', `Tutto l'orto: servono circa ${litri(tot.fabbisogno)}, la pioggia ne dà ${litri(tot.pioggia)}: ${periodoAcqua === 'prossimi' ? 'da dare' : 'da dare (o dati)'} circa ${litri(tot.daDare)}, cioè ${Math.ceil(tot.daDare / 10)} annaffiatoi da 10 litri.`, 'totale-acqua'),
+        elemento('p', 'Meglio poche annaffiature abbondanti (2–3 a settimana, al mattino presto o la sera) che un po\' ogni giorno. Con la pacciamatura ne serve circa un terzo in meno. Nel terreno sabbioso dividi in più volte; in quello argilloso bastano meno volte, ma a fondo.', 'nota-terreno'));
+    }
+    posto.replaceChildren(...contenuto);
+  }
+  mostra();
+  sezione.append(scelte, posto, elemento('p', 'Stima con il metodo FAO-56: evapotraspirazione di Bologna (Open-Meteo) × coefficiente di ogni coltura secondo la sua fase × superficie coltivata, meno la pioggia utile (l\'80% delle piogge da 3 mm in su).', 'fonte-meteo'));
+  return sezione;
+}
+
+// Riga della scheda dell'aiuola: acqua da dare nei prossimi 7 giorni
+function rigaAcqua(dati, aiuola) {
+  if (!meteoPronto()) return null;
+  const oggi = oggiVero();
+  const d = new Date(`${oggi}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 7);
+  const b = bilancioAcqua(dati, aiuola, oggi, d.toISOString().slice(0, 10));
+  if (!b.colture.length) return null;
+  const p = elemento('p', '', 'riga-acqua');
+  p.append(elemento('strong', 'Acqua, prossimi 7 giorni: '), `circa ${litri(b.daDare)} da dare (servono ${litri(b.fabbisogno)}, la pioggia ne dà ${litri(b.pioggia)}) `,
+    link('dettagli', '#/orto/acqua', 'link-info'));
+  return p;
 }

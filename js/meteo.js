@@ -21,7 +21,8 @@ let memoria;
 const meteo = () => (memoria === undefined ? (memoria = leggiMeteo()) : memoria);
 
 async function scarica(url) {
-  const r = await fetch(url);
+  // Sempre chiedendo al server se ci sono dati nuovi (le previsioni cambiano ogni ora)
+  const r = await fetch(url, { cache: 'no-cache' });
   if (!r.ok) throw new Error(`Meteo non disponibile (${r.status})`);
   return r.json();
 }
@@ -33,32 +34,40 @@ export async function aggiornaMeteo() {
   const oggi = oggiVero();
   const anno = Number(oggi.slice(0, 4));
   let cambiato = false;
-  try {
-    if (!m.normali || m.normaliAnno !== anno) {
-      const j = await scarica(`https://archive-api.open-meteo.com/v1/archive?${PUNTO}&start_date=${anno - 30}-01-01&end_date=${anno - 1}-12-31&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`);
+  // Versione 2: c'è anche l'evapotraspirazione (ET0). I dati vecchi restano finché non arrivano i nuovi
+  if (m.versioneDati !== 2) Object.assign(m, { normaliAnno: null, archivioFino: null, aggiornato: null, versioneDati: 2 });
+  const giorni = m.giorni ?? {};
+  // Tre richieste separate: se una non va (niente rete, troppe richieste), le altre arrivano lo stesso
+  // 1. Medie di 30 anni, una volta l'anno
+  if (!m.normali || m.normaliAnno !== anno) {
+    try {
+      const j = await scarica(`https://archive-api.open-meteo.com/v1/archive?${PUNTO}&start_date=${anno - 30}-01-01&end_date=${anno - 1}-12-31&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,et0_fao_evapotranspiration`);
       m.normali = calcolaNormali(j.daily);
       m.normaliAnno = anno;
       cambiato = true;
-    }
-    if (!m.aggiornato || Date.now() - m.aggiornato > 3 * ORE) {
-      const giorni = m.giorni ?? {};
-      // Dall'inizio dell'anno scorso fino a una settimana fa (dati definitivi), una volta al giorno
-      if (m.archivioFino !== oggi) {
-        const j = await scarica(`https://archive-api.open-meteo.com/v1/archive?${PUNTO}&start_date=${anno - 1}-01-01&end_date=${piu(oggi, -6)}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`);
-        unisci(giorni, j.daily, false);
-        m.archivioFino = oggi;
-      }
-      const j = await scarica(`https://api.open-meteo.com/v1/forecast?${PUNTO}&past_days=10&forecast_days=16&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code`);
+    } catch { /* si riprova al prossimo avvio */ }
+  }
+  // 2. Dall'inizio dell'anno scorso fino a una settimana fa (dati definitivi), una volta al giorno
+  if (m.archivioFino !== oggi) {
+    try {
+      const j = await scarica(`https://archive-api.open-meteo.com/v1/archive?${PUNTO}&start_date=${anno - 1}-01-01&end_date=${piu(oggi, -6)}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,et0_fao_evapotranspiration`);
+      unisci(giorni, j.daily, false);
+      m.archivioFino = oggi;
+      cambiato = true;
+    } catch { /* si riprova più tardi */ }
+  }
+  // 3. Previsioni e ultimi giorni, ogni 3 ore
+  if (!m.aggiornato || Date.now() - m.aggiornato > 3 * ORE) {
+    try {
+      const j = await scarica(`https://api.open-meteo.com/v1/forecast?${PUNTO}&past_days=10&forecast_days=16&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,et0_fao_evapotranspiration`);
       unisci(giorni, j.daily, true);
-      // Si tiene solo dall'inizio dell'anno scorso
-      for (const k of Object.keys(giorni)) if (k < `${anno - 1}-01-01`) delete giorni[k];
-      m.giorni = giorni;
       m.aggiornato = Date.now();
       cambiato = true;
-    }
-  } catch {
-    // niente rete o servizio non raggiungibile: si usa quello che c'è
+    } catch { /* si usa l'ultima copia */ }
   }
+  // Si tiene solo dall'inizio dell'anno scorso
+  for (const k of Object.keys(giorni)) if (k < `${anno - 1}-01-01`) delete giorni[k];
+  m.giorni = giorni;
   if (cambiato) {
     scriviMeteo(m);
     memoria = m;
@@ -69,29 +78,30 @@ export async function aggiornaMeteo() {
   return m;
 }
 
-// giorni[data] = [massima, minima, pioggia mm, codice del tempo (solo previsioni), previsione sì/no]
+// giorni[data] = [massima, minima, pioggia mm, codice del tempo (solo previsioni), previsione sì/no, ET0 mm]
 function unisci(giorni, d, previsione) {
   d.time.forEach((t, i) => {
     if (d.temperature_2m_max[i] == null) return;
-    giorni[t] = [d.temperature_2m_max[i], d.temperature_2m_min[i], d.precipitation_sum[i] ?? 0, d.weather_code?.[i] ?? null, previsione && t > oggiVero()];
+    giorni[t] = [d.temperature_2m_max[i], d.temperature_2m_min[i], d.precipitation_sum[i] ?? 0, d.weather_code?.[i] ?? null, previsione && t > oggiVero(), d.et0_fao_evapotranspiration?.[i] ?? null];
   });
 }
 
-// Medie di ogni giorno dell'anno ('MM-GG'), lisciate su una settimana: { 'MM-GG': [massima, minima, pioggia] }
+// Medie di ogni giorno dell'anno ('MM-GG'), lisciate su una settimana: { 'MM-GG': [massima, minima, pioggia, ET0] }
 function calcolaNormali(d) {
   const somme = {};
   d.time.forEach((t, i) => {
     if (d.temperature_2m_max[i] == null) return;
     const k = t.slice(5);
-    const s = somme[k] ??= [0, 0, 0, 0];
-    s[0] += d.temperature_2m_max[i]; s[1] += d.temperature_2m_min[i]; s[2] += d.precipitation_sum[i] ?? 0; s[3]++;
+    const s = somme[k] ??= [0, 0, 0, 0, 0];
+    s[0] += d.temperature_2m_max[i]; s[1] += d.temperature_2m_min[i]; s[2] += d.precipitation_sum[i] ?? 0;
+    s[3] += d.et0_fao_evapotranspiration?.[i] ?? 0; s[4]++;
   });
   const giorni = Array.from({ length: 366 }, (_, i) => piu('2000-01-01', i).slice(5));   // 2000 è bisestile
-  const medie = giorni.map(k => somme[k] ? somme[k].slice(0, 3).map(v => v / somme[k][3]) : null);
+  const medie = giorni.map(k => somme[k] ? somme[k].slice(0, 4).map(v => v / somme[k][4]) : null);
   const normali = {};
   giorni.forEach((k, i) => {
     const vicini = [-3, -2, -1, 0, 1, 2, 3].map(o => medie[(i + o + 366) % 366]).filter(Boolean);
-    normali[k] = [0, 1, 2].map(q => Math.round(vicini.reduce((s, v) => s + v[q], 0) / vicini.length * 10) / 10);
+    normali[k] = [0, 1, 2, 3].map(q => Math.round(vicini.reduce((s, v) => s + v[q], 0) / vicini.length * 10) / 10);
   });
   return normali;
 }
@@ -114,9 +124,9 @@ export function tempoDel(iso) {
   const m = meteo();
   if (!m?.normali) return null;
   const g = simulato ? simulato.giorni?.[iso] : m.giorni?.[iso];
-  if (g) return { massima: g[0], minima: g[1], pioggia: g[2], codice: g[3], previsione: g[4], media: false };
   const n = m.normali[iso.slice(5)] ?? m.normali['02-28'];
-  return { massima: n[0], minima: n[1], pioggia: n[2], codice: null, previsione: false, media: true };
+  if (g) return { massima: g[0], minima: g[1], pioggia: g[2], codice: g[3] ?? null, previsione: !!g[4], et0: g[5] ?? n[3], media: false };
+  return { massima: n[0], minima: n[1], pioggia: n[2], codice: null, previsione: false, et0: n[3], media: true };
 }
 
 export function mediaDel(iso) {
@@ -269,7 +279,7 @@ export async function scaricaAnnata(annoVero, partenza) {
   const da = `${annoPartenza - scarto}${partenza.slice(4)}`;
   const limite = piu(oggiVero(), -6);
   const fine = [piu(da, 4 * 365 + 120), limite].sort()[0];
-  const j = await scarica(`https://archive-api.open-meteo.com/v1/archive?${PUNTO}&start_date=${da}&end_date=${fine}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`);
+  const j = await scarica(`https://archive-api.open-meteo.com/v1/archive?${PUNTO}&start_date=${da}&end_date=${fine}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,et0_fao_evapotranspiration`);
   const giorni = {};
   j.daily.time.forEach((t, i) => {
     if (j.daily.temperature_2m_max[i] == null) return;
@@ -277,7 +287,7 @@ export async function scaricaAnnata(annoVero, partenza) {
     const mmgg = t.slice(5);
     // Il 29 febbraio esiste solo negli anni bisestili
     if (mmgg === '02-29' && !(anno % 4 === 0 && (anno % 100 !== 0 || anno % 400 === 0))) return;
-    giorni[`${anno}-${mmgg}`] = [j.daily.temperature_2m_max[i], j.daily.temperature_2m_min[i], j.daily.precipitation_sum[i] ?? 0];
+    giorni[`${anno}-${mmgg}`] = [j.daily.temperature_2m_max[i], j.daily.temperature_2m_min[i], j.daily.precipitation_sum[i] ?? 0, null, false, j.daily.et0_fao_evapotranspiration?.[i] ?? null];
   });
   return { origine: annoVero, giorni };
 }

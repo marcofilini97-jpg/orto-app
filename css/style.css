@@ -1004,3 +1004,11 @@ header { position: relative; z-index: 30; }
 .annata-raccolto { margin: 10px 0; padding: 8px 12px; background: #fff; border: 2px solid #e5d3b0; border-radius: 12px; }
 .annata-raccolto h3 { margin: 2px 0 4px; }
 .evento-annata { margin: 4px 0; padding: 4px 8px; font-size: .9rem; background: #fdeeea; border-left: 4px solid #c0392b; border-radius: 6px; }
+
+/* L'acqua */
+.tabella-acqua td, .tabella-acqua th { text-align: right; }
+.tabella-acqua td:first-child, .tabella-acqua th:first-child { text-align: left; }
+.colture-acqua { display: block; font-size: .75rem; color: var(--marrone-scuro); }
+.da-dare { font-weight: 800; color: #3d6fa8; }
+.totale-acqua { margin: 10px 0; padding: 8px 10px; font-weight: 700; background: #eaf3fb; border-left: 4px solid #3d6fa8; border-radius: 6px; }
+.riga-acqua { margin: 8px 0; padding: 6px 10px; background: #eaf3fb; border-left: 4px solid #3d6fa8; border-radius: 6px; }

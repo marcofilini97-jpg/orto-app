@@ -7,7 +7,7 @@ import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto,
   paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaOrti, paginaPersone, paginaSolaLettura,
-  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaOrto, paginaTerrenoOrto, paginaTerrenoAttuale, paginaSole, paginaSoleAiuola, paginaMeteo, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaOrto, paginaTerrenoOrto, paginaTerrenoAttuale, paginaSole, paginaSoleAiuola, paginaMeteo, paginaAcqua, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -45,6 +45,7 @@ function schermata() {
   if (pagina === 'disegna') return puoDisegnare() ? paginaDisegna(dati, { nuovo: id === 'nuovo' }) : paginaSolaLettura();
   if (pagina === 'orto') {
     if (id === 'meteo') return paginaMeteo();
+    if (id === 'acqua') return paginaAcqua(dati);
     if (id === 'terreno') return sotto === 'modifica' ? paginaTerrenoOrto(dati) : paginaTerrenoAttuale();
     if (id === 'sole') {
       const a = dati.aiuole.find(x => x.id === sotto);
