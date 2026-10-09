@@ -937,3 +937,13 @@ header { position: relative; z-index: 30; }
 .estremo-esposizione.fondo { top: 15%; }
 .estremo-esposizione.davanti { bottom: 15%; }
 .verso-esposizione { margin: 4px 0; font-weight: 800; text-align: center; }
+
+/* Mappa con alberi che escono dal terreno: si scorre con il dito */
+.scorri-mappa { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.scorri-mappa::-webkit-scrollbar { display: none; }
+.interno-mappa { box-sizing: border-box; }
+/* Distanze del vialetto dai lati */
+.quota-disegno { position: absolute; z-index: 9; border-top: 2px dashed #fff8e7; pointer-events: none; }
+.quota-disegno.verticale { border-top: 0; border-left: 2px dashed #fff8e7; }
+.testo-quota { position: absolute; left: 50%; top: 0; transform: translate(-50%, -50%); padding: 0 6px; font-size: .75rem; font-weight: 800; white-space: nowrap; color: #fff; background: var(--testo); border-radius: 4px; }
+.quota-disegno.verticale .testo-quota { left: 0; top: 50%; }

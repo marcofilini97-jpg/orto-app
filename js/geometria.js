@@ -190,3 +190,14 @@ export function tracciato(a) {
   }
   return `M ${-mw} ${-mh} H ${mw} V ${mh} H ${-mw} Z`;
 }
+
+// Un albero piantato in un'aiuola le toglie un cerchio attorno al tronco (radici, ombra fitta, passaggio)
+export const RAGGIO_TRONCO = 40;   // cm
+
+// Come misure(), togliendo lo spazio degli alberi che hanno il tronco in quella parte dell'aiuola
+export function misureLibere(a, zona = 'tutta', alberi = []) {
+  const m = misure(a, zona);
+  const n = alberi.filter(b => dentro(a, zona, b.x, b.y)).length;
+  if (!n || !m.L) return m;
+  return { L: m.L, W: Math.max(0, Math.round(m.W - n * Math.PI * RAGGIO_TRONCO ** 2 / m.L)) };
+}

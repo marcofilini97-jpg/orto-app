@@ -16,7 +16,7 @@ import {
   spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
 } from './terreno.js';
 import { GUIDE, LAVORI } from './impara.js';
-import { area, dentro as dentroForma, quadratoDentro, toccaRettangoli, ingombro, ingombroZona, posti, puntoEtichetta, tracciato, misure } from './geometria.js';
+import { area, misureLibere, RAGGIO_TRONCO, dentro as dentroForma, quadratoDentro, toccaRettangoli, ingombro, ingombroZona, posti, puntoEtichetta, tracciato, misure } from './geometria.js';
 import { pianoAutomatico, resaColtura, kgTra, inRaccolta, fineSovescio } from './arcade.js';
 
 const TIPI = {
@@ -264,7 +264,34 @@ function terrenoMappa(dati) {
     box.append(p);
   }
   disponiQuandoPronto(box, dati);
-  return box;
+  if (dati.alberi.length === 0) return box;
+  // Gli alberi possono uscire dal terreno: attorno si lascia spazio e la mappa si scorre con il dito
+  const scorri = elemento('div', '', 'scorri-mappa');
+  const interno = elemento('div', '', 'interno-mappa');
+  interno.append(box);
+  scorri.append(interno);
+  let primaVolta = true;
+  new ResizeObserver(() => {
+    if (!box.clientWidth) return;
+    const t = dati.terreno[0];
+    const s = box.clientWidth / t.larghezza;
+    let sx = 0, dx = 0, su = 0, giu = 0;
+    for (const al of dati.alberi) {
+      const d = al.diametro;
+      sx = Math.max(sx, d / 2 - al.x);
+      dx = Math.max(dx, al.x + d / 2 - t.larghezza);
+      su = Math.max(su, d - al.y);
+      giu = Math.max(giu, al.y + d * 0.12 - t.lunghezza);
+    }
+    const px = n => Math.ceil(Math.max(0, n) * s);
+    interno.style.width = `calc(100% + ${px(sx) + px(dx)}px)`;
+    interno.style.padding = `${px(su)}px ${px(dx)}px ${px(giu)}px ${px(sx)}px`;
+    if (primaVolta) {
+      scorri.scrollLeft = px(sx);
+      primaVolta = false;
+    }
+  }).observe(box);
+  return scorri;
 }
 
 // I disegnini si dispongono quando si conosce la grandezza vera del terreno sullo schermo (e a ogni cambio)
@@ -290,6 +317,9 @@ function disponiPiantine(box, dati) {
     // Il cartellino col nome non va coperto
     const nome = el.querySelector('.nome');
     const evita = nome ? [{ x: b.x + nome.offsetLeft / scala, y: b.y + nome.offsetTop / scala, w: nome.offsetWidth / scala, h: nome.offsetHeight / scala }] : [];
+    for (const al of dati.alberi) {
+      if (dentroForma(a, 'tutta', al.x, al.y)) evita.push({ x: al.x - RAGGIO_TRONCO, y: al.y - RAGGIO_TRONCO, w: 2 * RAGGIO_TRONCO, h: 2 * RAGGIO_TRONCO });
+    }
     const perZona = new Map();
     for (const p of el.querySelectorAll('.piantina')) {
       if (!perZona.has(p.dataset.zona)) perZona.set(p.dataset.zona, []);
@@ -537,6 +567,8 @@ export function infoAiuola(dati, aiuola) {
     elemento('h2', `Info ${nomeId(aiuola.id)}`),
     riga('Settore', String(aiuola.settore)),
     riga('Forma', `${NOMI_FORMA[aiuola.forma] ?? 'rettangolo'}, ${aiuola.w} × ${aiuola.h} cm`),
+    ...dati.alberi.filter(al => dentroForma(aiuola, 'tutta', al.x, al.y)).map(al => riga('Albero nell\'aiuola',
+      `${TIPI_ALBERO[al.tipo]?.nome ?? 'albero'}: circa ${String(Math.round(Math.PI * RAGGIO_TRONCO ** 2 / 1000) / 10).replace('.', ',')} m² in meno per le colture`)),
     riga('Divisione', asse === 'fondo-davanti' ? 'divisa a metà: fondo / davanti'
       : asse === 'sinistra-destra' ? 'divisa a metà: sinistra / destra' : 'non divisa'),
     elemento('h3', 'Terreno'),
@@ -1033,7 +1065,7 @@ function fineSuggerita(scheda, inizio) {
 // Misure (cm) della parte di aiuola usata, dalla sua forma vera (per un rettangolo 180 × 120: metà fondo 180 × 60, metà sinistra 90 × 120)
 function misureParte(dati, id, parte) {
   const a = dati.aiuole.find(x => x.id === id);
-  return a ? misure(a, parte || 'tutta') : AIUOLA;
+  return a ? misureLibere(a, parte || 'tutta', dati.alberi) : AIUOLA;
 }
 
 const kgTesto = v => (v < 10 ? v.toFixed(1) : String(Math.round(v))).replace('.', ',');
@@ -2928,13 +2960,13 @@ function testoKg(n) {
 }
 
 function inRaccoltaIl(dati, c, g) {
-  const info = resaColtura(c, dati.aiuole);
+  const info = resaColtura(c, dati.aiuole, dati.alberi);
   return !!info && inRaccolta(info, g);
 }
 
 // kg [min, max] di tutte le colture tra da (compreso) e a (escluso)
 function totaleRaccolto(dati, da, a) {
-  return dati.colture.map(c => resaColtura(c, dati.aiuole)).filter(Boolean)
+  return dati.colture.map(c => resaColtura(c, dati.aiuole, dati.alberi)).filter(Boolean)
     .map(info => kgTra(info, da, a))
     .reduce((t, kg) => [t[0] + kg[0], t[1] + kg[1]], [0, 0]);
 }
@@ -2980,7 +3012,7 @@ export function paginaRaccolto(dati) {
 
 // Grafico dei 12 mesi (ottobre–settembre) e colture con raccolta nell'anno dell'orto y
 function annoDiRaccolto(dati, y, g, fino) {
-  const infos = dati.colture.map(c => resaColtura(c, dati.aiuole)).filter(Boolean);
+  const infos = dati.colture.map(c => resaColtura(c, dati.aiuole, dati.alberi)).filter(Boolean);
   const mezzo = kg => (kg[0] + kg[1]) / 2;
   const mesi = MESI_ANNO_ORTO.map((_, i) => {
     const m = (i + 9) % 12 + 1;
@@ -3764,9 +3796,34 @@ export function paginaDisegna(originali, { nuovo = false } = {}) {
       m.style.top = `${(b.y + b.h) / t.lunghezza * 100}%`;
       m.setAttribute('aria-label', inclina ? 'Trascina per inclinare' : 'Trascina per cambiare le misure');
       tela.append(misura, m);
+      if (categoria === 'vialetto') distanzeVialetto(b);
     }
     recinto.replaceChildren(staccionata(dati));
     disegnaLegenda();
+  }
+
+  // Distanze del vialetto dai due lati del terreno paralleli a lui: per vedere se è al centro
+  function distanzeVialetto(b) {
+    const verticale = b.h >= b.w;
+    const prima = verticale ? b.x : b.y;
+    const dopo = verticale ? t.larghezza - b.x - b.w : t.lunghezza - b.y - b.h;
+    const centrato = Math.abs(prima - dopo) < 5;
+    const quota = (x1, y1, x2, y2, cm) => {
+      const linea = elemento('span', '', `quota-disegno${verticale ? '' : ' verticale'}`);
+      inPercentuale(linea, { x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.max(Math.abs(x2 - x1), 0.01), h: Math.max(Math.abs(y2 - y1), 0.01) }, t);
+      const testo = elemento('span', `${Math.round(cm)} cm${centrato ? ' · al centro ✓' : ''}`, 'testo-quota');
+      linea.append(testo);
+      tela.append(linea);
+    };
+    if (verticale) {
+      const y = b.y + b.h / 2;
+      quota(0, y, b.x, y, prima);
+      quota(b.x + b.w, y, t.larghezza, y, dopo);
+    } else {
+      const x = b.x + b.w / 2;
+      quota(x, 0, x, b.y, prima);
+      quota(x, b.y + b.h, x, t.lunghezza, dopo);
+    }
   }
 
   function disegnaLegenda() {
@@ -3802,6 +3859,23 @@ export function paginaDisegna(originali, { nuovo = false } = {}) {
         b.addEventListener('click', () => { modo = m; disegnaTela(); });
         riga.append(b);
       };
+      const duplica = elemento('button', 'Duplica ⧉', 'modo-legenda');
+      duplica.type = 'button';
+      duplica.addEventListener('click', () => {
+        const copia = { ...structuredClone(sel), id: nuovoId({ aiuola: 'a', vialetto: 'v', albero: 'b' }[categoria]) };
+        copia.x = Math.min(t.larghezza, sel.x + 20);
+        copia.y = Math.min(t.lunghezza, sel.y + 20);
+        if (categoria === 'aiuola') {
+          copia.nome = nuovoNome();
+          copia.note = '';
+          delete copia.suolo;
+        }
+        lista(categoria).push(copia);
+        scelto = copia.id;
+        disegnaTela();
+        disegnaPannello();
+      });
+      riga.append(duplica);
       pulsanteModo('misure', 'Misure ⤡');
       if (categoria !== 'albero') pulsanteModo('inclina', 'Inclinazione ↻');
     }
@@ -3851,7 +3925,6 @@ export function paginaDisegna(originali, { nuovo = false } = {}) {
     if (azione.tipo === 'sposta') {
       const nx = Math.min(t.larghezza, Math.max(0, aGriglia(azione.x0 + p.x - azione.da.x)));
       const ny = Math.min(t.lunghezza, Math.max(0, aGriglia(azione.y0 + p.y - azione.da.y)));
-      if (categoria === 'albero' && sullAiuola(dati, nx, ny)) return;   // gli alberi non vanno sulle aiuole
       x.x = nx;
       x.y = ny;
     } else if (azione.tipo === 'inclina') {
@@ -3871,11 +3944,44 @@ export function paginaDisegna(originali, { nuovo = false } = {}) {
   });
   const fine = () => {
     if (!azione) return;
+    const finita = azione;
     azione = null;
     disegnaPannello();
+    // Un albero lasciato dentro un'aiuola: si chiede conferma (toglie spazio alle colture)
+    const x = elementoScelto();
+    if (categoria === 'albero' && finita.tipo === 'sposta' && x && (x.x !== finita.x0 || x.y !== finita.y0)) {
+      const aiuola = dati.aiuole.find(a => dentroForma(a, 'tutta', x.x, x.y));
+      const primaDentro = aiuola && dentroForma(aiuola, 'tutta', finita.x0, finita.y0);
+      if (aiuola && !primaDentro) {
+        chiedi(`Piantare l'albero dentro l'aiuola ${aiuola.nome}?`,
+          `Il tronco sta nell'aiuola, non sul bordo: le toglie circa mezzo metro quadro, quindi ci staranno meno piante e la resa sarà più bassa.`,
+          'Sì, nell\'aiuola', 'No, rimettilo dov\'era', null, () => {
+            x.x = finita.x0;
+            x.y = finita.y0;
+            disegnaTela();
+          });
+      }
+    }
   };
   tela.addEventListener('pointerup', fine);
   tela.addEventListener('pointercancel', fine);
+
+  // Piccolo pop-up con una domanda e due risposte
+  function chiedi(titolo, testo, si, no, seSi, seNo) {
+    const velo = elemento('div', '', 'velo-disegno');
+    const box = elemento('div', '', 'finestra-disegno');
+    box.setAttribute('role', 'dialog');
+    const chiudi = () => { velo.remove(); box.remove(); };
+    const riga = elemento('div', '', 'azioni-passo');
+    const bNo = elemento('button', no, 'pulsante secondario');
+    const bSi = elemento('button', si, 'pulsante');
+    for (const b of [bNo, bSi]) b.type = 'button';
+    bNo.addEventListener('click', () => { chiudi(); seNo?.(); });
+    bSi.addEventListener('click', () => { chiudi(); seSi?.(); });
+    riga.append(bNo, bSi);
+    box.append(elemento('h3', titolo), elemento('p', testo), riga);
+    document.body.append(velo, box);
+  }
 
   // Il taglio della L deve lasciare almeno 30 cm per lato
   function sistemaTaglio(a) {
@@ -4186,7 +4292,6 @@ export function paginaDisegna(originali, { nuovo = false } = {}) {
       testoVerso.textContent = t.esposizione == null ? 'Gira la bussola con il dito: la N rossa va dove c\'è il Nord.'
         : `Il fondo dell'orto guarda verso ${nomeVerso(t.esposizione)} (${t.esposizione}°)`;
       spiega.textContent = testoEsposizione(t.esposizione);
-      disegnaTela();
     };
     const etFondo = elemento('span', 'Fondo', 'estremo-esposizione fondo');
     const etDavanti = elemento('span', 'Davanti', 'estremo-esposizione davanti');
@@ -4207,12 +4312,16 @@ export function paginaDisegna(originali, { nuovo = false } = {}) {
       t.esposizione = a5(360 - nord);
       aggiornaBussola();
     });
-    const lascia = () => { presa = null; };
+    const lascia = () => {
+      if (!presa) return;
+      presa = null;
+      disegnaTela();
+    };
     quadrante.addEventListener('pointerup', lascia);
     quadrante.addEventListener('pointercancel', lascia);
     const riga = elemento('div', '', 'azioni-passo');
     riga.append(
-      bottone('Non lo so', 'pulsante secondario', () => { t.esposizione = null; aggiornaBussola(); }),
+      bottone('Non lo so', 'pulsante secondario', () => { t.esposizione = null; aggiornaBussola(); disegnaTela(); }),
       bottone('Salva il disegno ✓', 'pulsante', salvaTutto));
     apriPasso(4, 'Esposizione', quadrante, testoVerso, spiega, avviso, riga,
       bottone('‹ Torna alle aiuole', 'link-info indietro-passo', () => vaiAlleAiuole(categoria, scelto)));
@@ -4367,44 +4476,96 @@ function testoEsposizione(esposizione) {
 
 // ---- Alberi: sul verde (mai sulle aiuole), in stile cartone di tre quarti, con l'ombra di mezzogiorno verso Nord ----
 
-// h = altezza di partenza (m). Colori: chioma, parte in ombra, riflessi, frutti
+// h = altezza di partenza (m). chioma: forma della chioma; frutto: come sono disegnati i frutti
 const TIPI_ALBERO = {
-  melo: { nome: 'Melo', base: '#4f9a33', scuro: '#3a7a26', chiaro: '#7cc152', frutto: '#e2412b', h: 4 },
-  pero: { nome: 'Pero', base: '#4a9535', scuro: '#356f27', chiaro: '#78bb55', frutto: '#d3d84a', h: 5 },
-  pesco: { nome: 'Pesco', base: '#58a23c', scuro: '#3f7d2b', chiaro: '#86c760', frutto: '#f59a5c', h: 3.5 },
-  albicocco: { nome: 'Albicocco', base: '#4f9a33', scuro: '#3a7a26', chiaro: '#80c158', frutto: '#f2a23a', h: 4 },
-  ciliegio: { nome: 'Ciliegio', base: '#4b9033', scuro: '#346a25', chiaro: '#74b452', frutto: '#a3141f', h: 6 },
-  susino: { nome: 'Susino', base: '#4c9234', scuro: '#366c26', chiaro: '#76b454', frutto: '#6b3a8e', h: 4 },
-  fico: { nome: 'Fico', base: '#3f8a2b', scuro: '#2c6620', chiaro: '#66aa48', frutto: '#7a3d6e', h: 4 },
-  cachi: { nome: 'Cachi', base: '#4c8b30', scuro: '#356524', chiaro: '#73ac4e', frutto: '#f07f1a', h: 6 },
-  noce: { nome: 'Noce', base: '#3e7f2c', scuro: '#2b5e20', chiaro: '#5f9e46', frutto: null, h: 12 },
-  olivo: { nome: 'Olivo', base: '#8aa676', scuro: '#667f57', chiaro: '#b2c79f', frutto: '#3b3b2e', h: 5 },
-  conifera: { nome: 'Conifera (pino, abete…)', aghi: true, h: 10 },
-  generico: { nome: 'Altro albero', base: '#47913a', scuro: '#316b28', chiaro: '#6fb055', frutto: null, h: 8 },
+  melo: { nome: 'Melo', chioma: 'tonda', base: '#4f9a33', scuro: '#3a7a26', chiaro: '#7cc152', frutto: 'mela', h: 4 },
+  pero: { nome: 'Pero', chioma: 'ovale', base: '#4a9535', scuro: '#356f27', chiaro: '#78bb55', frutto: 'pera', h: 5 },
+  pesco: { nome: 'Pesco', chioma: 'tonda', base: '#5aa43e', scuro: '#3f7d2b', chiaro: '#8acb62', frutto: 'pesca', h: 3.5 },
+  albicocco: { nome: 'Albicocco', chioma: 'tonda', base: '#4f9a33', scuro: '#3a7a26', chiaro: '#80c158', frutto: 'albicocca', h: 4 },
+  ciliegio: { nome: 'Ciliegio', chioma: 'larga', base: '#4b9033', scuro: '#346a25', chiaro: '#74b452', frutto: 'ciliegia', h: 6 },
+  susino: { nome: 'Susino', chioma: 'tonda', base: '#4c9234', scuro: '#366c26', chiaro: '#76b454', frutto: 'susina', h: 4 },
+  fico: { nome: 'Fico', chioma: 'fico', base: '#3f8a2b', scuro: '#2c6620', chiaro: '#66aa48', frutto: 'fico', h: 4 },
+  cachi: { nome: 'Cachi', chioma: 'tonda', base: '#4c8b30', scuro: '#356524', chiaro: '#73ac4e', frutto: 'cachi', h: 6 },
+  noce: { nome: 'Noce', chioma: 'larga', base: '#3e7f2c', scuro: '#2b5e20', chiaro: '#5f9e46', frutto: 'noce', h: 12 },
+  olivo: { nome: 'Olivo', chioma: 'olivo', h: 5 },
+  conifera: { nome: 'Conifera (pino, abete…)', chioma: 'conifera', h: 10 },
+  generico: { nome: 'Altro albero', chioma: 'tonda', base: '#47913a', scuro: '#316b28', chiaro: '#6fb055', frutto: null, h: 8 },
 };
+
+const CONTORNO = '#1d2414';
+
+// Un frutto disegnato nel punto (x, y)
+function frutto(tipo, x, y) {
+  const lucido = `<circle cx="${x - 1.3}" cy="${y - 1.5}" r="1.2" fill="#fff" opacity=".75"/>`;
+  switch (tipo) {
+    case 'mela': return `<path d="M${x} ${y - 4.5} v-2.5" stroke="#5c3d22" stroke-width="1.3"/><circle cx="${x}" cy="${y}" r="4.6" fill="#e2412b" stroke="${CONTORNO}" stroke-width="1.3"/>${lucido}`;
+    case 'pera': return `<path d="M${x} ${y - 6} c-2 0 -2.2 2.6 -2.2 3.8 c-2.6 1 -3.4 3.4 -3.2 5.2 c.4 2.6 3 3.4 5.4 3.4 s5 -.8 5.4 -3.4 c.2 -1.8 -.6 -4.2 -3.2 -5.2 c0 -1.2 -.2 -3.8 -2.2 -3.8 z" fill="#cdd64a" stroke="${CONTORNO}" stroke-width="1.2"/><path d="M${x} ${y - 6} l1 -2" stroke="#5c3d22" stroke-width="1.2"/>`;
+    case 'pesca': return `<circle cx="${x}" cy="${y}" r="4.8" fill="#f8b26a" stroke="${CONTORNO}" stroke-width="1.3"/><path d="M${x + .5} ${y - 4.6} a4.8 4.8 0 0 1 0 9.4 a7 7 0 0 0 0 -9.4 z" fill="#e8574a" opacity=".85"/><path d="M${x} ${y - 4} q-1.5 4 0 8" stroke="#c0503a" stroke-width=".9" fill="none"/>`;
+    case 'albicocca': return `<circle cx="${x}" cy="${y}" r="4" fill="#f5a23a" stroke="${CONTORNO}" stroke-width="1.2"/><circle cx="${x + 1.5}" cy="${y + 1}" r="1.8" fill="#e8743a" opacity=".7"/>${lucido}`;
+    case 'ciliegia': return `<path d="M${x - 3} ${y + 1} Q${x - 1} ${y - 6} ${x + 1} ${y - 8} Q${x + 2} ${y - 5} ${x + 3.5} ${y + 1}" fill="none" stroke="#4a6b22" stroke-width="1.1"/><circle cx="${x - 3}" cy="${y + 2}" r="2.8" fill="#a3141f" stroke="${CONTORNO}" stroke-width="1.1"/><circle cx="${x + 3.5}" cy="${y + 2.4}" r="2.8" fill="#a3141f" stroke="${CONTORNO}" stroke-width="1.1"/>`;
+    case 'susina': return `<ellipse cx="${x}" cy="${y}" rx="3.6" ry="4.6" fill="#6b3a8e" stroke="${CONTORNO}" stroke-width="1.2"/><ellipse cx="${x - 1.2}" cy="${y - 1}" rx="1.2" ry="2" fill="#b9a6cc" opacity=".7"/>`;
+    case 'fico': return `<path d="M${x} ${y - 5} c-1 2 -4.5 3.5 -4.5 6.5 c0 2.6 2 4 4.5 4 s4.5 -1.4 4.5 -4 c0 -3 -3.5 -4.5 -4.5 -6.5 z" fill="#7a3d6e" stroke="${CONTORNO}" stroke-width="1.2"/><path d="M${x - 1.6} ${y + 1} q1 -2 3 -1" stroke="#c99bc0" stroke-width="1" fill="none"/>`;
+    case 'cachi': return `<circle cx="${x}" cy="${y}" r="4.7" fill="#f07f1a" stroke="${CONTORNO}" stroke-width="1.3"/><path d="M${x - 3} ${y - 4} l3 1.4 l3 -1.4 l-1.4 3 l-1.6 -1 l-1.6 1 z" fill="#4a6b22" stroke="${CONTORNO}" stroke-width=".8"/>${lucido}`;
+    case 'noce': return `<circle cx="${x}" cy="${y}" r="3.6" fill="#8fbf4a" stroke="${CONTORNO}" stroke-width="1.1"/>`;
+    case 'oliva': return `<ellipse cx="${x}" cy="${y}" rx="1.9" ry="2.6" fill="#2f2a3a" stroke="${CONTORNO}" stroke-width=".8"/><ellipse cx="${x - .6}" cy="${y - .9}" rx=".5" ry=".8" fill="#fff" opacity=".6"/>`;
+    default: return '';
+  }
+}
+
+const POSTI_FRUTTI = [[30, 34], [54, 26], [72, 38], [40, 54], [64, 56], [82, 52], [24, 50]];
+const TRONCO = `<path d="M44 104 C46 92 46 80 44 68 H60 C58 80 58 92 62 104 C56 107 50 107 44 104 Z" fill="#8a5a32" stroke="#2a1e12" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M50 70 V100" stroke="#6b4325" stroke-width="2.5"/><path d="M40 105 L46 100 M64 105 L58 100" stroke="#2a1e12" stroke-width="2.5" stroke-linecap="round"/>`;
+const NUVOLA = 'M18 64 C4 62 2 44 14 38 C10 22 26 12 38 18 C44 4 66 4 70 20 C84 14 98 28 90 42 C102 50 96 68 80 66 C74 76 58 76 52 70 C42 78 24 76 18 64 Z';
+const NUVOLA_LUCE = 'M14 38 C10 22 26 12 38 18 C44 4 66 4 70 20 C84 14 98 28 90 42 C82 50 70 46 64 52 C54 58 42 50 34 54 C22 56 12 50 14 38 Z';
+
+// Chioma a nuvola (tonda, ovale o larga), con ombra sotto, luce sopra e i frutti
+function chiomaNuvola(t, trasforma = '') {
+  const frutti = t.frutto ? POSTI_FRUTTI.map(([x, y]) => frutto(t.frutto, x, y)).join('') : '';
+  return `<g transform="${trasforma}">
+    <path d="${NUVOLA}" fill="${t.scuro}" stroke="${CONTORNO}" stroke-width="3" stroke-linejoin="round"/>
+    <path d="${NUVOLA_LUCE}" fill="${t.base}"/>
+    <path d="M22 30 C24 20 34 18 40 24 C46 12 60 12 64 22 C56 22 52 28 46 28 C38 32 30 26 22 30 Z" fill="${t.chiaro}"/>
+    <path d="M70 26 C78 24 86 30 84 38 C80 34 74 34 70 26 Z" fill="${t.chiaro}"/>
+    <path d="M24 60 C32 64 40 62 46 66" stroke="${CONTORNO}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".55"/>
+    ${frutti}</g>`;
+}
 
 // Disegno (viewBox 104 × 116): la base del tronco è in (52, 104)
 function svgAlbero(tipo) {
   const t = TIPI_ALBERO[tipo] ?? TIPI_ALBERO.generico;
   const ombra = '<ellipse cx="52" cy="106" rx="34" ry="7" fill="#1d3311" opacity=".35"/>';
-  if (t.aghi) {
+  let corpo;
+  if (t.chioma === 'conifera') {
     const strato = (y, w, h) => `<path d="M52 ${y} L${52 + w} ${y + h} C${52 + w / 2} ${y + h + 5} ${52 - w / 2} ${y + h + 5} ${52 - w} ${y + h} Z" fill="#2f6b4a" stroke="#14261a" stroke-width="3" stroke-linejoin="round"/>
       <path d="M52 ${y + 4} L${52 + w * .55} ${y + h * .8} C${52 + w * .2} ${y + h * .9} ${52 - w * .3} ${y + h * .85} ${52 - w * .6} ${y + h * .8} Z" fill="#47896a"/>`;
-    return `<svg viewBox="0 0 104 116" aria-hidden="true">${ombra}
-      <rect x="46" y="86" width="12" height="18" rx="2" fill="#8a5a32" stroke="#2a1e12" stroke-width="2.5"/>
-      ${strato(46, 38, 42)}${strato(26, 30, 36)}${strato(6, 22, 30)}</svg>`;
+    corpo = `<rect x="46" y="86" width="12" height="18" rx="2" fill="#8a5a32" stroke="#2a1e12" stroke-width="2.5"/>
+      ${strato(46, 38, 42)}${strato(26, 30, 36)}${strato(6, 22, 30)}
+      <circle cx="40" cy="80" r="2.6" fill="#8a5a32" stroke="#2a1e12" stroke-width="1"/><circle cx="66" cy="62" r="2.4" fill="#8a5a32" stroke="#2a1e12" stroke-width="1"/>`;
+  } else if (t.chioma === 'olivo') {
+    // Tronco contorto e chioma argentata a ciuffi staccati, con le olive
+    const ciuffo = (cx, cy, rx, ry) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#7f9a6e" stroke="${CONTORNO}" stroke-width="2.6"/>
+      <ellipse cx="${cx - rx * .25}" cy="${cy - ry * .3}" rx="${rx * .62}" ry="${ry * .5}" fill="#a9bf97"/>
+      <path d="M${cx - rx * .6} ${cy - ry * .1} q${rx * .3} -${ry * .35} ${rx * .6} -${ry * .1} M${cx} ${cy + ry * .2} q${rx * .3} -${ry * .3} ${rx * .6} -${ry * .05}" stroke="#dfe8d2" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+    const olive = [[26, 44], [33, 50], [70, 30], [77, 37], [54, 22], [60, 52], [84, 54], [20, 56]].map(([x, y]) => frutto('oliva', x, y)).join('');
+    corpo = `<path d="M40 105 C44 96 38 88 44 80 C48 74 42 66 48 60 L56 60 C60 66 54 72 60 80 C66 88 60 96 66 105 C58 108 48 108 40 105 Z" fill="#7d6a55" stroke="#2a1e12" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M47 98 C49 92 46 86 50 80 M56 96 C55 90 58 86 56 80" stroke="#5a4a3a" stroke-width="2" fill="none"/>
+      <ellipse cx="51" cy="88" rx="2.2" ry="3" fill="#4a3b2c"/>
+      <path d="M48 62 C40 56 30 56 24 52 M56 62 C64 54 72 52 80 50 M52 60 V40" stroke="#5a4a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+      ${ciuffo(26, 50, 18, 12)}${ciuffo(78, 48, 18, 13)}${ciuffo(52, 28, 22, 15)}${ciuffo(40, 42, 13, 9)}${ciuffo(66, 40, 13, 9)}${olive}`;
+  } else if (t.chioma === 'fico') {
+    // Foglie grandi a cinque lobi, i fichi a goccia
+    const foglia = (cx, cy, s, r, colore) => `<g transform="translate(${cx} ${cy}) rotate(${r}) scale(${s})">
+      <path d="M0 12 C-4 8 -14 10 -15 2 C-12 0 -10 -2 -13 -7 C-8 -9 -6 -6 -5 -10 C-3 -15 3 -15 5 -10 C6 -6 8 -9 13 -7 C10 -2 12 0 15 2 C14 10 4 8 0 12 Z" fill="${colore}" stroke="${CONTORNO}" stroke-width="2.2" stroke-linejoin="round"/>
+      <path d="M0 12 V-10 M0 2 L-10 -4 M0 2 L10 -4 M0 6 L-9 4 M0 6 L9 4" stroke="${CONTORNO}" stroke-width=".9" opacity=".5"/></g>`;
+    corpo = `${TRONCO}<path d="${NUVOLA}" fill="${t.scuro}" stroke="${CONTORNO}" stroke-width="3" stroke-linejoin="round"/>
+      ${foglia(24, 52, 1, -30, t.base)}${foglia(80, 52, 1, 30, t.base)}${foglia(30, 30, 1.05, -15, t.base)}${foglia(74, 28, 1.05, 18, t.base)}${foglia(52, 22, 1.15, 0, t.chiaro)}${foglia(52, 48, 1.1, 0, t.base)}
+      ${[[38, 58], [66, 60], [44, 38], [62, 36]].map(([x, y]) => frutto('fico', x, y)).join('')}`;
+  } else {
+    const trasforma = t.chioma === 'ovale' ? 'translate(52 40) scale(.84 1.12) translate(-52 -40)'
+      : t.chioma === 'larga' ? 'translate(52 44) scale(1.1 .9) translate(-52 -44)' : '';
+    corpo = `${TRONCO}${chiomaNuvola(t, trasforma)}`;
   }
-  const frutti = t.frutto ? [[30, 34], [54, 26], [72, 38], [40, 54], [64, 56], [82, 52], [24, 50]]
-    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.3" fill="${t.frutto}" stroke="#1d2414" stroke-width="1.4"/><circle cx="${x - 1.3}" cy="${y - 1.4}" r="1.3" fill="#fff" opacity=".7"/>`).join('') : '';
-  return `<svg viewBox="0 0 104 116" aria-hidden="true">${ombra}
-    <path d="M44 104 C46 92 46 80 44 68 H60 C58 80 58 92 62 104 C56 107 50 107 44 104 Z" fill="#8a5a32" stroke="#2a1e12" stroke-width="2.5" stroke-linejoin="round"/>
-    <path d="M50 70 V100" stroke="#6b4325" stroke-width="2.5"/><path d="M40 105 L46 100 M64 105 L58 100" stroke="#2a1e12" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M18 64 C4 62 2 44 14 38 C10 22 26 12 38 18 C44 4 66 4 70 20 C84 14 98 28 90 42 C102 50 96 68 80 66 C74 76 58 76 52 70 C42 78 24 76 18 64 Z" fill="${t.scuro}" stroke="#1d2414" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M14 38 C10 22 26 12 38 18 C44 4 66 4 70 20 C84 14 98 28 90 42 C82 50 70 46 64 52 C54 58 42 50 34 54 C22 56 12 50 14 38 Z" fill="${t.base}"/>
-    <path d="M22 30 C24 20 34 18 40 24 C46 12 60 12 64 22 C56 22 52 28 46 28 C38 32 30 26 22 30 Z" fill="${t.chiaro}"/>
-    <path d="M70 26 C78 24 86 30 84 38 C80 34 74 34 70 26 Z" fill="${t.chiaro}"/>
-    <path d="M24 60 C32 64 40 62 46 66" stroke="#1d2414" stroke-width="2" fill="none" stroke-linecap="round" opacity=".55"/>
-    ${frutti}</svg>`;
+  return `<svg viewBox="0 0 104 116" aria-hidden="true">${ombra}${corpo}</svg>`;
 }
 
 // Ombra di mezzogiorno (in primavera e autunno il sole a Bologna è alto circa 45°), verso Nord.

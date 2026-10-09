@@ -2,7 +2,7 @@
 // Solo calcoli: restituisce le colture (e le voci di registro) da aggiungere, senza salvare niente.
 
 import { CATALOGO, colturaDaNome, disposizione, resa, AIUOLA } from './catalogo.js';
-import { misure } from './geometria.js';
+import { misureLibere } from './geometria.js';
 
 const GIRO = ['L', 'C', 'A', 'S'];
 // Ordine di partenza dei settori se l'orto non ha storia (come nel piano 2026–27)
@@ -186,14 +186,14 @@ const giorniTra = (da, a) => (Date.parse(a) - Date.parse(da)) / 86400000;
 
 // Resa della coltura nelle sue aiuole/metà e periodi di raccolta (il primo dopo l'inizio; le perenni ogni anno).
 // null se il catalogo non dà la resa (fiori, sovesci, aromatiche…)
-export function resaColtura(c, aiuole = []) {
+export function resaColtura(c, aiuole = [], alberi = []) {
   const scheda = colturaDaNome(c.nome);
   if (!scheda?.r) return null;
   let kg = [0, 0];
   for (const id of c.aiuoleIds) {
     const parte = c.parti?.[id];
     const aiuola = aiuole.find(x => x.id === id);
-    const misura = aiuola ? misure(aiuola, parte || 'tutta') : !parte ? AIUOLA : ['fondo', 'davanti'].includes(parte) ? { L: AIUOLA.L, W: AIUOLA.W / 2 } : { L: AIUOLA.L / 2, W: AIUOLA.W };
+    const misura = aiuola ? misureLibere(aiuola, parte || 'tutta', alberi) : !parte ? AIUOLA : ['fondo', 'davanti'].includes(parte) ? { L: AIUOLA.L, W: AIUOLA.W / 2 } : { L: AIUOLA.L / 2, W: AIUOLA.W };
     const r = resa(scheda, disposizione(scheda, misura.L, misura.W));
     if (!r) return null;
     kg = [kg[0] + r[0], kg[1] + r[1]];
