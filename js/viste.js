@@ -4054,8 +4054,8 @@ export function paginaDisegna(originali, { nuovo = false } = {}) {
         campo('Chioma larga (cm)', x.diametro, n => { if (n >= 50 && n <= 3000) x.diametro = aGriglia(n); }, { min: 50, max: 3000 }),
         campo('Altezza (m)', x.altezza, n => { if (n > 0 && n <= 40) x.altezza = n; }, { step: 0.5, min: 0.5, max: 40 }));
       pannello.append(griglia, elimina('Elimina albero'), elemento('p', t.esposizione != null
-        ? 'Trascinalo dal tronco. Non può stare sulle aiuole, ma la chioma sì. L\'ombra è quella di mezzogiorno in primavera e in autunno.'
-        : 'Trascinalo dal tronco. Non può stare sulle aiuole, ma la chioma sì. Con l\'esposizione vedrai anche la sua ombra.', 'nota-terreno'));
+        ? 'Trascinalo dal tronco, dove vuoi: anche dentro un\'aiuola, ma lì toglie spazio alle colture. L\'ombra è quella di mezzogiorno in primavera e in autunno.'
+        : 'Trascinalo dal tronco, dove vuoi: anche dentro un\'aiuola, ma lì toglie spazio alle colture. Con l\'esposizione vedrai anche la sua ombra.', 'nota-terreno'));
       return;
     }
     if (categoria === 'aiuola') {
