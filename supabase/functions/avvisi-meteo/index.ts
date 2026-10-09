@@ -91,9 +91,10 @@ Deno.serve(async richiesta => {
   for (const [ortoId, telefoni] of perOrto) {
     // Colture attive dell'orto (iniziate, senza data di fine)
     const { data: righe } = await supabase.from('elementi').select('dati').eq('orto_id', ortoId).eq('tipo', 'coltura').eq('eliminato', false);
-    const attive = (righe ?? []).map(x => x.dati).filter(c => c?.stato === 'attiva' && c.dataInizio <= oggi && !c.dataFine);
-    const colture = [...new Set(attive.map(c => c.nome as string))];
-    const delicate = [...new Set(attive.filter(c => [...CALDE].some(p => senzaAccenti(c.nome).includes(p)) || giorniTra(c.dataInizio, oggi) <= 21).map(c => (c.nome as string).toLowerCase()))];
+    type Coltura = { nome: string; stato: string; dataInizio: string; dataFine: string | null };
+    const attive = (righe ?? []).map(x => x.dati as Coltura).filter(c => c?.stato === 'attiva' && c.dataInizio <= oggi && !c.dataFine);
+    const colture: string[] = [...new Set(attive.map(c => c.nome))];
+    const delicate: string[] = [...new Set(attive.filter(c => [...CALDE].some(p => senzaAccenti(c.nome).includes(p)) || giorniTra(c.dataInizio, oggi) <= 21).map(c => c.nome.toLowerCase()))];
     for (const a of avvisi(giorni, oggi, colture, delicate)) {
       // Già mandato? (la chiave contiene il giorno)
       const { error: doppio } = await supabase.from('avvisi_inviati').insert({ orto_id: ortoId, chiave: a.chiave });
