@@ -4289,8 +4289,10 @@ export function paginaDisegna(originali, { nuovo = false } = {}) {
       // Le lettere restano dritte mentre l'anello gira
       for (const g of bussolaEl.querySelectorAll('.lettera-g')) g.setAttribute('transform', `rotate(${-nord} ${g.dataset.x} ${g.dataset.y})`);
       bussolaEl.classList.toggle('spenta', t.esposizione == null);
-      testoVerso.textContent = t.esposizione == null ? 'Gira la bussola con il dito: la N rossa va dove c\'è il Nord.'
-        : `Il fondo dell'orto guarda verso ${nomeVerso(t.esposizione)} (${t.esposizione}°)`;
+      // Due righe fisse: la prima non cambia, la seconda ha sempre la stessa altezza (niente salti)
+      testoVerso.replaceChildren(
+        elemento('span', t.esposizione == null ? 'Gira la bussola con il dito:' : 'Il fondo dell\'orto guarda verso'),
+        elemento('strong', t.esposizione == null ? 'la N rossa va dove c\'è il Nord' : `${nomeVerso(t.esposizione)} (${t.esposizione}°)`));
       spiega.textContent = testoEsposizione(t.esposizione);
     };
     const etFondo = elemento('span', 'Fondo', 'estremo-esposizione fondo');

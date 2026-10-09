@@ -947,3 +947,7 @@ header { position: relative; z-index: 30; }
 .quota-disegno.verticale { border-top: 0; border-left: 2px dashed #fff8e7; }
 .testo-quota { position: absolute; left: 50%; top: 0; transform: translate(-50%, -50%); padding: 0 6px; font-size: .75rem; font-weight: 800; white-space: nowrap; color: #fff; background: var(--testo); border-radius: 4px; }
 .quota-disegno.verticale .testo-quota { left: 0; top: 50%; }
+.finestra-disegno.grande { top: max(8px, 3dvh); transform: translateX(-50%); }
+.verso-esposizione { display: flex; flex-direction: column; align-items: center; min-height: 3.2em; }
+.verso-esposizione strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.finestra-disegno.grande .nota-terreno { min-height: 6.5em; }
