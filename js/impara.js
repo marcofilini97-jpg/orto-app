@@ -82,7 +82,7 @@ export const GUIDE = [
       'Prima di annaffiare infila un dito nella terra: se è asciutta per qualche centimetro, è ora.',
       'Bagna al mattino presto o la sera, quando la terra non scotta.',
       'Dai l\'acqua alla base delle piante, non sulle foglie: le foglie bagnate favoriscono malattie come la {peronospora:peronospora}.',
-      'In piena estate servono indicativamente 20–35 litri per m² a settimana, divisi in due o tre volte; di più con caldo e vento, niente se piove.',
+      'In piena estate, in media, servono 20–35 litri per m² a settimana, divisi in due o tre volte; le colture più assetate nel pieno della crescita (pomodori, zucchine, cetrioli a luglio) arrivano a 40–50. Di più con caldo e vento, niente se piove. Quanta ne serve davvero alle tue aiuole, settimana per settimana, lo calcola la pagina "L\'acqua" (icona dell\'orto in alto).',
       'Dopo le semine e i trapianti bagna più spesso e con meno acqua, finché le piante non hanno radicato.',
     ],
     quando: 'Soprattutto da maggio a settembre.',
