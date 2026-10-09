@@ -17,7 +17,7 @@ export function annoOrto(iso) {
 }
 
 // Prima fine di raccolta dopo l'inizio (stima dal catalogo), come in viste.js
-function fineStimata(scheda, inizio) {
+export function fineStimata(scheda, inizio) {
   if (!scheda || scheda.tappa === 'P') return null;
   const anno = Number(inizio.slice(0, 4));
   const fine = scheda.r.flatMap(([, al]) => [`${anno}-${al}`, `${anno + 1}-${al}`]).filter(d => d > inizio).sort()[0] ?? null;

@@ -3076,14 +3076,16 @@ function annoDiRaccolto(dati, y, g, fino) {
       const finora = mezzo(kgTra(info, inizioAnno, fino < fineAnno ? fino : fineAnno));
       const periodi = info.periodi.filter(p => p.dal < fineAnno && p.stop > inizioAnno);
       const stato = periodi.some(p => p.dal <= g && g < p.stop) ? 'in' : periodi.every(p => p.stop <= g) ? 'finita' : 'dopo';
-      const forbice = `${testoKg(kgAnno[0]).replace(' kg', '')}–${testoKg(kgAnno[1])}`;
+      // Per le colture da venire si mostra tutto il raccolto previsto (anche la parte che cade nell'anno dopo)
+      const kgMostrati = stato === 'dopo' ? info.kg : kgAnno;
+      const forbice = `${testoKg(kgMostrati[0]).replace(' kg', '')}–${testoKg(kgMostrati[1])}`;
       const voce = link('', `#/coltura/${c.id}`, 'voce-raccolto');
       const nome = elemento('b', c.nome);
       nome.append(elemento('span', { in: 'in raccolta', finita: 'finita', dopo: 'da venire' }[stato], `stato-raccolto stato-${stato}`));
       const dove = doveColtura(c);
       const nota = stato === 'in' ? `${dove} · finora, su ${forbice} previsti`
         : stato === 'finita' ? `${dove} · ${forbice}`
-        : `${dove} · ${forbice} da ${MESI_LUNGHI[Number(periodi[0].dal.slice(5, 7)) - 1]}`;
+        : `${dove} · ${forbice} previsti da ${MESI_LUNGHI[Number(periodi[0].dal.slice(5, 7)) - 1]}`;
       voce.append(icona(c.nome, 'icona-raccolto', 2), nome, elemento('em', stato === 'dopo' ? '—' : testoKg(finora)), elemento('small', nota));
       return voce;
     });
