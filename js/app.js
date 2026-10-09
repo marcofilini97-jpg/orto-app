@@ -1,7 +1,7 @@
 import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva, accessoDaLink, completaCollegamento, ortoAttuale,
   soloLettura, MESSAGGIO_SOLA_LETTURA, aggiornaDatiSalvati, cambiaSviluppatore } from './dati.js';
 import { CATALOGO } from './catalogo.js';
-import { aggiornaMeteo } from './meteo.js';
+import { aggiornaMeteo, impostaMeteoSimulato } from './meteo.js';
 import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
@@ -114,6 +114,8 @@ function disegna() {
   delete document.body.dataset.stagione;
   document.body.classList.toggle('prova', inProva() && !inArcade());
   document.body.classList.toggle('arcade', inArcade());
+  // Dentro Arcade si usa il meteo della simulazione (annata vera o medie), fuori il meteo di Bologna
+  impostaMeteoSimulato(inArcade() ? (simulazioneAttiva().meteo ?? {}) : null);
   // Nella barra: il nome della simulazione in Arcade, altrimenti il nome dell'orto (tocco = I miei orti)
   const nomeBarra = document.querySelector('.nome-barra');
   const orto = ortoAttuale();

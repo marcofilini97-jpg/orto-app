@@ -998,3 +998,9 @@ header { position: relative; z-index: 30; }
 .avviso-pioggia { border-left-color: #3d6fa8; }
 .avviso-secco { border-left-color: #c49a3a; }
 .icona-avviso { margin-right: 6px; }
+
+/* Arcade: annata */
+.modulo-arcade .campo-annata[hidden] { display: none; }
+.annata-raccolto { margin: 10px 0; padding: 8px 12px; background: #fff; border: 2px solid #e5d3b0; border-radius: 12px; }
+.annata-raccolto h3 { margin: 2px 0 4px; }
+.evento-annata { margin: 4px 0; padding: 4px 8px; font-size: .9rem; background: #fdeeea; border-left: 4px solid #c0392b; border-radius: 6px; }

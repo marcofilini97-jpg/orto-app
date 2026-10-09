@@ -3,7 +3,7 @@
 
 import { CATALOGO, colturaDaNome, disposizione, resa, AIUOLA } from './catalogo.js';
 import { misureLibere } from './geometria.js';
-import { raccoltaPrevista, spostaFine } from './meteo.js';
+import { raccoltaPrevista, spostaFine, effettiClima } from './meteo.js';
 import { mesiTra, fattoreSoleAiuola, soleNoto } from './sole.js';
 
 const GIRO = ['L', 'C', 'A', 'S'];
@@ -227,7 +227,10 @@ export function resaColtura(c, dati = { aiuole: [], alberi: [], terreno: [] }) {
   // Coltura terminata prima: la raccolta si ferma alla data di fine
   periodi = periodi.filter(p => !c.dataFine || p.dal < c.dataFine)
     .map(p => ({ ...p, stop: c.dataFine && c.dataFine < p.al ? c.dataFine : p.al }));
-  return periodi.length ? { coltura: c, scheda, kg, periodi } : null;
+  if (!periodi.length) return null;
+  // Gelate e caldo estremo dell'annata (con il meteo vero; con le medie non succede niente)
+  const clima = scheda.tappa === 'P' ? { fattore: 1, eventi: [] } : effettiClima(scheda, c.dataInizio, periodi[0]);
+  return { coltura: c, scheda, kg: kg.map(v => v * clima.fattore), periodi, eventi: clima.eventi };
 }
 
 // kg [min, max] raccolti tra i giorni da (compreso) e a (escluso)

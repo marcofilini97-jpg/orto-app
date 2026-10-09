@@ -16,7 +16,7 @@ import {
   spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
 } from './terreno.js';
 import { GUIDE, LAVORI } from './impara.js';
-import { aggiornaMeteo, meteoPronto, tempoDel, mediaDel, raccoltaPrevista, spostaFine, avvisiMeteo, coltureAttive } from './meteo.js';
+import { aggiornaMeteo, meteoPronto, tempoDel, mediaDel, raccoltaPrevista, spostaFine, avvisiMeteo, coltureAttive, scaricaAnnata, impostaMeteoSimulato } from './meteo.js';
 import { posizioneSole, ombraAlberoAlSole, oreDiSole, oreMedie, mesiTra, fattoreSoleAiuola, soleNoto } from './sole.js';
 import { area, misureLibere, RAGGIO_TRONCO, dentro as dentroForma, quadratoDentro, toccaRettangoli, ingombro, ingombroZona, posti, puntoEtichetta, tracciato, misure } from './geometria.js';
 import { pianoAutomatico, resaColtura, kgTra, inRaccolta, fineSovescio } from './arcade.js';
@@ -3033,7 +3033,22 @@ export function paginaRaccolto(dati) {
     b.addEventListener('click', () => mostraAnno(y));
     anni.append(b);
   }
-  sezione.append(totale, anni, posto);
+  sezione.append(totale);
+  // L'annata: clima scelto ed eventi fino al giorno della simulazione
+  const eventi = dati.colture.map(c => resaColtura(c, dati)).filter(Boolean)
+    .flatMap(info => (info.eventi ?? []).map(e => ({ ...e, coltura: info.coltura })))
+    .filter(e => e.data <= g).sort((x, y) => x.data.localeCompare(y.data));
+  const annata = elemento('div', '', 'annata-raccolto');
+  annata.append(elemento('h3', 'L\'annata'), elemento('p', sim.parametri.clima === 'annata'
+    ? `Meteo vero: la prima estate è quella del ${sim.parametri.annata}, poi gli anni seguenti${sim.meteo ? '' : ' (meteo non scaricato)'}. Tempi di raccolta, gelate e caldo come allora.`
+    : 'Clima medio degli ultimi 30 anni: niente gelate tardive né ondate di caldo.', 'nota-terreno'));
+  for (const e of eventi) {
+    const p = elemento('p', '', 'evento-annata');
+    p.append(elemento('strong', `${dataPerUtente(e.data)} · ${e.coltura.nome} (${doveColtura(e.coltura)}): `), e.testo);
+    annata.append(p);
+  }
+  if (sim.parametri.clima === 'annata' && !eventi.length) annata.append(elemento('p', 'Finora nessuna gelata tardiva né caldo estremo sulle colture.', 'nota-terreno'));
+  sezione.append(annata, anni, posto);
   mostraAnno(Math.min(primo + 4, Math.max(primo, annoOrto(g))));
   return sezione;
 }
@@ -3126,6 +3141,13 @@ function esempiFamiglia(f) {
     .map(s => s.nome.toLowerCase()).join(', ');
 }
 
+// Annate tra cui scegliere (dal 1996 all'anno scorso), con qualche nota sulle più particolari a Bologna
+const ANNATE = (() => {
+  const note = { 2003: 'estate caldissima', 2012: 'estate calda e secca', 2014: 'estate fresca e piovosa', 2017: 'molto secca', 2022: 'siccità e caldo', 2023: 'alluvione di maggio' };
+  const ultimo = Number(oggiVero().slice(0, 4)) - 1;
+  return Array.from({ length: ultimo - 1996 + 1 }, (_, i) => ultimo - i).map(a => [a, note[a] ?? '']);
+})();
+
 // Parametri di una simulazione nuova (id null) o di una salvata
 export function paginaArcade(id) {
   const sim = id ? leggiSimulazione(id) : null;
@@ -3152,6 +3174,11 @@ export function paginaArcade(id) {
     <fieldset><legend>Partenza</legend>${scelte('partenza', [['vuoto', 'Orto vuoto'], ['reale', "Dall'orto reale"]])}</fieldset>
     <label class="campo-dal" hidden>Com'era l'orto reale il<input type="text" name="dal" placeholder="gg/mm/aaaa"></label>
     <fieldset><legend>Terreno</legend>${scelte('terreno', [['reale', 'Quello reale'], ['stima', 'Stima di Bologna']])}</fieldset>
+    <fieldset><legend>Clima</legend>${scelte('clima', [['media', 'Media di 30 anni'], ['annata', 'Un\'annata vera']])}
+      <label class="campo-annata" hidden>Prima estate come quella del
+        <select name="annata">${ANNATE.map(([a, nota]) => `<option value="${a}">${a}${nota ? ` · ${nota}` : ''}</option>`).join('')}</select></label>
+      <p class="aiuto-pref campo-annata" hidden>Il meteo vero di quell'anno e dei seguenti, giorno per giorno: tempi di raccolta, gelate tardive e caldo estremo cambiano la simulazione.</p>
+    </fieldset>
     <fieldset class="preferenze"><legend>Preferenze</legend>
       <p class="aiuto-pref">Tocca una coltura: una volta <b class="pref-si">♥ mi piace</b>, due volte <b class="pref-no">✕ non la voglio</b>, tre volte torna normale.</p>
       <div class="posto-preferenze"></div>
@@ -3168,6 +3195,8 @@ export function paginaArcade(id) {
   c.anni.value = String(p.anni ?? 4);
   c.dal.value = dataPerUtente(p.dal);
   for (const k of ['rotazione', 'partenza', 'terreno']) modulo.querySelector(`[name="${k}"][value="${p[k]}"]`).checked = true;
+  modulo.querySelector(`[name="clima"][value="${p.clima ?? 'media'}"]`).checked = true;
+  c.annata.value = String(p.annata ?? ANNATE[0][0]);
   for (const casella of modulo.querySelectorAll('[name="famiglie"]')) casella.checked = (p.famiglie ?? FAMIGLIE_ROTAZIONE).includes(casella.value);
   const pref = { preferite: [], escluse: [], obiettivo: 'varieta', ...(p.preferenze ?? {}) };
   modulo.querySelector(`[name="obiettivo"][value="${pref.obiettivo}"]`).checked = true;
@@ -3197,11 +3226,12 @@ export function paginaArcade(id) {
     modulo.querySelector('.campo-anni').hidden = !personalizzata;
     modulo.querySelector('.campo-famiglie').hidden = !personalizzata;
     modulo.querySelector('.campo-dal').hidden = modulo.querySelector('[name="partenza"]:checked').value !== 'reale';
+    for (const el of modulo.querySelectorAll('.campo-annata')) el.hidden = modulo.querySelector('[name="clima"]:checked').value !== 'annata';
   };
   modulo.addEventListener('change', mostraCampi);
   mostraCampi();
 
-  modulo.addEventListener('submit', evento => {
+  modulo.addEventListener('submit', async evento => {
     evento.preventDefault();
     const avviso = modulo.querySelector('.errore');
     const scelto = k => modulo.querySelector(`[name="${k}"]:checked`).value;
@@ -3210,6 +3240,7 @@ export function paginaArcade(id) {
       inizio: `${anno}-${c.mese.value}`, rotazione: scelto('rotazione'), anni: Number(c.anni.value),
       famiglie: [...modulo.querySelectorAll('[name="famiglie"]:checked')].map(x => x.value),
       partenza: scelto('partenza'), dal: dataPerArchivio(c.dal.value) ?? '', terreno: scelto('terreno'),
+      clima: scelto('clima'), annata: Number(c.annata.value),
       preferenze: {
         preferite: [...statoPref].filter(([, v]) => v === 'si').map(([k]) => k),
         escluse: [...statoPref].filter(([, v]) => v === 'no').map(([k]) => k),
@@ -3232,12 +3263,32 @@ export function paginaArcade(id) {
       avviso.hidden = false;
       return;
     }
-    const base = ['inizio', 'partenza', 'dal', 'terreno'];
+    const base = ['inizio', 'partenza', 'dal', 'terreno', 'clima', 'annata'];
     const ricomincia = !sim || base.some(k => (k === 'dal' && nuovi.partenza !== 'reale') ? false : nuovi[k] !== p[k]);
-    if (sim && ricomincia && !confirm('Hai cambiato la partenza: la simulazione ricomincia da capo e perde le colture aggiunte. Continuare?')) return;
+    if (sim && ricomincia && !confirm('Hai cambiato la partenza o il clima: la simulazione ricomincia da capo e perde le colture aggiunte. Continuare?')) return;
     const nuova = sim ?? { id: nuovoId('s'), creata: oggiVero() };
     Object.assign(nuova, { nome: c.nome.value.trim(), parametri: nuovi });
-    if (ricomincia) Object.assign(nuova, { dati: datiPerSimulazione(nuovi), giorno: `${nuovi.inizio}-01` });
+    if (ricomincia) {
+      Object.assign(nuova, { dati: datiPerSimulazione(nuovi), giorno: `${nuovi.inizio}-01` });
+      // Annata vera: si scarica una volta e resta nella simulazione (così funziona anche senza rete)
+      nuova.meteo = null;
+      if (nuovi.clima === 'annata') {
+        const pulsante = modulo.querySelector('[type="submit"]');
+        pulsante.disabled = true;
+        pulsante.textContent = 'Scarico il meteo dell\'annata…';
+        try {
+          nuova.meteo = await scaricaAnnata(nuovi.annata, nuova.giorno);
+        } catch {
+          pulsante.disabled = false;
+          pulsante.textContent = sim ? 'Riprendi simulazione' : 'Inizia simulazione';
+          avviso.textContent = 'Non riesco a scaricare il meteo di quell\'annata: serve la connessione. Riprova, oppure scegli "Media di 30 anni".';
+          avviso.hidden = false;
+          return;
+        }
+      }
+    }
+    // Il piano automatico usa già il clima della simulazione (tempi di raccolta)
+    impostaMeteoSimulato(nuova.meteo ?? {});
     if (c.riempi.checked) {
       const piano = pianoAutomatico(nuova.dati, { dal: nuova.giorno, anni: 4, preferenze: nuovi.preferenze, nuovoId });
       nuova.dati.colture.push(...piano.colture);

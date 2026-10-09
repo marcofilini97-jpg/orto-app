@@ -100,11 +100,20 @@ export function meteoPronto() {
   return !!meteo()?.normali;
 }
 
+// Meteo di una simulazione Arcade: null fuori da Arcade; dentro { giorni } con l'annata vera spostata sulle date
+// della simulazione, oppure {} per usare solo le medie (mai il meteo di oggi, che nella simulazione non c'entra)
+let simulato = null;
+export function impostaMeteoSimulato(m) {
+  if (m === simulato) return;
+  simulato = m;
+  memoriaPrevisioni.clear();
+}
+
 // Il tempo di un giorno: quello vero o previsto se c'è, altrimenti la media. null se il meteo non è mai stato scaricato
 export function tempoDel(iso) {
   const m = meteo();
   if (!m?.normali) return null;
-  const g = m.giorni?.[iso];
+  const g = simulato ? simulato.giorni?.[iso] : m.giorni?.[iso];
   if (g) return { massima: g[0], minima: g[1], pioggia: g[2], codice: g[3], previsione: g[4], media: false };
   const n = m.normali[iso.slice(5)] ?? m.normali['02-28'];
   return { massima: n[0], minima: n[1], pioggia: n[2], codice: null, previsione: false, media: true };
@@ -246,4 +255,67 @@ export function coltureAttive(dati, colturaDaNome) {
   const attive = dati.colture.filter(c => c.stato === 'attiva' && c.dataInizio <= oggi && !c.dataFine);
   const delicate = attive.filter(c => CALDE.has(colturaDaNome(c.nome)?.id) || giorniTra(c.dataInizio, oggi) <= 21);
   return { colture: [...new Set(attive.map(c => c.nome))], delicate: [...new Set(delicate.map(c => c.nome.toLowerCase()))] };
+}
+
+// ---- Annate vere per Arcade ----
+
+// Il meteo vero di un'annata spostato sulle date della simulazione che parte il giorno `partenza`:
+// la prima estate della simulazione è l'estate di annoVero (es. partenza ottobre 2026, annata 2003: l'estate 2027
+// simulata è quella del 2003). Per 4 anni e mezzo. { origine, giorni: { 'AAAA-MM-GG': [massima, minima, pioggia] } }
+export async function scaricaAnnata(annoVero, partenza) {
+  const annoPartenza = Number(partenza.slice(0, 4));
+  const primaEstate = Number(partenza.slice(5, 7)) <= 6 ? annoPartenza : annoPartenza + 1;
+  const scarto = primaEstate - annoVero;
+  const da = `${annoPartenza - scarto}${partenza.slice(4)}`;
+  const limite = piu(oggiVero(), -6);
+  const fine = [piu(da, 4 * 365 + 120), limite].sort()[0];
+  const j = await scarica(`https://archive-api.open-meteo.com/v1/archive?${PUNTO}&start_date=${da}&end_date=${fine}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`);
+  const giorni = {};
+  j.daily.time.forEach((t, i) => {
+    if (j.daily.temperature_2m_max[i] == null) return;
+    const anno = Number(t.slice(0, 4)) + scarto;
+    const mmgg = t.slice(5);
+    // Il 29 febbraio esiste solo negli anni bisestili
+    if (mmgg === '02-29' && !(anno % 4 === 0 && (anno % 100 !== 0 || anno % 400 === 0))) return;
+    giorni[`${anno}-${mmgg}`] = [j.daily.temperature_2m_max[i], j.daily.temperature_2m_min[i], j.daily.precipitation_sum[i] ?? 0];
+  });
+  return { origine: annoVero, giorni };
+}
+
+// Colture da frutto che soffrono il caldo estremo mentre fioriscono e maturano
+const FRUTTO = new Set(['pomodoro', 'peperone', 'melanzana', 'zucchina', 'cetriolo', 'fagiolino', 'fagiolorampicante', 'melone', 'anguria', 'zucca']);
+
+// Effetti dell'annata (solo con il meteo vero, mai con le medie): gelata nel primo mese per le colture da caldo
+// (resa −40%), giorni oltre i 35 °C durante la raccolta delle colture da frutto (−3% al giorno, al massimo −30%).
+// { fattore, eventi: [{ data, testo }] }
+export function effettiClima(scheda, inizio, raccolta) {
+  const eventi = [];
+  let fattore = 1;
+  if (!scheda || !meteoPronto()) return { fattore, eventi };
+  if (CALDE.has(scheda.id)) {
+    for (let d = inizio, n = 0; n <= 30; d = piu(d, 1), n++) {
+      const t = tempoDel(d);
+      if (t && !t.media && t.minima <= 0) {
+        fattore *= 0.6;
+        eventi.push({ data: d, testo: `gelata (${Math.round(t.minima)} °C) poco dopo ${scheda.t ? 'il trapianto' : 'la semina'}: resa −40%` });
+        break;
+      }
+    }
+  }
+  if (FRUTTO.has(scheda.id) && raccolta) {
+    let caldi = 0, primo = null;
+    for (let d = raccolta.dal; d < raccolta.al; d = piu(d, 1)) {
+      const t = tempoDel(d);
+      if (t && !t.media && t.massima >= 35) {
+        caldi++;
+        primo ??= d;
+      }
+    }
+    if (caldi) {
+      const f = Math.max(0.7, 1 - 0.03 * caldi);
+      fattore *= f;
+      eventi.push({ data: primo, testo: `${caldi} ${caldi === 1 ? 'giorno' : 'giorni'} sopra i 35 °C durante la raccolta: resa −${Math.round((1 - f) * 100)}%` });
+    }
+  }
+  return { fattore, eventi };
 }
