@@ -4484,7 +4484,7 @@ const TIPI_ALBERO = {
   albicocco: { nome: 'Albicocco', chioma: 'tonda', base: '#4f9a33', scuro: '#3a7a26', chiaro: '#80c158', frutto: 'albicocca', h: 4 },
   ciliegio: { nome: 'Ciliegio', chioma: 'larga', base: '#4b9033', scuro: '#346a25', chiaro: '#74b452', frutto: 'ciliegia', h: 6 },
   susino: { nome: 'Susino', chioma: 'tonda', base: '#4c9234', scuro: '#366c26', chiaro: '#76b454', frutto: 'susina', h: 4 },
-  fico: { nome: 'Fico', chioma: 'fico', base: '#3f8a2b', scuro: '#2c6620', chiaro: '#66aa48', frutto: 'fico', h: 4 },
+  fico: { nome: 'Fico', chioma: 'tonda', base: '#3f8a2b', scuro: '#2c6620', chiaro: '#66aa48', frutto: 'fico', h: 4 },
   cachi: { nome: 'Cachi', chioma: 'tonda', base: '#4c8b30', scuro: '#356524', chiaro: '#73ac4e', frutto: 'cachi', h: 6 },
   noce: { nome: 'Noce', chioma: 'larga', base: '#3e7f2c', scuro: '#2b5e20', chiaro: '#5f9e46', frutto: 'noce', h: 12 },
   olivo: { nome: 'Olivo', chioma: 'olivo', h: 5 },
@@ -4506,6 +4506,7 @@ function frutto(tipo, x, y) {
     case 'susina': return `<ellipse cx="${x}" cy="${y}" rx="3.6" ry="4.6" fill="#6b3a8e" stroke="${CONTORNO}" stroke-width="1.2"/><ellipse cx="${x - 1.2}" cy="${y - 1}" rx="1.2" ry="2" fill="#b9a6cc" opacity=".7"/>`;
     case 'fico': return `<path d="M${x} ${y - 5} c-1 2 -4.5 3.5 -4.5 6.5 c0 2.6 2 4 4.5 4 s4.5 -1.4 4.5 -4 c0 -3 -3.5 -4.5 -4.5 -6.5 z" fill="#7a3d6e" stroke="${CONTORNO}" stroke-width="1.2"/><path d="M${x - 1.6} ${y + 1} q1 -2 3 -1" stroke="#c99bc0" stroke-width="1" fill="none"/>`;
     case 'cachi': return `<circle cx="${x}" cy="${y}" r="4.7" fill="#f07f1a" stroke="${CONTORNO}" stroke-width="1.3"/><path d="M${x - 3} ${y - 4} l3 1.4 l3 -1.4 l-1.4 3 l-1.6 -1 l-1.6 1 z" fill="#4a6b22" stroke="${CONTORNO}" stroke-width=".8"/>${lucido}`;
+    case 'olivaVerde': return `<ellipse cx="${x}" cy="${y}" rx="1.9" ry="2.6" fill="#8aa13a" stroke="${CONTORNO}" stroke-width=".8"/>`;
     case 'noce': return `<circle cx="${x}" cy="${y}" r="3.6" fill="#8fbf4a" stroke="${CONTORNO}" stroke-width="1.1"/>`;
     case 'oliva': return `<ellipse cx="${x}" cy="${y}" rx="1.9" ry="2.6" fill="#2f2a3a" stroke="${CONTORNO}" stroke-width=".8"/><ellipse cx="${x - .6}" cy="${y - .9}" rx=".5" ry=".8" fill="#fff" opacity=".6"/>`;
     default: return '';
@@ -4542,24 +4543,15 @@ function svgAlbero(tipo) {
       ${strato(46, 38, 42)}${strato(26, 30, 36)}${strato(6, 22, 30)}
       <circle cx="40" cy="80" r="2.6" fill="#8a5a32" stroke="#2a1e12" stroke-width="1"/><circle cx="66" cy="62" r="2.4" fill="#8a5a32" stroke="#2a1e12" stroke-width="1"/>`;
   } else if (t.chioma === 'olivo') {
-    // Tronco contorto e chioma argentata a ciuffi staccati, con le olive
-    const ciuffo = (cx, cy, rx, ry) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#7f9a6e" stroke="${CONTORNO}" stroke-width="2.6"/>
-      <ellipse cx="${cx - rx * .25}" cy="${cy - ry * .3}" rx="${rx * .62}" ry="${ry * .5}" fill="#a9bf97"/>
-      <path d="M${cx - rx * .6} ${cy - ry * .1} q${rx * .3} -${ry * .35} ${rx * .6} -${ry * .1} M${cx} ${cy + ry * .2} q${rx * .3} -${ry * .3} ${rx * .6} -${ry * .05}" stroke="#dfe8d2" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
-    const olive = [[26, 44], [33, 50], [70, 30], [77, 37], [54, 22], [60, 52], [84, 54], [20, 56]].map(([x, y]) => frutto('oliva', x, y)).join('');
-    corpo = `<path d="M40 105 C44 96 38 88 44 80 C48 74 42 66 48 60 L56 60 C60 66 54 72 60 80 C66 88 60 96 66 105 C58 108 48 108 40 105 Z" fill="#7d6a55" stroke="#2a1e12" stroke-width="2.5" stroke-linejoin="round"/>
-      <path d="M47 98 C49 92 46 86 50 80 M56 96 C55 90 58 86 56 80" stroke="#5a4a3a" stroke-width="2" fill="none"/>
-      <ellipse cx="51" cy="88" rx="2.2" ry="3" fill="#4a3b2c"/>
-      <path d="M48 62 C40 56 30 56 24 52 M56 62 C64 54 72 52 80 50 M52 60 V40" stroke="#5a4a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
-      ${ciuffo(26, 50, 18, 12)}${ciuffo(78, 48, 18, 13)}${ciuffo(52, 28, 22, 15)}${ciuffo(40, 42, 13, 9)}${ciuffo(66, 40, 13, 9)}${olive}`;
-  } else if (t.chioma === 'fico') {
-    // Foglie grandi a cinque lobi, i fichi a goccia
-    const foglia = (cx, cy, s, r, colore) => `<g transform="translate(${cx} ${cy}) rotate(${r}) scale(${s})">
-      <path d="M0 12 C-4 8 -14 10 -15 2 C-12 0 -10 -2 -13 -7 C-8 -9 -6 -6 -5 -10 C-3 -15 3 -15 5 -10 C6 -6 8 -9 13 -7 C10 -2 12 0 15 2 C14 10 4 8 0 12 Z" fill="${colore}" stroke="${CONTORNO}" stroke-width="2.2" stroke-linejoin="round"/>
-      <path d="M0 12 V-10 M0 2 L-10 -4 M0 2 L10 -4 M0 6 L-9 4 M0 6 L9 4" stroke="${CONTORNO}" stroke-width=".9" opacity=".5"/></g>`;
-    corpo = `${TRONCO}<path d="${NUVOLA}" fill="${t.scuro}" stroke="${CONTORNO}" stroke-width="3" stroke-linejoin="round"/>
-      ${foglia(24, 52, 1, -30, t.base)}${foglia(80, 52, 1, 30, t.base)}${foglia(30, 30, 1.05, -15, t.base)}${foglia(74, 28, 1.05, 18, t.base)}${foglia(52, 22, 1.15, 0, t.chiaro)}${foglia(52, 48, 1.1, 0, t.base)}
-      ${[[38, 58], [66, 60], [44, 38], [62, 36]].map(([x, y]) => frutto('fico', x, y)).join('')}`;
+    // Tronco contorto con il buco, chioma tonda ma leggera e argentata, olive nere e verdi
+    const olive = [[24, 48, 'oliva'], [36, 52, 'oliva'], [62, 50, 'oliva'], [78, 46, 'oliva'], [50, 30, 'oliva'], [30, 36, 'olivaVerde'], [70, 34, 'olivaVerde'], [86, 50, 'olivaVerde']]
+      .map(([x, y, f]) => frutto(f, x, y)).join('');
+    corpo = `<path d="M38 105 C44 98 36 90 42 82 C47 76 40 70 46 63 L50 61 C47 68 54 72 50 79 L54 79 C51 72 58 68 56 61 L60 62 C64 70 58 76 63 82 C69 90 61 98 68 105 C58 108 48 108 38 105 Z" fill="#7d6a55" stroke="#2a1e12" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M45 99 C48 92 44 87 48 82 M59 97 C57 91 60 87 58 82" stroke="#5a4a3a" stroke-width="1.8" fill="none"/><ellipse cx="53" cy="90" rx="2.6" ry="4" fill="#3b2f23"/>
+      <path d="M48 64 C40 58 30 58 22 54 M58 64 C66 56 74 54 84 52 M52 62 V44" stroke="#5a4a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M10 52 C2 40 12 30 22 32 C22 18 40 10 52 16 C64 8 84 16 82 30 C94 30 102 42 94 54 C88 62 72 58 66 62 C58 56 46 58 38 62 C30 58 16 62 10 52 Z" fill="#6f8a60" stroke="${CONTORNO}" stroke-width="2.8" stroke-linejoin="round"/>
+      <path d="M18 44 C16 34 26 30 32 34 C34 24 48 20 54 26 C62 18 78 24 76 34 C70 30 62 34 58 38 C50 32 40 36 34 40 C28 38 22 40 18 44 Z" fill="#93ab80"/>
+      ${olive}`;
   } else {
     const trasforma = t.chioma === 'ovale' ? 'translate(52 40) scale(.84 1.12) translate(-52 -40)'
       : t.chioma === 'larga' ? 'translate(52 44) scale(1.1 .9) translate(-52 -44)' : '';
