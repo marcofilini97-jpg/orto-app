@@ -32,7 +32,7 @@ function avvisi(giorni: Map<string, Giorno>, oggi: string, colture: string[], de
   const gelo = prossimi.find(g => g.minima <= 1);
   if (gelo && delicate.length) {
     out.push({ chiave: `gelo-${gelo.d}`, titolo: `Gelata ${quando(gelo.d, oggi)}`,
-      testo: `Minima prevista ${Math.round(gelo.minima)} °C: copri con il tessuto non tessuto ${delicate.slice(0, 4).join(', ')}${delicate.length > 4 ? '…' : ''}.` });
+      testo: `Minima prevista ${Math.round(gelo.minima)} °C: copri con il tessuto non tessuto (${delicate.slice(0, 4).join(', ')}${delicate.length > 4 ? '…' : ''}).` });
   }
   const caldo = prossimi.find(g => g.massima >= 33);
   if (caldo) {

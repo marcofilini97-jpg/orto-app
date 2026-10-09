@@ -215,7 +215,7 @@ export function avvisiMeteo({ colture, delicate }) {
   const gelo = prossimi.find(x => x.t.minima <= 1);
   if (gelo && delicate.length) {
     avvisi.push({ chiave: `gelo-${gelo.d}`, tipo: 'gelo', titolo: `Gelata ${quando(gelo.d, oggi)}`,
-      testo: `Minima prevista ${Math.round(gelo.t.minima)} °C: copri con il tessuto non tessuto ${delicate.slice(0, 4).join(', ')}${delicate.length > 4 ? '…' : ''}.` });
+      testo: `Minima prevista ${Math.round(gelo.t.minima)} °C: copri con il tessuto non tessuto (${delicate.slice(0, 4).join(', ')}${delicate.length > 4 ? '…' : ''}).` });
   }
   const caldo = prossimi.find(x => x.t.massima >= 33);
   if (caldo) {

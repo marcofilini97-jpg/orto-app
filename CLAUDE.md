@@ -46,6 +46,7 @@ orto-app/
 │   ├── meteo.js          ← meteo di Bologna da Open-Meteo (medie di 30 anni, giorni recenti, previsioni) e gradi giorno
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
+supabase/functions/avvisi-meteo/index.ts ← funzione del server (Edge Function) che ogni sera manda le notifiche degli avvisi meteo
 ```
 
 ## Date
@@ -226,7 +227,9 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Gradi giorno: soglia 10 °C (tetto 30) per le colture da caldo (pomodoro, peperone, melanzana, zucchina, cetriolo, zucca, melone, anguria, mais, fagiolini, basilico), 5 °C (tetto 25) per le altre. Il calore che serve a una coltura si ricava dal calendario del catalogo in un anno medio (dal primo giorno di trapianto/semina all'inizio della raccolta); `raccoltaPrevista(scheda, inizio, metodo)` somma il caldo vero, poi le previsioni e poi le medie fino a quel calore. Esclusi perenni, fiori e sovesci
 - Usato in: fine stimata delle colture (`fineSuggerita` in viste.js, `fineStimata` in arcade.js: la fine del calendario si sposta come l'inizio della raccolta, al massimo un mese più tardi), periodi di raccolta di Arcade, riquadro "Dal catalogo" e scheda della coltura ("Raccolta prevista: da circa il … (N giorni prima del calendario, per il caldo)")
 - Pagina `#/orto/meteo` (pulsante "Il meteo" in L'orto): oggi, prossimi 10 giorni (bordo azzurro se la minima è ≤ 1 °C), ultimi 30 giorni e pioggia da gennaio rispetto alla media, fonte
-- Da fare: avvisi meteo (gelate, caldo, pioggia) e notifiche sul telefono; Arcade con le annate vere; bilancio dell'acqua
+- Avvisi meteo (`avvisiMeteo` in meteo.js, prossimi 4 giorni, solo se nell'orto ci sono colture attive): gelata (minima ≤ 1 °C, se ci sono colture delicate: da caldo o iniziate da meno di 3 settimane), caldo forte (massima ≥ 33 °C), pioggia oggi o domani ≥ 10 mm, da aprile a settembre una settimana senza pioggia (< 2 mm) e niente in arrivo. Strisce colorate in cima alla mappa (tocco = Il meteo) e nella pagina del meteo
+- Notifiche sul telefono (Web Push): nelle Impostazioni "Notifiche" → "Attiva le notifiche" (serve un account; su iPhone solo con l'app installata sulla Home). Il telefono si iscrive con la chiave pubblica VAPID (`CHIAVE_NOTIFICHE` in server.js) e l'iscrizione va nella tabella `iscrizioni_notifiche` (orto_id, email, endpoint unico, dati; ognuno vede e toglie solo le sue). Ogni sera un Cron di Supabase fa partire l'Edge Function `avvisi-meteo` (codice in `supabase/functions/avvisi-meteo/index.ts`, stesse regole di `avvisiMeteo`): previsioni di Bologna, colture attive di ogni orto con telefoni iscritti, notifiche con web-push; ogni avviso parte una volta sola (tabella `avvisi_inviati`, solo il server ci scrive); iscrizioni scadute (404/410) cancellate. `?prova=<PAROLA_PROVA>` manda una notifica di prova. Secrets della funzione: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY (mai nel codice), VAPID_SUBJECT, PAROLA_PROVA. sw.js mostra la notifica e al tocco apre `#/orto/meteo`
+- Da fare: Arcade con le annate vere; bilancio dell'acqua
 
 ## Barra verde e Impostazioni
 - Icone a destra nella barra verde: cappello da studente (Impara), aiuola con la lente (`#/orto` "L'orto": "Disegna l'orto" e "Il terreno dell'orto"; nascosta in Arcade), ingranaggio (Impostazioni). Il catalogo non è più nella barra: sta dentro Impara
