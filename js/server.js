@@ -34,7 +34,7 @@ async function chiedi(percorso, opzioni = {}) {
     let messaggio = `Errore del server (${risposta.status}).`;
     try {
       const corpo = await risposta.json();
-      messaggio = corpo.msg || corpo.message || corpo.error_description || messaggio;
+      messaggio = corpo.errore || corpo.msg || corpo.message || corpo.error_description || messaggio;
     } catch { /* risposta senza dettagli */ }
     const errore = new Error(messaggio);
     errore.stato = risposta.status;
@@ -164,6 +164,13 @@ export async function cambiaRuolo(ortoId, email, ruolo) {
 // Toglie una persona dall'orto (il gestore toglie chiunque; ognuno può togliere se stesso)
 export async function togliPersona(ortoId, email) {
   await chiedi(filtroPersona(ortoId, email), { method: 'DELETE', headers: await intestazioneAccesso() });
+}
+
+// Email di invito a una persona dell'orto (la manda la funzione del server invita-persona, solo per il gestore)
+export async function invitaPersona(ortoId, email) {
+  return chiedi('/functions/v1/invita-persona', {
+    method: 'POST', headers: await intestazioneAccesso(), body: JSON.stringify({ orto_id: ortoId, email }),
+  });
 }
 
 // Elimina l'orto con tutti i suoi dati (solo il gestore)

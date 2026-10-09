@@ -4,7 +4,7 @@ import {
   carica, salva, esporta, importa, oggi, domani, nuovoId, dataPerUtente, dataPerArchivio, orarioPerUtente,
   inProva, attivaProva, disattivaProva, ricominciaProva,
   sincronizza, collegaTelefono, scollegaTelefono, statoSincronizzazione, cancellaDatiTelefono,
-  iscriviti, recuperaPassword, cambiaPassword, sviluppatore, ortoAttuale, CHIAVE_NOTIFICHE, salvaIscrizioneNotifiche, togliIscrizioneNotifiche, elencoOrti, cambiaOrto, nuovoOrto, rinominaOrto,
+  iscriviti, recuperaPassword, cambiaPassword, sviluppatore, ortoAttuale, CHIAVE_NOTIFICHE, salvaIscrizioneNotifiche, togliIscrizioneNotifiche, invitaPersona, elencoOrti, cambiaOrto, nuovoOrto, rinominaOrto,
   personeOrto, aggiungiPersona, cambiaRuolo, togliPersona, eliminaOrto, esciDallOrto, soloLettura,
   elencoSimulazioni, leggiSimulazione, salvaSimulazione, eliminaSimulazione, entraArcade, inArcade,
   simulazioneAttiva, impostaGiornoArcade, datiPerSimulazione, inizioOrtoReale, oggiVero,
@@ -3665,8 +3665,26 @@ export function paginaPersone() {
             }
             ricarica();
           });
+          // Manda (o rimanda) l'email di invito
+          const invita = elemento('button', '✉', 'pulsante-piccolo invito');
+          invita.type = 'button';
+          invita.title = 'Manda l\'email di invito';
+          invita.setAttribute('aria-label', `Manda l'email di invito a ${p.email}`);
+          invita.hidden = p.email === mia;
+          invita.addEventListener('click', async () => {
+            invita.disabled = true;
+            avviso.hidden = true;
+            try {
+              await invitaPersona(orto.id, p.email);
+              invita.textContent = '✓';
+              invita.title = 'Invito mandato';
+            } catch (e) {
+              errore(e);
+              invita.disabled = false;
+            }
+          });
           const comandi = elemento('span', '', 'comandi-persona');
-          comandi.append(ruolo, togli);
+          comandi.append(ruolo, invita, togli);
           voce.append(comandi);
         } else {
           voce.append(elemento('span', NOMI_RUOLO[p.ruolo], `ruolo-orto ruolo-${p.ruolo}`));
@@ -3703,6 +3721,7 @@ export function paginaPersone() {
       evento.preventDefault();
       const email = campo.value.trim().toLowerCase();
       errAgg.hidden = true;
+      errAgg.classList.remove('fatto-accesso');
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
         errAgg.textContent = 'Scrivi un\'email valida.';
         errAgg.hidden = false;
@@ -3713,6 +3732,16 @@ export function paginaPersone() {
         await aggiungiPersona(orto.id, email, ruolo.value);
         campo.value = '';
         ricarica();
+        // L'email di invito: se non parte, la persona resta aggiunta e si può rimandare con ✉
+        try {
+          await invitaPersona(orto.id, email);
+          errAgg.textContent = `Aggiunta. Le abbiamo mandato un'email di invito a ${email}.`;
+          errAgg.classList.add('fatto-accesso');
+        } catch (e) {
+          errAgg.textContent = `Aggiunta, ma l'email di invito non è partita: ${e instanceof TypeError ? 'server non raggiungibile' : e.message}. Puoi rimandarla con ✉ accanto al suo nome.`;
+          errAgg.classList.remove('fatto-accesso');
+        }
+        errAgg.hidden = false;
       } catch (e) {
         errAgg.textContent = e instanceof TypeError ? 'Server non raggiungibile: controlla la connessione.' : e.message;
         errAgg.hidden = false;
@@ -3720,7 +3749,7 @@ export function paginaPersone() {
       pulsante.disabled = false;
     });
     sezione.append(elemento('h3', 'Aggiungi una persona'),
-      elemento('p', 'Scrivi la sua email: se si iscrive (o è già iscritta) con questa email, trova l\'orto in "I miei orti". Chi fa parte dell\'orto vede le email delle altre persone.', 'nota-terreno'),
+      elemento('p', 'Scrivi la sua email: le arriva un invito, e quando si iscrive (o se è già iscritta) con questa email trova l\'orto in "I miei orti". Con ✉ accanto a un nome rimandi l\'invito. Chi fa parte dell\'orto vede le email delle altre persone.', 'nota-terreno'),
       modulo);
   }
   const ruoli = elemento('ul', '', 'nota-terreno spiega-ruoli');

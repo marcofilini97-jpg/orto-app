@@ -4,7 +4,7 @@
 import { collegato, emailCollegata, accedi, esci, scaricaNovita, inviaModifiche, mieiOrti, creaOrto, rinominaOrtoServer,
   personeOrto, aggiungiPersona, cambiaRuolo, togliPersona, eliminaOrtoServer } from './server.js';
 export { iscriviti, recuperaPassword, cambiaPassword, accessoDaLink, personeOrto, aggiungiPersona, cambiaRuolo, togliPersona,
-  CHIAVE_NOTIFICHE, salvaIscrizioneNotifiche, togliIscrizioneNotifiche } from './server.js';
+  CHIAVE_NOTIFICHE, salvaIscrizioneNotifiche, togliIscrizioneNotifiche, invitaPersona } from './server.js';
 
 const CHIAVE = 'orto-dati';
 const CHIAVE_PROVA = 'orto-dati-prova';      // copia separata per la modalità prova

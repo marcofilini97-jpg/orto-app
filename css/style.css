@@ -1012,3 +1012,4 @@ header { position: relative; z-index: 30; }
 .da-dare { font-weight: 800; color: #3d6fa8; }
 .totale-acqua { margin: 10px 0; padding: 8px 10px; font-weight: 700; background: #eaf3fb; border-left: 4px solid #3d6fa8; border-radius: 6px; }
 .riga-acqua { margin: 8px 0; padding: 6px 10px; background: #eaf3fb; border-left: 4px solid #3d6fa8; border-radius: 6px; }
+.pulsante-piccolo.invito { color: #3d6fa8; border-color: #3d6fa8; }
