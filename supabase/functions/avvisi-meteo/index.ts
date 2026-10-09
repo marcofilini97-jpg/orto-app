@@ -63,15 +63,23 @@ Deno.serve(async richiesta => {
   const prova = new URL(richiesta.url).searchParams.get('prova');
   if (prova) {
     if (prova !== Deno.env.get('PAROLA_PROVA')) return new Response('Parola di prova sbagliata', { status: 403 });
-    const { data } = await supabase.from('iscrizioni_notifiche').select('dati');
+    const { data, error } = await supabase.from('iscrizioni_notifiche').select('dati');
     let ok = 0;
+    const errori: string[] = [];
+    if (error) errori.push(`lettura iscrizioni: ${error.message}`);
+    // Controllo delle chiavi (senza mostrarle): la pubblica è lunga 87 caratteri, la privata 43
+    const pub = Deno.env.get('VAPID_PUBLIC_KEY') ?? '', priv = Deno.env.get('VAPID_PRIVATE_KEY') ?? '';
+    const chiavi = { pubblica: pub.length, privata: priv.length, pubblicaComeNellApp: pub.startsWith('BCAFSaWf9DSd') && pub.endsWith('t4XfdOM') };
     for (const t of data ?? []) {
       try {
         await webpush.sendNotification(t.dati, JSON.stringify({ titolo: 'Orto: notifica di prova', testo: 'Le notifiche funzionano!', chiave: 'prova' }));
         ok++;
-      } catch { /* telefono non raggiungibile */ }
+      } catch (e) {
+        const err = e as { statusCode?: number; body?: string; message?: string };
+        errori.push(`${err.statusCode ?? ''} ${err.body ?? err.message ?? e}`.trim().slice(0, 300));
+      }
     }
-    return new Response(JSON.stringify({ prova: true, mandate: ok }), { headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ prova: true, iscritti: data?.length ?? 0, mandate: ok, chiavi, errori }, null, 2), { headers: { 'Content-Type': 'application/json' } });
   }
 
   // Previsioni e ultimi giorni di Bologna
