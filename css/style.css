@@ -973,3 +973,19 @@ header { position: relative; z-index: 30; }
 .colonna-sole { position: relative; background: linear-gradient(#f7c948, #f2a400); border: 1.5px solid #8a4a14; border-bottom: 0; border-radius: 4px 4px 0 0; overflow: hidden; }
 .ombra-sole { position: absolute; left: 0; right: 0; top: 0; background: repeating-linear-gradient(45deg, #9aa6b4 0 3px, #c9d1da 3px 6px); }
 .riquadro-ok { padding: 8px 10px; font-weight: 700; color: #2b4a1f; background: #dbe9cc; border-radius: 8px; }
+
+/* Il meteo */
+.meteo-oggi { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #fff; border: 2px solid #e5d3b0; border-radius: 12px; }
+.icona-meteo-grande { font-size: 2.6rem; line-height: 1; }
+.meteo-oggi strong { display: block; font-size: 1.15rem; }
+.meteo-oggi small { color: var(--marrone-scuro); }
+.meteo-giorni { display: grid; gap: 4px; }
+.meteo-giorno { display: grid; grid-template-columns: 4.2em 2em 2.6em 2.6em 1fr; align-items: center; gap: 6px; padding: 4px 10px; background: #fff; border: 2px solid #e5d3b0; border-radius: 10px; }
+.meteo-giorno.gelo { border-color: #4a90c2; background: #eaf3fb; }
+.nome-giorno { font-weight: 800; }
+.icona-meteo { font-size: 1.3rem; }
+.meteo-giorno .massima { font-weight: 800; color: #b5443a; }
+.meteo-giorno .minima { font-weight: 700; color: #3d6fa8; }
+.meteo-giorno .pioggia { font-size: .85rem; color: #3d6fa8; text-align: right; }
+.fonte-meteo { margin-top: 14px; font-size: .8rem; color: var(--marrone-scuro); }
+.raccolta-prevista { margin: 6px 0; padding: 6px 10px; font-weight: 700; color: #6b3a10; background: #fdf0d8; border-left: 4px solid #e9933a; border-radius: 6px; }

@@ -43,6 +43,7 @@ orto-app/
 │   ├── impara.js         ← Impara: guide brevi (testi e disegni) e lavori di ogni mese
 │   ├── geometria.js      ← forme delle aiuole (rettangolo, rotonda, a L, girate): dentro/fuori, metà, misure, posti dei disegnini
 │   ├── sole.js           ← posizione del sole a Bologna, ombra degli alberi, ore di sole delle aiuole, effetto sulla resa
+│   ├── meteo.js          ← meteo di Bologna da Open-Meteo (medie di 30 anni, giorni recenti, previsioni) e gradi giorno
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
 ```
@@ -218,6 +219,14 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Le colture `stato: "pianificata"` di una versione di prova vengono convertite all'avvio (app.js) in attive con inizio futuro
 - Sulla mappa, le aiuole con una coltura in programma nei prossimi 30 giorni hanno in basso a sinistra un paletto di legno con il disegnino della coltura e i giorni che mancano ("12 g"); se sono più d'una, la prima che inizia
 - Da fare: scelta della regola di rotazione nelle Impostazioni (base, personalizzata con anni da 2 a 5 e famiglie, nessuna); il tasto per accelerare il tempo (Arcade)
+
+## Meteo e gradi giorno
+- Fonte: Open-Meteo (gratis per uso non commerciale, senza chiave; dati CC BY 4.0, da citare: "Dati meteo: Open-Meteo.com (CC BY 4.0), Bologna città"). Punto: Bologna città (44,49 N, 11,34 E), mai la posizione dell'orto. Se un giorno l'app diventerà commerciale andrà cambiata (come Supabase e Brevo)
+- `js/meteo.js`: `aggiornaMeteo()` all'avvio e al ritorno della rete: medie di 30 anni (archivio ERA5, una volta l'anno, salvate come medie di ogni giorno lisciate su una settimana), giorni dall'inizio dell'anno scorso (archivio, una volta al giorno) e previsioni a 16 giorni (ogni 3 ore). Copia sul telefono in `orto-meteo` (localStorage, letta e scritta da dati.js con `leggiMeteo`/`scriviMeteo`); con i dati nuovi l'evento `meteo-aggiornato` ridisegna la schermata (non un modulo). `tempoDel(data)` = dato vero, previsto o media
+- Gradi giorno: soglia 10 °C (tetto 30) per le colture da caldo (pomodoro, peperone, melanzana, zucchina, cetriolo, zucca, melone, anguria, mais, fagiolini, basilico), 5 °C (tetto 25) per le altre. Il calore che serve a una coltura si ricava dal calendario del catalogo in un anno medio (dal primo giorno di trapianto/semina all'inizio della raccolta); `raccoltaPrevista(scheda, inizio, metodo)` somma il caldo vero, poi le previsioni e poi le medie fino a quel calore. Esclusi perenni, fiori e sovesci
+- Usato in: fine stimata delle colture (`fineSuggerita` in viste.js, `fineStimata` in arcade.js: la fine del calendario si sposta come l'inizio della raccolta, al massimo un mese più tardi), periodi di raccolta di Arcade, riquadro "Dal catalogo" e scheda della coltura ("Raccolta prevista: da circa il … (N giorni prima del calendario, per il caldo)")
+- Pagina `#/orto/meteo` (pulsante "Il meteo" in L'orto): oggi, prossimi 10 giorni (bordo azzurro se la minima è ≤ 1 °C), ultimi 30 giorni e pioggia da gennaio rispetto alla media, fonte
+- Da fare: avvisi meteo (gelate, caldo, pioggia) e notifiche sul telefono; Arcade con le annate vere; bilancio dell'acqua
 
 ## Barra verde e Impostazioni
 - Icone a destra nella barra verde: cappello da studente (Impara), aiuola con la lente (`#/orto` "L'orto": "Disegna l'orto" e "Il terreno dell'orto"; nascosta in Arcade), ingranaggio (Impostazioni). Il catalogo non è più nella barra: sta dentro Impara

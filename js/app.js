@@ -1,12 +1,13 @@
 import { carica, salva, sincronizza, inProva, inArcade, esciArcade, simulazioneAttiva, accessoDaLink, completaCollegamento, ortoAttuale,
   soloLettura, MESSAGGIO_SOLA_LETTURA, aggiornaDatiSalvati, cambiaSviluppatore } from './dati.js';
 import { CATALOGO } from './catalogo.js';
+import { aggiornaMeteo } from './meteo.js';
 import { PROVE } from './terreno.js';
 import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto,
   paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaOrti, paginaPersone, paginaSolaLettura,
-  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaOrto, paginaTerrenoOrto, paginaTerrenoAttuale, paginaSole, paginaSoleAiuola, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaOrto, paginaTerrenoOrto, paginaTerrenoAttuale, paginaSole, paginaSoleAiuola, paginaMeteo, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -43,6 +44,7 @@ function schermata() {
   impostaNomiAiuole(dati);
   if (pagina === 'disegna') return puoDisegnare() ? paginaDisegna(dati, { nuovo: id === 'nuovo' }) : paginaSolaLettura();
   if (pagina === 'orto') {
+    if (id === 'meteo') return paginaMeteo();
     if (id === 'terreno') return sotto === 'modifica' ? paginaTerrenoOrto(dati) : paginaTerrenoAttuale();
     if (id === 'sole') {
       const a = dati.aiuole.find(x => x.id === sotto);
@@ -196,6 +198,13 @@ mostra();
 // Sincronizzazione: all'avvio, quando torna la rete e quando si torna sull'app
 sincronizza();
 window.addEventListener('online', sincronizza);
+
+// Meteo di Bologna: all'avvio e quando torna la rete; con i dati nuovi si ridisegna (non mentre si compila un modulo)
+aggiornaMeteo();
+window.addEventListener('online', aggiornaMeteo);
+document.addEventListener('meteo-aggiornato', () => {
+  if (!contenuto.querySelector('form')) disegna();
+});
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') sincronizza();
 });

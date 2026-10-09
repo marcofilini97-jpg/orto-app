@@ -16,6 +16,7 @@ import {
   spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
 } from './terreno.js';
 import { GUIDE, LAVORI } from './impara.js';
+import { aggiornaMeteo, meteoPronto, tempoDel, mediaDel, raccoltaPrevista, spostaFine } from './meteo.js';
 import { posizioneSole, ombraAlberoAlSole, oreDiSole, oreMedie, mesiTra, fattoreSoleAiuola, soleNoto } from './sole.js';
 import { area, misureLibere, RAGGIO_TRONCO, dentro as dentroForma, quadratoDentro, toccaRettangoli, ingombro, ingombroZona, posti, puntoEtichetta, tracciato, misure } from './geometria.js';
 import { pianoAutomatico, resaColtura, kgTra, inRaccolta, fineSovescio } from './arcade.js';
@@ -671,6 +672,7 @@ export function paginaOrto(dati) {
       : elemento('p', 'Solo chi gestisce l\'orto può cambiarne la forma.', 'nota-terreno'),
     link('Il terreno', '#/orto/terreno', 'pulsante secondario'),
     link('L\'esposizione', '#/orto/sole', 'pulsante secondario'),
+    link('Il meteo', '#/orto/meteo', 'pulsante secondario'),
   );
   return sezione;
 }
@@ -1057,10 +1059,12 @@ function periodoCatalogo([dal, al]) {
 }
 
 // Fine suggerita: la prima fine di un periodo di raccolta del catalogo che viene dopo l'inizio
-function fineSuggerita(scheda, inizio) {
+function fineSuggerita(scheda, inizio, metodo = scheda.t ? 'trapianto' : 'semina') {
   const anno = Number(inizio.slice(0, 4));
   const date = scheda.r.flatMap(([, al]) => [`${anno}-${al}`, `${anno + 1}-${al}`]).filter(d => d > inizio).sort();
-  return scheda.tappa === 'V' && date[0] ? fineSovescio(scheda, inizio, date[0]) : date[0] ?? null;
+  if (scheda.tappa === 'V' && date[0]) return fineSovescio(scheda, inizio, date[0]);
+  // Con il meteo: la raccolta si sposta come prevedono i gradi giorno (caldo vero, previsioni, medie)
+  return spostaFine(date[0] ?? null, raccoltaPrevista(scheda, inizio, metodo));
 }
 
 // Misure (cm) della parte di aiuola usata, dalla sua forma vera (per un rettangolo 180 × 120: metà fondo 180 × 60, metà sinistra 90 × 120)
@@ -1113,6 +1117,8 @@ function suggerimentiCatalogo(dati, modulo, colturaId) {
     if (scheda.s) righe.push(`Semina a Bologna: ${scheda.s.map(periodoCatalogo).join(' · ')}`);
     if (scheda.t) righe.push(`${scheda.tLabel ?? 'Trapianto'} a Bologna: ${scheda.t.map(periodoCatalogo).join(' · ')}`);
     righe.push(`${scheda.rLabel ?? 'Raccolta'}: ${scheda.r.map(periodoCatalogo).join(' · ')}`);
+    const prevista = inizio && testoRaccoltaPrevista(scheda, inizio, metodo === 'semina' ? 'semina' : metodo === 'trapianto' ? 'trapianto' : undefined);
+    if (prevista) righe.push(prevista);
 
     // Piante e resa nelle aiuole (o metà) scelte
     let piante = 0, min = 0, max = 0, conResa = true, pienoMin = 0, pienoMax = 0;
@@ -1512,6 +1518,12 @@ export function schedaColtura(dati, coltura) {
     intestazione,
     riga('Stato', inProgramma ? 'In programma' : attiva ? 'Attiva' : 'Terminata'),
     riga('Aiuole', doveColtura(coltura)),
+    ...(() => {
+      const scheda = colturaDaNome(coltura.nome);
+      const testo = coltura.stato === 'attiva' && !coltura.dataFine && scheda
+        ? testoRaccoltaPrevista(scheda, coltura.dataInizio, coltura.metodo === 'semina' || coltura.metodo === 'trapianto' ? coltura.metodo : undefined) : null;
+      return testo ? [elemento('p', testo, 'raccolta-prevista')] : [];
+    })(),
     riga('Inizio', dataPerUtente(coltura.dataInizio)),
   );
   if (!attiva) sezione.append(riga('Fine', dataPerUtente(coltura.dataFine)));
@@ -4770,4 +4782,97 @@ export function paginaSoleAiuola(dati, aiuola) {
       elemento('h3', 'Renderebbero meno'), elenco(meno));
   }
   return sezione;
+}
+
+// ---- Il meteo di Bologna (Open-Meteo): oggi, prossimi giorni, quest'anno rispetto alla media ----
+
+// Icona semplice dal codice del tempo (codici WMO)
+function iconaTempo(codice, pioggia) {
+  if (codice == null) return pioggia >= 1 ? '🌧️' : '☀️';
+  if (codice === 0) return '☀️';
+  if (codice <= 2) return '🌤️';
+  if (codice === 3) return '☁️';
+  if (codice <= 48) return '🌫️';
+  if (codice <= 57) return '🌦️';
+  if (codice <= 67) return '🌧️';
+  if (codice <= 77) return '❄️';
+  if (codice <= 82) return '🌦️';
+  if (codice <= 86) return '🌨️';
+  return '⛈️';
+}
+
+const gradiTesto = n => `${String(Math.round(n * 10) / 10).replace('.', ',')}°`;
+const NOMI_GIORNO = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
+
+export function paginaMeteo() {
+  const sezione = document.createElement('section');
+  sezione.append(link('← L\'orto', '#/orto', 'indietro'), elemento('h2', 'Il meteo di Bologna'));
+  if (!meteoPronto()) {
+    sezione.append(elemento('p', 'Sto scaricando i dati meteo… Serve la connessione la prima volta; poi restano anche senza rete.', 'nota-terreno'));
+    aggiornaMeteo();
+    return sezione;
+  }
+  const oggi = oggiVero();
+  const tOggi = tempoDel(oggi);
+  const oggiBox = elemento('div', '', 'meteo-oggi');
+  oggiBox.append(elemento('span', iconaTempo(tOggi.codice, tOggi.pioggia), 'icona-meteo-grande'));
+  const testoOggi = elemento('div');
+  testoOggi.append(elemento('strong', `Oggi: ${gradiTesto(tOggi.minima)} – ${gradiTesto(tOggi.massima)}`),
+    elemento('small', tOggi.pioggia >= 0.5 ? `pioggia ${String(tOggi.pioggia).replace('.', ',')} mm` : 'niente pioggia'));
+  oggiBox.append(testoOggi);
+
+  // Prossimi giorni (previsioni)
+  const prossimi = elemento('div', '', 'meteo-giorni');
+  for (let i = 1; i <= 10; i++) {
+    const d = (() => { const x = new Date(`${oggi}T12:00:00Z`); x.setUTCDate(x.getUTCDate() + i); return x.toISOString().slice(0, 10); })();
+    const t = tempoDel(d);
+    if (!t || t.media) break;
+    const g = elemento('div', '', 'meteo-giorno');
+    const giorno = new Date(`${d}T12:00:00Z`);
+    g.append(elemento('span', `${NOMI_GIORNO[giorno.getUTCDay()]} ${giorno.getUTCDate()}`, 'nome-giorno'),
+      elemento('span', iconaTempo(t.codice, t.pioggia), 'icona-meteo'),
+      elemento('span', `${Math.round(t.massima)}°`, 'massima'), elemento('span', `${Math.round(t.minima)}°`, 'minima'),
+      elemento('span', t.pioggia >= 0.5 ? `${Math.round(t.pioggia)} mm` : '', 'pioggia'));
+    if (t.minima <= 1) g.classList.add('gelo');
+    prossimi.append(g);
+  }
+
+  // Quest'anno rispetto alla media di 30 anni: ultimi 30 giorni e dall'inizio dell'anno
+  const confronto = (da, a) => {
+    let caldo = 0, caldoMedio = 0, pioggia = 0, pioggiaMedia = 0;
+    for (let d = da; d <= a; d = (() => { const x = new Date(`${d}T12:00:00Z`); x.setUTCDate(x.getUTCDate() + 1); return x.toISOString().slice(0, 10); })()) {
+      const t = tempoDel(d), m = mediaDel(d);
+      if (!t || !m || t.media) continue;
+      caldo += (t.massima + t.minima) / 2; caldoMedio += (m.massima + m.minima) / 2;
+      pioggia += t.pioggia; pioggiaMedia += m.pioggia;
+    }
+    return { caldo, caldoMedio, pioggia, pioggiaMedia };
+  };
+  const meno30 = (() => { const x = new Date(`${oggi}T12:00:00Z`); x.setUTCDate(x.getUTCDate() - 30); return x.toISOString().slice(0, 10); })();
+  const mese = confronto(meno30, oggi);
+  const giorniMese = 31;
+  const anno = confronto(`${oggi.slice(0, 4)}-01-01`, oggi);
+  const differenza = (mese.caldo - mese.caldoMedio) / giorniMese;
+  const righe = elemento('div', '', 'meteo-confronto');
+  righe.append(
+    riga('Ultimi 30 giorni', `${differenza >= 0 ? '+' : ''}${gradiTesto(differenza)} rispetto alla media; pioggia ${Math.round(mese.pioggia)} mm (di solito ${Math.round(mese.pioggiaMedia)})`),
+    riga('Da gennaio', `pioggia ${Math.round(anno.pioggia)} mm (di solito ${Math.round(anno.pioggiaMedia)})`),
+  );
+
+  sezione.append(oggiBox, elemento('h3', 'Prossimi giorni'), prossimi, elemento('h3', 'Quest\'anno rispetto alla media'), righe,
+    elemento('p', 'Con il caldo vero di quest\'anno, le previsioni e le medie degli ultimi 30 anni l\'app stima quando le colture saranno pronte da raccogliere (gradi giorno): la vedi nelle schede delle colture.', 'nota-terreno'));
+  const fonte = elemento('p', '', 'fonte-meteo');
+  fonte.append('Dati meteo: ', Object.assign(link('Open-Meteo.com', 'https://open-meteo.com/', ''), { target: '_blank', rel: 'noopener' }), ' (CC BY 4.0), Bologna città.');
+  sezione.append(fonte);
+  return sezione;
+}
+
+// "Raccolta prevista: da circa 12/07 (5 giorni prima del calendario, per il caldo)"
+function testoRaccoltaPrevista(scheda, inizio, metodo) {
+  const p = raccoltaPrevista(scheda, inizio, metodo);
+  if (!p) return null;
+  const quando = p.scarto === 0 ? 'come nel calendario'
+    : p.scarto < 0 ? `${-p.scarto} ${p.scarto === -1 ? 'giorno' : 'giorni'} prima del calendario, per il caldo`
+    : `${p.scarto} ${p.scarto === 1 ? 'giorno' : 'giorni'} dopo il calendario, per il fresco`;
+  return `Raccolta prevista: da circa il ${dataPerUtente(p.data)} (${quando})`;
 }

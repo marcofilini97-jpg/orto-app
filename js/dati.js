@@ -12,7 +12,8 @@ const CHIAVE_SYNC = 'orto-sync';             // stato della sincronizzazione
 const CHIAVE_ARCADE = 'orto-arcade';         // simulazioni Arcade (solo su questo telefono)
 const CHIAVE_ARCADE_ATTIVA = 'orto-arcade-attiva';   // id della simulazione in cui si sta giocando
 const CHIAVE_SVILUPPATORE = 'orto-sviluppatore';   // '1' su questo telefono chi sviluppa l'app vede la modalità prova
-const CHIAVE_ELENCO_ORTI = 'orto-elenco-orti';  // ultimo elenco degli orti dell'account (per vederlo anche offline)
+const CHIAVE_ELENCO_ORTI = 'orto-elenco-orti';
+const CHIAVE_METEO = 'orto-meteo';               // meteo di Bologna (Open-Meteo): medie, giorni recenti e previsioni  // ultimo elenco degli orti dell'account (per vederlo anche offline)
 // Gli altri orti dell'account restano da parte sul telefono: 'orto-dati:<id>' e 'orto-sync:<id>'
 const DA_PARTE_DATI = 'orto-dati:';
 const DA_PARTE_SYNC = 'orto-sync:';
@@ -156,6 +157,23 @@ export function nuovoId(prefisso) {
 }
 
 // ---- Modalità prova: una copia separata dei dati, che non si sincronizza ----
+
+// Meteo salvato sul telefono (vale per tutti gli orti: è il meteo di Bologna)
+export function leggiMeteo() {
+  try {
+    return JSON.parse(localStorage.getItem(CHIAVE_METEO));
+  } catch {
+    return null;
+  }
+}
+
+export function scriviMeteo(m) {
+  try {
+    localStorage.setItem(CHIAVE_METEO, JSON.stringify(m));
+  } catch {
+    // spazio pieno: si resta senza copia
+  }
+}
 
 export function sviluppatore() {
   return localStorage.getItem(CHIAVE_SVILUPPATORE) === '1';
@@ -554,7 +572,7 @@ export function scollegaTelefono() {
 // Cancella tutto ciò che l'app ha salvato su questo telefono (i dati sul server restano)
 export function cancellaDatiTelefono() {
   scollegaTelefono();
-  for (const chiave of [CHIAVE, CHIAVE_PROVA, CHIAVE_MODO, CHIAVE_ARCADE, CHIAVE_ARCADE_ATTIVA]) localStorage.removeItem(chiave);
+  for (const chiave of [CHIAVE, CHIAVE_PROVA, CHIAVE_MODO, CHIAVE_ARCADE, CHIAVE_ARCADE_ATTIVA, CHIAVE_METEO]) localStorage.removeItem(chiave);
 }
 
 export function statoSincronizzazione() {

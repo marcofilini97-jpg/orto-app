@@ -3,6 +3,7 @@
 
 import { CATALOGO, colturaDaNome, disposizione, resa, AIUOLA } from './catalogo.js';
 import { misureLibere } from './geometria.js';
+import { raccoltaPrevista, spostaFine } from './meteo.js';
 import { mesiTra, fattoreSoleAiuola, soleNoto } from './sole.js';
 
 const GIRO = ['L', 'C', 'A', 'S'];
@@ -20,7 +21,8 @@ function fineStimata(scheda, inizio) {
   if (!scheda || scheda.tappa === 'P') return null;
   const anno = Number(inizio.slice(0, 4));
   const fine = scheda.r.flatMap(([, al]) => [`${anno}-${al}`, `${anno + 1}-${al}`]).filter(d => d > inizio).sort()[0] ?? null;
-  return scheda.tappa === 'V' && fine ? fineSovescio(scheda, inizio, fine) : fine;
+  if (scheda.tappa === 'V' && fine) return fineSovescio(scheda, inizio, fine);
+  return spostaFine(fine, raccoltaPrevista(scheda, inizio, scheda.t ? 'trapianto' : 'semina'));
 }
 
 // I sovesci si tagliano all'inizio del loro periodo di taglio, dopo almeno 6 settimane di crescita
@@ -216,7 +218,12 @@ export function resaColtura(c, dati = { aiuole: [], alberi: [], terreno: [] }) {
     }
   }
   periodi.sort((x, z) => x.al.localeCompare(z.al));
-  if (scheda.tappa !== 'P') periodi = periodi.slice(0, 1);
+  if (scheda.tappa !== 'P') {
+    periodi = periodi.slice(0, 1);
+    // Con il meteo: la raccolta comincia quando la coltura ha avuto il caldo che le serve
+    const prev = periodi[0] && raccoltaPrevista(scheda, c.dataInizio, c.metodo === 'semina' || c.metodo === 'trapianto' ? c.metodo : (scheda.t ? 'trapianto' : 'semina'));
+    if (prev) periodi[0] = { dal: prev.data > c.dataInizio ? prev.data : c.dataInizio, al: spostaFine(periodi[0].al, prev) };
+  }
   // Coltura terminata prima: la raccolta si ferma alla data di fine
   periodi = periodi.filter(p => !c.dataFine || p.dal < c.dataFine)
     .map(p => ({ ...p, stop: c.dataFine && c.dataFine < p.al ? c.dataFine : p.al }));

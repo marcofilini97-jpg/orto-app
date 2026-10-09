@@ -4,7 +4,7 @@
 const CACHE = 'orto-v3';
 const FILE = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
-  './js/app.js', './js/dati.js', './js/server.js', './js/viste.js', './js/disegni.js', './js/catalogo.js', './js/terreno.js', './js/arcade.js', './js/impara.js', './js/geometria.js', './js/sole.js',
+  './js/app.js', './js/dati.js', './js/server.js', './js/viste.js', './js/disegni.js', './js/catalogo.js', './js/terreno.js', './js/arcade.js', './js/impara.js', './js/geometria.js', './js/sole.js', './js/meteo.js',
   './font/baloo2.woff2', './font/fredoka.woff2', './icone/icona-192.png', './icone/icona-512.png', './icone/terra-arata.svg',
 ];
 
