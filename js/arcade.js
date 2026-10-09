@@ -3,6 +3,7 @@
 
 import { CATALOGO, colturaDaNome, disposizione, resa, AIUOLA } from './catalogo.js';
 import { misureLibere } from './geometria.js';
+import { mesiTra, fattoreSoleAiuola, soleNoto } from './sole.js';
 
 const GIRO = ['L', 'C', 'A', 'S'];
 // Ordine di partenza dei settori se l'orto non ha storia (come nel piano 2026–27)
@@ -186,7 +187,9 @@ const giorniTra = (da, a) => (Date.parse(a) - Date.parse(da)) / 86400000;
 
 // Resa della coltura nelle sue aiuole/metà e periodi di raccolta (il primo dopo l'inizio; le perenni ogni anno).
 // null se il catalogo non dà la resa (fiori, sovesci, aromatiche…)
-export function resaColtura(c, aiuole = [], alberi = []) {
+// dati: l'orto (aiuole, alberi, terreno): la resa usa le misure vere, lo spazio tolto dagli alberi e le ore di sole
+export function resaColtura(c, dati = { aiuole: [], alberi: [], terreno: [] }) {
+  const { aiuole = [], alberi = [] } = dati;
   const scheda = colturaDaNome(c.nome);
   if (!scheda?.r) return null;
   let kg = [0, 0];
@@ -194,8 +197,12 @@ export function resaColtura(c, aiuole = [], alberi = []) {
     const parte = c.parti?.[id];
     const aiuola = aiuole.find(x => x.id === id);
     const misura = aiuola ? misureLibere(aiuola, parte || 'tutta', alberi) : !parte ? AIUOLA : ['fondo', 'davanti'].includes(parte) ? { L: AIUOLA.L, W: AIUOLA.W / 2 } : { L: AIUOLA.L / 2, W: AIUOLA.W };
-    const r = resa(scheda, disposizione(scheda, misura.L, misura.W));
-    if (!r) return null;
+    const r0 = resa(scheda, disposizione(scheda, misura.L, misura.W));
+    if (!r0) return null;
+    // Meno sole del necessario (ombra degli alberi), meno resa
+    const fine = scheda.r.flatMap(([, al]) => [`${c.dataInizio.slice(0, 4)}-${al}`, `${Number(c.dataInizio.slice(0, 4)) + 1}-${al}`]).filter(d => d > c.dataInizio).sort()[0] ?? c.dataInizio;
+    const f = aiuola && soleNoto(dati) ? fattoreSoleAiuola(dati, aiuola, mesiTra(c.dataInizio, fine), parte || 'tutta', scheda.sole ?? 6) : 1;
+    const r = [r0[0] * f, r0[1] * f];
     kg = [kg[0] + r[0], kg[1] + r[1]];
   }
   if (kg[1] === 0) return null;

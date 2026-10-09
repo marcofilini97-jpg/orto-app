@@ -951,3 +951,25 @@ header { position: relative; z-index: 30; }
 .verso-esposizione { display: flex; flex-direction: column; align-items: center; min-height: 3.2em; }
 .verso-esposizione strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 .finestra-disegno.grande .nota-terreno { min-height: 6.5em; }
+
+/* L'esposizione: ore di sole */
+.pagina-sole .terreno { margin-top: 2px; }
+.ore-aiuola { position: absolute; left: 50%; top: 55%; z-index: 8; transform: translate(-50%, -50%); padding: 0 6px; font-family: 'Fredoka', 'Baloo 2', sans-serif; font-size: 1rem; font-weight: 600; white-space: nowrap; color: var(--testo); background: rgb(255 248 231 / .85); border-radius: 8px; pointer-events: none; }
+.ombre-sole { position: absolute; inset: 0; z-index: 15; pointer-events: none; }
+.ombre-sole svg { width: 100%; height: 100%; overflow: visible; }
+.ombre-sole rect { fill: #14260c; opacity: .35; }
+.pagina-sole .albero { opacity: .45; }
+.comandi-sole { margin-top: 10px; padding: 8px 10px; background: var(--crema); border: 3px solid var(--legno); border-radius: 14px; }
+.mesi-sole { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.mesi-sole button { padding: 4px 0; font: inherit; font-size: .85rem; font-weight: 800; color: var(--testo); background: #fff; border: 2px solid var(--legno); border-radius: 8px; cursor: pointer; }
+.mesi-sole button[aria-pressed="true"] { color: var(--crema); background: var(--verde); border-color: var(--verde-bordo); }
+.cursore-sole { width: 100%; margin: 10px 0 2px; accent-color: #f2a400; }
+.ora-sole-testo { margin: 0; font-weight: 800; text-align: center; }
+.legenda-sole { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .78rem; font-weight: 700; }
+.scala-sole { flex: 1; height: 10px; background: linear-gradient(90deg, #5d6b7a, #9aa6b4, #e9d27a, #f7c948, #f2a400); border: 1.5px solid var(--testo); border-radius: 5px; }
+.nota-sole { margin: 6px 0 0; font-size: .85rem; }
+.riquadro-sole { padding: 12px; background: var(--crema); border: 3px solid var(--legno); border-radius: 14px; }
+.grafico-sole { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; align-items: end; height: 110px; margin-top: 8px; border-bottom: 2px solid var(--marrone-scuro); }
+.colonna-sole { position: relative; background: linear-gradient(#f7c948, #f2a400); border: 1.5px solid #8a4a14; border-bottom: 0; border-radius: 4px 4px 0 0; overflow: hidden; }
+.ombra-sole { position: absolute; left: 0; right: 0; top: 0; background: repeating-linear-gradient(45deg, #9aa6b4 0 3px, #c9d1da 3px 6px); }
+.riquadro-ok { padding: 8px 10px; font-weight: 700; color: #2b4a1f; background: #dbe9cc; border-radius: 8px; }

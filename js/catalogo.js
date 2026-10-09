@@ -25,10 +25,11 @@ export const AIUOLA = { L: 180, W: 120 };
 // - fitta: true = semina fitta a file, senza contare le piante
 // - kgP = kg per pianta [min, max]; kgM2 = kg per m² [min, max] (per le colture fitte). Sempre stime indicative
 // - unita: cosa si raccoglie (se non sono semplicemente "kg"); prof: profondità di semina o messa a dimora
+// - sole: ore di sole diretto al giorno che servono per rendere bene (7 = pieno sole, 6 = sole, 4 = sopporta la mezz'ombra)
 // - giorni: dalla semina/trapianto alla raccolta; avviso: sconsigliata e perché; scopo: a cosa serve (fiori, sovesci, aromatiche)
 // - consigli: nei testi {id:testo} è una parola con spiegazione, id = chiave di GLOSSARIO; problemi: id di GLOSSARIO
 export const CATALOGO = [
-  { id: 'fava', nome: 'Fava', parole: ['fava', 'fave'], famiglia: 'Leguminose', tappa: 'L', esigenza: 'arricchisce',
+  { id: 'fava', sole: 6, nome: 'Fava', parole: ['fava', 'fave'], famiglia: 'Leguminose', tappa: 'L', esigenza: 'arricchisce',
     s: [['11-01','11-20'],['02-15','02-28']], r: [['05-01','05-31']],
     sullaFila: '20', traLeFile: '25 nella coppia, 50 tra le coppie', prof: '4–5 cm', kgP: [0.2, 0.3], unita: 'baccelli',
     consigli: [
@@ -37,7 +38,7 @@ export const CATALOGO = [
       "Quando compaiono i primi baccelli, {cimare:cima} le piante, cioè taglia gli ultimi 10 cm della punta: lì si radunano gli {afidi:afidi} neri, e la pianta mette le forze nei baccelli.",
       "A fine raccolta {tagliopiede:taglia le piante al piede} invece di strapparle: le radici restano nel terreno e lasciano l'azoto ai cavoli che vengono dopo.",
     ], problemi: ['afidi', 'uccelli'] },
-  { id: 'pisello', nome: 'Pisello nano', parole: ['pisell'], famiglia: 'Leguminose', tappa: 'L', esigenza: 'arricchisce',
+  { id: 'pisello', sole: 6, nome: 'Pisello nano', parole: ['pisell'], famiglia: 'Leguminose', tappa: 'L', esigenza: 'arricchisce',
     s: [['02-15','03-15'],['11-01','11-30']], r: [['05-20','06-30']],
     sullaFila: '5', traLeFile: '35', prof: '3–4 cm', kgP: [0.03, 0.04], unita: 'baccelli',
     consigli: [
@@ -46,7 +47,7 @@ export const CATALOGO = [
       "Anche se è \"nano\" (40–60 cm), cresce meglio appoggiato: lungo ogni fila stendi una rete bassa o pianta qualche ramoscello.",
       "A fine raccolta {tagliopiede:taglia le piante al piede}, come per le fave: le radici lasciano azoto nel terreno.",
     ], problemi: ['oidio', 'uccelli'] },
-  { id: 'fagiolino', nome: 'Fagiolino nano', parole: ['fagiolin'], famiglia: 'Leguminose', tappa: 'L', esigenza: 'arricchisce',
+  { id: 'fagiolino', sole: 7, nome: 'Fagiolino nano', parole: ['fagiolin'], famiglia: 'Leguminose', tappa: 'L', esigenza: 'arricchisce',
     s: [['05-01','07-15']], r: [['07-01','09-30']], giorni: '55–65',
     sullaFila: '7', traLeFile: '40', prof: '3–4 cm', kgP: [0.04, 0.06],
     consigli: [
@@ -55,7 +56,7 @@ export const CATALOGO = [
       "Raccogli ogni 2–3 giorni, quando i baccelli sono sottili e si spezzano con uno schiocco: più raccogli, più la pianta ne produce.",
       "Varietà adatte: {bobis:Bobis a grano nero} o {contender:Contender}.",
     ], problemi: ['ragnetto', 'cimice'] },
-  { id: 'cavolfiore', nome: 'Cavolfiore', parole: ['cavolfior'], famiglia: 'Brassicacee', tappa: 'L', esigenza: 'alta',
+  { id: 'cavolfiore', sole: 6, nome: 'Cavolfiore', parole: ['cavolfior'], famiglia: 'Brassicacee', tappa: 'L', esigenza: 'alta',
     t: [['07-20','08-25']], r: [['11-01','02-28']],
     sullaFila: '60', traLeFile: '60', kgP: [0.6, 1],
     consigli: [
@@ -64,7 +65,7 @@ export const CATALOGO = [
       "Lascia 60 cm tra le piante: sembra tanto, ma a fine crescita ogni pianta è larga mezzo metro. Più vicine fanno teste piccole.",
       "Quando la testa bianca è grande come un pugno, piegale sopra qualche foglia: resta bianca e tenera.",
     ], problemi: ['cavolaia', 'altica', 'moscabianca', 'uccelli'] },
-  { id: 'verza', nome: 'Verza e cappuccio', parole: ['verz', 'cappucc', 'cavol'], famiglia: 'Brassicacee', tappa: 'L', esigenza: 'alta',
+  { id: 'verza', sole: 6, nome: 'Verza e cappuccio', parole: ['verz', 'cappucc', 'cavol'], famiglia: 'Brassicacee', tappa: 'L', esigenza: 'alta',
     t: [['07-20','08-25']], r: [['11-01','02-28']],
     sullaFila: '60', traLeFile: '60', kgP: [1, 1.5],
     consigli: [
@@ -72,7 +73,7 @@ export const CATALOGO = [
       "Concima come il cavolfiore: {compost:compost} prima del trapianto e {pollina:pollina} al trapianto e dopo 4 settimane.",
       "Reggono bene il freddo: la verza dopo le prime gelate diventa anche più dolce, quindi puoi raccoglierla con calma per tutto l'inverno.",
     ], problemi: ['cavolaia', 'moscabianca', 'lumache'] },
-  { id: 'broccolo', nome: 'Broccolo', parole: ['broccol'], famiglia: 'Brassicacee', tappa: 'L', esigenza: 'alta',
+  { id: 'broccolo', sole: 6, nome: 'Broccolo', parole: ['broccol'], famiglia: 'Brassicacee', tappa: 'L', esigenza: 'alta',
     t: [['08-01','08-31']], r: [['10-01','12-31']],
     sullaFila: '50', traLeFile: '60', kgP: [0.4, 0.6],
     consigli: [
@@ -80,7 +81,7 @@ export const CATALOGO = [
       "Taglia la testa centrale quando i boccioli sono ancora chiusi e verde scuro: se vedi spuntare fiorellini gialli sei in ritardo.",
       "Dopo il primo taglio non togliere la pianta: per qualche settimana fa altre teste più piccole ai lati ({getti:getti laterali}).",
     ], problemi: ['cavolaia', 'afidi'] },
-  { id: 'cavolonero', nome: 'Cavolo nero', parole: ['cavolo nero'], famiglia: 'Brassicacee', tappa: 'L', esigenza: 'alta',
+  { id: 'cavolonero', sole: 6, nome: 'Cavolo nero', parole: ['cavolo nero'], famiglia: 'Brassicacee', tappa: 'L', esigenza: 'alta',
     t: [['07-01','09-30']], r: [['10-01','04-30']],
     sullaFila: '50', traLeFile: '60', kgP: [0.8, 1.2],
     consigli: [
@@ -88,7 +89,7 @@ export const CATALOGO = [
       "Regge bene il freddo e un po' d'ombra: va bene anche in un'aiuola con qualche ora d'ombra d'estate.",
       "Anche lui va coperto con la {rete:rete antinsetto} dal trapianto.",
     ], problemi: ['cavolaia', 'moscabianca'] },
-  { id: 'zucchina', nome: 'Zucchina', parole: ['zucchin'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
+  { id: 'zucchina', sole: 7, nome: 'Zucchina', parole: ['zucchin'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
     t: [['05-01','05-20']], s: [['06-20','06-30']], r: [['06-01','09-30']],
     sullaFila: '100', traLeFile: '100', prof: '2–3 cm', kgP: [4, 8],
     consigli: [
@@ -98,7 +99,7 @@ export const CATALOGO = [
       "A luglio raccogli ogni 1–2 giorni, quando sono lunghe 15–20 cm: se le lasci crescere diventano grosse e acquose, e la pianta ne fa meno.",
       "Se a fine giugno semini una seconda pianta, avrai zucchine fino all'autunno, quando le prime piante sono stanche.",
     ], problemi: ['oidio', 'afidi'] },
-  { id: 'cetriolo', nome: 'Cetriolo su rete', parole: ['cetriol'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
+  { id: 'cetriolo', sole: 7, nome: 'Cetriolo su rete', parole: ['cetriol'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
     t: [['05-10','05-25']], r: [['07-01','09-30']],
     sullaFila: '35', traLeFile: '— (una fila sola)', prof: '2 cm', kgP: [2, 4],
     consigli: [
@@ -107,7 +108,7 @@ export const CATALOGO = [
       "Bagna con regolarità e alla base: con l'acqua a singhiozzo i frutti diventano amari.",
       "Varietà adatta: {marketmore:Marketmore}.",
     ], problemi: ['oidio', 'ragnetto'] },
-  { id: 'aglio', nome: 'Aglio', parole: ['aglio'], famiglia: 'Alliacee', tappa: 'A', esigenza: 'bassa',
+  { id: 'aglio', sole: 6, nome: 'Aglio', parole: ['aglio'], famiglia: 'Alliacee', tappa: 'A', esigenza: 'bassa',
     t: [['10-15','11-30']], r: [['06-15','07-10']],
     sullaFila: '12–15', traLeFile: '25–30', prof: 'spicchio coperto da 2–3 cm', kgP: [0.03, 0.05], unita: 'teste',
     consigli: [
@@ -116,7 +117,7 @@ export const CATALOGO = [
       "Togli spesso le erbacce tra le file: l'aglio ha poche foglie strette e non regge la concorrenza.",
       "Raccogli quando metà delle foglie è secca, tra metà giugno e inizio luglio, poi lascia asciugare le teste all'ombra per 2–3 settimane.",
     ], problemi: ['ruggine', 'infestanti'] },
-  { id: 'cipolla', nome: 'Cipolla da bulbillo', parole: ['cipoll'], famiglia: 'Alliacee', tappa: 'A', esigenza: 'bassa',
+  { id: 'cipolla', sole: 6, nome: 'Cipolla da bulbillo', parole: ['cipoll'], famiglia: 'Alliacee', tappa: 'A', esigenza: 'bassa',
     t: [['10-01','11-30']], r: [['05-01','06-30']],
     sullaFila: '10', traLeFile: '25', prof: 'punta a filo del terreno', kgP: [0.06, 0.1],
     consigli: [
@@ -124,7 +125,7 @@ export const CATALOGO = [
       "Ad aprile {diradare:dirada}: togli una pianta ogni due e mangiala come {cipollotto:cipollotto}. Quelle rimaste hanno più spazio e ingrossano.",
       "Raccogli tra maggio e giugno, quando le foglie si piegano da sole. Niente letame prima delle cipolle.",
     ], problemi: ['moscacipolla', 'peronospora'] },
-  { id: 'finocchio', nome: 'Finocchio', parole: ['finocch'], famiglia: 'Apiacee', tappa: 'A', esigenza: 'media',
+  { id: 'finocchio', sole: 6, nome: 'Finocchio', parole: ['finocch'], famiglia: 'Apiacee', tappa: 'A', esigenza: 'media',
     t: [['07-20','08-25']], r: [['10-01','12-31']],
     sullaFila: '30', traLeFile: '40', kgP: [0.25, 0.35],
     consigli: [
@@ -133,7 +134,7 @@ export const CATALOGO = [
       "Bagna con regolarità: se la terra passa da secca a bagnata, il grumolo si spacca o la pianta va in fiore.",
       "Raccogli entro dicembre, prima delle gelate sotto i −4 °C.",
     ], problemi: ['lumache'] },
-  { id: 'radicchio', nome: 'Radicchio e cicorie', parole: ['radicch', 'cicori', 'catalogn'], famiglia: 'Asteracee', tappa: 'A', esigenza: 'media',
+  { id: 'radicchio', sole: 4, nome: 'Radicchio e cicorie', parole: ['radicch', 'cicori', 'catalogn'], famiglia: 'Asteracee', tappa: 'A', esigenza: 'media',
     t: [['08-01','08-31']], r: [['10-01','01-31']],
     sullaFila: '30', traLeFile: '40', kgP: [0.2, 0.4],
     consigli: [
@@ -141,7 +142,7 @@ export const CATALOGO = [
       "Regge il freddo: con le prime gelate le foglie diventano più colorate e croccanti.",
       "Raccogli tagliando il cespo alla base, da ottobre a gennaio.",
     ], problemi: ['lumache'] },
-  { id: 'bietola', nome: 'Bietola da taglio', parole: ['biet', 'erbett'], famiglia: 'Amarantacee', tappa: 'A', esigenza: 'media',
+  { id: 'bietola', sole: 4, nome: 'Bietola da taglio', parole: ['biet', 'erbett'], famiglia: 'Amarantacee', tappa: 'A', esigenza: 'media',
     s: [['03-01','05-31'],['07-01','08-31']], r: [['05-15','12-15']],
     sullaFila: '30', traLeFile: '40', prof: '2 cm', kgP: [0.6, 1],
     consigli: [
@@ -149,7 +150,7 @@ export const CATALOGO = [
       "Due periodi di semina: marzo–maggio per l'estate, luglio–agosto per l'autunno.",
       "Va bene anche in {mezzombra:mezz'ombra}: d'estate soffre meno il caldo.",
     ], problemi: ['lumache', 'afidi'] },
-  { id: 'carota', nome: 'Carota corta', parole: ['carot'], famiglia: 'Apiacee', tappa: 'A', esigenza: 'bassa',
+  { id: 'carota', sole: 6, nome: 'Carota corta', parole: ['carot'], famiglia: 'Apiacee', tappa: 'A', esigenza: 'bassa',
     s: [['03-01','07-31']], r: [['06-15','11-30']], giorni: '90–120',
     sullaFila: '4–5', traLeFile: '25', fitta: true, prof: '1 cm', kgM2: [2, 4],
     consigli: [
@@ -158,7 +159,7 @@ export const CATALOGO = [
       "Quando sono alte 5 cm, {diradare:dirada} lasciandone una ogni 4–5 cm.",
       "Niente letame: fa carote biforcute e piene di radichette.",
     ], problemi: ['moscacarota', 'ferretti'] },
-  { id: 'pomodoro', nome: 'Pomodoro', parole: ['pomodor'], famiglia: 'Solanacee', tappa: 'S', esigenza: 'alta',
+  { id: 'pomodoro', sole: 7, nome: 'Pomodoro', parole: ['pomodor'], famiglia: 'Solanacee', tappa: 'S', esigenza: 'alta',
     t: [['04-25','05-15']], r: [['07-15','10-10']],
     sullaFila: '50–60', traLeFile: '60', kgP: [3, 5],
     consigli: [
@@ -169,7 +170,7 @@ export const CATALOGO = [
       "Concime: 4–5 kg/m² di {compost:compost} in inverno e 40–60 g/m² di {cornunghia:cornunghia} al trapianto. Non esagerare: troppo azoto fa tante foglie e pochi frutti.",
       "Lo spazio libero ai piedi delle piante è perfetto per il basilico.",
     ], problemi: ['peronospora', 'cimice', 'tuta', 'marciume', 'ragnetto'] },
-  { id: 'peperone', nome: 'Peperone', parole: ['peperon'], famiglia: 'Solanacee', tappa: 'S', esigenza: 'alta',
+  { id: 'peperone', sole: 7, nome: 'Peperone', parole: ['peperon'], famiglia: 'Solanacee', tappa: 'S', esigenza: 'alta',
     t: [['05-05','05-20']], r: [['07-01','10-10']],
     sullaFila: '45', traLeFile: '60', kgP: [0.8, 1.5],
     consigli: [
@@ -178,7 +179,7 @@ export const CATALOGO = [
       "Bagna con regolarità: l'acqua a singhiozzo provoca il {marciume:marciume apicale}.",
       "Quando i rami sono carichi di frutti, sostienili con un piccolo {tutore:tutore}: si spezzano facilmente.",
     ], problemi: ['afidi', 'cimice', 'marciume'] },
-  { id: 'melanzana', nome: 'Melanzana', parole: ['melanzan'], famiglia: 'Solanacee', tappa: 'S', esigenza: 'alta',
+  { id: 'melanzana', sole: 7, nome: 'Melanzana', parole: ['melanzan'], famiglia: 'Solanacee', tappa: 'S', esigenza: 'alta',
     t: [['05-05','05-20']], r: [['07-01','10-10']],
     sullaFila: '60', traLeFile: '60', kgP: [2, 3],
     consigli: [
@@ -186,7 +187,7 @@ export const CATALOGO = [
       "Ogni settimana guarda sotto le foglie: la {dorifora:dorifora} e le sue uova arancioni si tolgono a mano.",
       "Raccogli quando la buccia è lucida: se diventa opaca il frutto è troppo maturo, pieno di semi e amaro.",
     ], problemi: ['dorifora', 'ragnetto', 'cimice'] },
-  { id: 'lattuga', nome: 'Lattughe e insalate', parole: ['lattug', 'insalat'], famiglia: 'Asteracee', tappa: 'J', esigenza: 'media',
+  { id: 'lattuga', sole: 4, nome: 'Lattughe e insalate', parole: ['lattug', 'insalat'], famiglia: 'Asteracee', tappa: 'J', esigenza: 'media',
     t: [['03-01','09-30']], r: [['04-15','11-30']], giorni: '45–70',
     sullaFila: '30', traLeFile: '30', kgP: [0.25, 0.35],
     consigli: [
@@ -194,14 +195,14 @@ export const CATALOGO = [
       "D'estate mettile dove c'è un po' d'ombra: col caldo vanno in fiore e diventano amare.",
       "Puoi metterle negli spazi liberi tra pomodori o cavoli appena trapiantati: le raccogli prima che le piante grandi chiudano lo spazio.",
     ], problemi: ['lumache', 'afidi', 'ferretti'] },
-  { id: 'lattugainv', nome: 'Lattuga invernale', parole: ['lattuga invernale', 'meraviglia'], famiglia: 'Asteracee', tappa: 'J', esigenza: 'media',
+  { id: 'lattugainv', sole: 4, nome: 'Lattuga invernale', parole: ['lattuga invernale', 'meraviglia'], famiglia: 'Asteracee', tappa: 'J', esigenza: 'media',
     t: [['09-01','10-31']], r: [['01-01','04-30']],
     sullaFila: '30', traLeFile: '30', kgP: [0.2, 0.3],
     consigli: [
       "Trapianta a settembre–ottobre una varietà che regge il freddo, come {meraviglia:Meraviglia d'inverno}: si raccoglie da gennaio ad aprile.",
       "Nelle notti sotto i −3 °C coprila con il {tnt:tessuto non tessuto}.",
     ], problemi: ['lumache'] },
-  { id: 'spinacio', nome: 'Spinacio', parole: ['spinac'], famiglia: 'Amarantacee', tappa: 'J', esigenza: 'media',
+  { id: 'spinacio', sole: 4, nome: 'Spinacio', parole: ['spinac'], famiglia: 'Amarantacee', tappa: 'J', esigenza: 'media',
     s: [['09-15','10-20'],['02-15','03-15']], r: [['11-01','04-30']],
     sullaFila: '8–10', traLeFile: '25', fitta: true, prof: '2 cm', kgM2: [1, 1.5],
     consigli: [
@@ -209,7 +210,7 @@ export const CATALOGO = [
       "Quando le piantine sono nate, {diradare:dirada} lasciandone una ogni 8–10 cm.",
       "Raccogli le foglie esterne: la pianta continua a produrne.",
     ], problemi: ['peronospora', 'lumache'] },
-  { id: 'valerianella', nome: 'Valerianella', parole: ['valerian', 'songino', 'gallinell'], famiglia: 'Caprifogliacee', tappa: 'J', esigenza: 'bassa',
+  { id: 'valerianella', sole: 4, nome: 'Valerianella', parole: ['valerian', 'songino', 'gallinell'], famiglia: 'Caprifogliacee', tappa: 'J', esigenza: 'bassa',
     s: [['08-01','10-31']], r: [['11-01','03-31']],
     sullaFila: '3–5', traLeFile: '15', fitta: true, prof: '0,5–1 cm', kgM2: [0.5, 1],
     consigli: [
@@ -217,7 +218,7 @@ export const CATALOGO = [
       "Il seme sta quasi in superficie: tieni la terra umida finché non nasce.",
       "Si raccoglie tutta la rosetta, tagliandola alla base.",
     ], problemi: ['lumache'] },
-  { id: 'rucola', nome: 'Rucola', parole: ['rucol', 'rucchet'], famiglia: 'Brassicacee', tappa: 'J', esigenza: 'bassa',
+  { id: 'rucola', sole: 4, nome: 'Rucola', parole: ['rucol', 'rucchet'], famiglia: 'Brassicacee', tappa: 'J', esigenza: 'bassa',
     s: [['03-01','05-31'],['08-01','10-31']], r: [['04-01','06-30'],['09-01','11-30']], giorni: '25–40',
     sullaFila: 'fitta', traLeFile: '20', fitta: true, prof: '0,5 cm', kgM2: [0.8, 1.2],
     consigli: [
@@ -225,7 +226,7 @@ export const CATALOGO = [
       "Tra giugno e luglio va subito in fiore e diventa troppo piccante: meglio evitarla.",
       "È della stessa famiglia dei cavoli: nella rotazione conta come un cavolo.",
     ], problemi: ['altica'] },
-  { id: 'ravanello', nome: 'Ravanello', parole: ['ravanell'], famiglia: 'Brassicacee', tappa: 'J', esigenza: 'bassa',
+  { id: 'ravanello', sole: 4, nome: 'Ravanello', parole: ['ravanell'], famiglia: 'Brassicacee', tappa: 'J', esigenza: 'bassa',
     s: [['02-01','05-31'],['08-01','10-31']], r: [['03-01','06-30'],['09-01','11-30']], giorni: '25–35',
     sullaFila: '3–4', traLeFile: '15', fitta: true, prof: '1 cm', kgM2: [1, 2],
     consigli: [
@@ -233,7 +234,7 @@ export const CATALOGO = [
       "Semina poco alla volta, ogni 2–3 settimane ({scalare:semina a scalare}).",
       "È della stessa famiglia dei cavoli: nella rotazione conta come un cavolo.",
     ], problemi: ['altica'] },
-  { id: 'prezzemolo', nome: 'Prezzemolo', parole: ['prezzemol'], famiglia: 'Apiacee', tappa: 'J', esigenza: 'bassa',
+  { id: 'prezzemolo', sole: 4, nome: 'Prezzemolo', parole: ['prezzemol'], famiglia: 'Apiacee', tappa: 'J', esigenza: 'bassa',
     s: [['03-01','04-30'],['08-01','09-30']], r: [['05-01','03-31']],
     sullaFila: '15', traLeFile: '25', prof: '1 cm', kgP: [0.1, 0.2],
     consigli: [
@@ -241,7 +242,7 @@ export const CATALOGO = [
       "Per una famiglia bastano 10–15 piante: non serve un'aiuola intera, anche un angolo o un bordo va bene.",
       "Taglia gli steli esterni: la pianta ricaccia e dura quasi tutto l'anno. Va bene anche in {mezzombra:mezz'ombra}.",
     ], problemi: [] },
-  { id: 'basilico', nome: 'Basilico', parole: ['basilic'], famiglia: 'Lamiacee', tappa: 'J', esigenza: 'media',
+  { id: 'basilico', sole: 7, nome: 'Basilico', parole: ['basilic'], famiglia: 'Lamiacee', tappa: 'J', esigenza: 'media',
     t: [['05-15','06-30']], r: [['06-01','09-30']],
     sullaFila: '20–25', traLeFile: '— (una fila sul bordo)', prof: '0,5 cm', kgP: [0.15, 0.25],
     consigli: [
@@ -250,7 +251,7 @@ export const CATALOGO = [
       "{cimare:Cima} le punte prima che fiorisca: la pianta si allarga e fa più foglie.",
       "Raccogli tutto prima del primo freddo di ottobre.",
     ], problemi: [] },
-  { id: 'carciofo', nome: 'Carciofo', parole: ['carciof'], famiglia: 'Asteracee', tappa: 'P', esigenza: 'alta',
+  { id: 'carciofo', sole: 7, nome: 'Carciofo', parole: ['carciof'], famiglia: 'Asteracee', tappa: 'P', esigenza: 'alta',
     t: [['03-01','04-30']], r: [['04-01','06-30']],
     sullaFila: '100', traLeFile: '100', kgP: [1, 2], unita: 'capolini',
     consigli: [
@@ -261,7 +262,7 @@ export const CATALOGO = [
       "D'inverno evita che l'acqua ristagni attorno alla base: nella terra argillosa marcisce.",
     ], problemi: ['afidi'] },
   // ---- Aggiunte: altre colture dell'orto ----
-  { id: 'porro', nome: 'Porro', parole: ['porr'], famiglia: 'Alliacee', tappa: 'A', esigenza: 'media',
+  { id: 'porro', sole: 6, nome: 'Porro', parole: ['porr'], famiglia: 'Alliacee', tappa: 'A', esigenza: 'media',
     t: [['05-15','07-15']], r: [['10-01','03-31']],
     sullaFila: '10–15', traLeFile: '35', kgP: [0.15, 0.25],
     consigli: [
@@ -269,7 +270,7 @@ export const CATALOGO = [
       "Mettile in un solco profondo 10–15 cm e, man mano che crescono, {rincalzare:rincalza}: la parte bianca, quella che si mangia, diventa più lunga.",
       "Regge il freddo: lo lasci nell'aiuola e lo raccogli quando serve, da ottobre fino a marzo.",
     ], problemi: ['moscacipolla'] },
-  { id: 'scalogno', nome: 'Scalogno', parole: ['scalogn'], famiglia: 'Alliacee', tappa: 'A', esigenza: 'bassa',
+  { id: 'scalogno', sole: 6, nome: 'Scalogno', parole: ['scalogn'], famiglia: 'Alliacee', tappa: 'A', esigenza: 'bassa',
     t: [['10-15','11-30'],['02-15','03-15']], r: [['06-15','07-15']],
     sullaFila: '15', traLeFile: '25', prof: 'punta a filo del terreno', kgP: [0.1, 0.15],
     consigli: [
@@ -277,7 +278,7 @@ export const CATALOGO = [
       "Niente letame, come per aglio e cipolle.",
       "Raccogli quando le foglie seccano, poi lascia asciugare all'ombra: si conserva per mesi.",
     ], problemi: ['moscacipolla'] },
-  { id: 'sedano', nome: 'Sedano', parole: ['sedan'], famiglia: 'Apiacee', tappa: 'A', esigenza: 'alta',
+  { id: 'sedano', sole: 4, nome: 'Sedano', parole: ['sedan'], famiglia: 'Apiacee', tappa: 'A', esigenza: 'alta',
     t: [['05-01','06-30']], r: [['07-20','11-30']],
     sullaFila: '40', traLeFile: '40', kgP: [0.4, 0.7],
     consigli: [
@@ -285,7 +286,7 @@ export const CATALOGO = [
       "Vuole terreno ricco e acqua costante: con la terra secca le coste diventano dure e filose. Prima del trapianto metti del {compost:compost}.",
       "Raccogli la pianta intera tagliandola alla base, oppure qualche costa esterna alla volta.",
     ], problemi: ['lumache'] },
-  { id: 'fagiolorampicante', nome: 'Fagiolo rampicante', parole: ['fagiolo rampicante', 'rampicant', 'fagiol', 'borlott', 'cannellin'], famiglia: 'Leguminose', tappa: 'L', esigenza: 'arricchisce',
+  { id: 'fagiolorampicante', sole: 7, nome: 'Fagiolo rampicante', parole: ['fagiolo rampicante', 'rampicant', 'fagiol', 'borlott', 'cannellin'], famiglia: 'Leguminose', tappa: 'L', esigenza: 'arricchisce',
     s: [['05-01','06-30']], r: [['07-15','09-30']], giorni: '65–80',
     sullaFila: '10', traLeFile: '— (una fila lungo la rete)', prof: '3–4 cm', kgP: [0.15, 0.25],
     consigli: [
@@ -294,7 +295,7 @@ export const CATALOGO = [
       "Raccogli spesso: più baccelli togli, più la pianta ne produce. Per i fagioli da sgranare (borlotti, cannellini) aspetta che i baccelli siano gonfi.",
       "A fine raccolta {tagliopiede:taglia al piede}: le radici lasciano azoto nel terreno.",
     ], problemi: ['ragnetto', 'cimice'] },
-  { id: 'patata', nome: 'Patata', parole: ['patat'], famiglia: 'Solanacee', tappa: 'S', esigenza: 'alta', tLabel: 'Messa a dimora',
+  { id: 'patata', sole: 6, nome: 'Patata', parole: ['patat'], famiglia: 'Solanacee', tappa: 'S', esigenza: 'alta', tLabel: 'Messa a dimora',
     t: [['03-15','04-15']], r: [['07-01','08-31']], giorni: '90–120',
     sullaFila: '25–30', traLeFile: '60–70', prof: '10 cm', kgP: [0.8, 1.5], unita: 'tuberi',
     avviso: "Sconsigliata in un orto piccolo: occupa molto spazio per mesi e, nei primi anni dopo un prato, attira i {ferretti:ferretti}.",
@@ -303,7 +304,7 @@ export const CATALOGO = [
       "Quando le piante sono alte 15–20 cm, {rincalzare:rincalza}: le patate si formano nella terra ammucchiata e non diventano verdi.",
       "Raccogli quando la pianta ingiallisce e secca. È della stessa famiglia del pomodoro: nella rotazione sta con le solanacee.",
     ], problemi: ['dorifora', 'peronospora', 'ferretti'] },
-  { id: 'zucca', nome: 'Zucca', parole: ['zucca', 'zucche'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
+  { id: 'zucca', sole: 7, nome: 'Zucca', parole: ['zucca', 'zucche'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
     t: [['05-01','05-31']], r: [['09-01','10-31']],
     sullaFila: '160–200', traLeFile: '160–200', kgP: [5, 10], unita: 'frutti',
     avviso: "Sconsigliata in un orto piccolo: ogni pianta occupa 3–4 m², più di un'aiuola intera.",
@@ -311,7 +312,7 @@ export const CATALOGO = [
       "Metti 3–5 litri di {compost:compost} nella buca e lascia correre i rami fuori dall'aiuola, oppure su una rete robusta.",
       "Raccogli quando il picciolo è secco e duro: lasciando 5 cm di picciolo, la zucca si conserva per mesi in un posto fresco e asciutto.",
     ], problemi: ['oidio'] },
-  { id: 'melone', nome: 'Melone', parole: ['melon'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
+  { id: 'melone', sole: 7, nome: 'Melone', parole: ['melon'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
     t: [['05-01','05-31']], r: [['07-15','09-15']],
     sullaFila: '80–100', traLeFile: '100–150', kgP: [3, 6], unita: 'frutti',
     avviso: "Sconsigliato in un orto piccolo: occupa circa 1 m² a pianta e vuole molto caldo e acqua costante.",
@@ -320,7 +321,7 @@ export const CATALOGO = [
       "Pacciama il terreno e metti una tavoletta sotto ogni frutto, così non marcisce a contatto con la terra.",
       "È maturo quando profuma e il picciolo si stacca quasi da solo.",
     ], problemi: ['oidio'] },
-  { id: 'anguria', nome: 'Anguria', parole: ['anguri', 'cocomer'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
+  { id: 'anguria', sole: 7, nome: 'Anguria', parole: ['anguri', 'cocomer'], famiglia: 'Cucurbitacee', tappa: 'C', esigenza: 'alta',
     t: [['05-10','06-05']], r: [['08-01','09-15']],
     sullaFila: '150', traLeFile: '150', kgP: [5, 10], unita: 'frutti',
     avviso: "Sconsigliata in un orto piccolo: ogni pianta vuole almeno 2–3 m² e fa pochi frutti.",
@@ -328,7 +329,7 @@ export const CATALOGO = [
       "Bagna molto finché i frutti crescono, poi meno: maturano più dolci.",
       "È matura quando il viticcio più vicino al frutto è secco e la macchia sotto, dove poggia a terra, è diventata gialla.",
     ], problemi: ['oidio'] },
-  { id: 'mais', nome: 'Mais dolce', parole: ['mais', 'granoturc'], famiglia: 'Poacee', tappa: 'C', esigenza: 'alta',
+  { id: 'mais', sole: 7, nome: 'Mais dolce', parole: ['mais', 'granoturc'], famiglia: 'Poacee', tappa: 'C', esigenza: 'alta',
     s: [['04-20','05-31']], r: [['08-01','09-15']], giorni: '80–100',
     sullaFila: '25', traLeFile: '60', prof: '3–4 cm', kgP: [0.2, 0.3], unita: 'pannocchie',
     avviso: "Sconsigliato in un orto piccolo: ogni pianta dà 1–2 pannocchie, in uno spazio dove potresti raccogliere molto di più.",
@@ -340,7 +341,7 @@ export const CATALOGO = [
     ], problemi: [] },
 
   // ---- Perenni: restano nello stesso posto per anni ----
-  { id: 'asparago', nome: 'Asparago', parole: ['asparag'], famiglia: 'Asparagacee', tappa: 'P', esigenza: 'alta', tLabel: 'Messa a dimora',
+  { id: 'asparago', sole: 6, nome: 'Asparago', parole: ['asparag'], famiglia: 'Asparagacee', tappa: 'P', esigenza: 'alta', tLabel: 'Messa a dimora',
     t: [['03-01','04-15']], r: [['04-01','05-31']],
     sullaFila: '20–30', traLeFile: '— (una fila sola)', prof: '15–20 cm', kgP: [0.3, 0.5],
     avviso: "Sconsigliato in un orto piccolo: occupa lo stesso posto per 10–15 anni e si raccoglie solo dal terzo anno.",
@@ -349,7 +350,7 @@ export const CATALOGO = [
       "Non raccogliere nei primi due anni: la pianta deve fare radici forti.",
       "Dopo la raccolta lascia crescere le fronde fino all'autunno: nutrono le radici per l'anno dopo.",
     ], problemi: [] },
-  { id: 'fragola', nome: 'Fragola', parole: ['fragol'], famiglia: 'Rosacee', tappa: 'P', esigenza: 'media',
+  { id: 'fragola', sole: 6, nome: 'Fragola', parole: ['fragol'], famiglia: 'Rosacee', tappa: 'P', esigenza: 'media',
     t: [['08-15','10-15'],['03-01','04-15']], r: [['05-01','06-30']],
     sullaFila: '30', traLeFile: '40', kgP: [0.2, 0.4],
     consigli: [
@@ -357,7 +358,7 @@ export const CATALOGO = [
       "Metti la paglia sotto le piante quando fioriscono: i frutti restano puliti e non marciscono.",
       "La pianta fa lunghi rami striscianti, gli {stoloni:stoloni}: toglili, oppure lasciali radicare per avere piante nuove. Dopo 3 anni rinnova le piante.",
     ], problemi: ['lumache', 'uccelli'] },
-  { id: 'rosmarino', nome: 'Rosmarino', parole: ['rosmarin'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'bassa',
+  { id: 'rosmarino', sole: 7, nome: 'Rosmarino', parole: ['rosmarin'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'bassa',
     t: [['03-15','05-15']], r: [['01-01','12-31']],
     sullaFila: '70', traLeFile: '— (una fila sul bordo)',
     scopo: "Aromatica da tenere sulla fascia di bordo: si taglia un rametto quando serve, tutto l'anno. I fiori attirano api e insetti utili.",
@@ -365,7 +366,7 @@ export const CATALOGO = [
       "Trapiantalo a marzo–aprile, non in autunno: nell'argilla bagnata le radici marciscono.",
       "Vuole sole pieno e terreno che non ristagna; non ha bisogno di concime né di molta acqua.",
     ], problemi: [] },
-  { id: 'salvia', nome: 'Salvia', parole: ['salvia'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'bassa',
+  { id: 'salvia', sole: 7, nome: 'Salvia', parole: ['salvia'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'bassa',
     t: [['03-15','05-15']], r: [['03-01','11-30']],
     sullaFila: '50', traLeFile: '— (una fila sul bordo)',
     scopo: "Aromatica per la fascia di bordo: si colgono le foglie quando servono.",
@@ -373,7 +374,7 @@ export const CATALOGO = [
       "Trapiantala in primavera, al sole, in terreno che non ristagna.",
       "A fine inverno accorcia i rami di un terzo: la pianta resta compatta e rifà foglie nuove.",
     ], problemi: [] },
-  { id: 'timo', nome: 'Timo', parole: ['timo'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'bassa',
+  { id: 'timo', sole: 7, nome: 'Timo', parole: ['timo'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'bassa',
     t: [['03-15','05-15']], r: [['03-01','11-30']],
     sullaFila: '30', traLeFile: '— (una fila sul bordo)',
     scopo: "Aromatica bassa per la fascia di bordo; i fiori attirano le api.",
@@ -381,7 +382,7 @@ export const CATALOGO = [
       "Trapiantalo in primavera, nel punto più assolato e asciutto.",
       "Dopo la fioritura accorcia i rametti: resta folto.",
     ], problemi: [] },
-  { id: 'origano', nome: 'Origano', parole: ['origan'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'bassa',
+  { id: 'origano', sole: 7, nome: 'Origano', parole: ['origan'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'bassa',
     t: [['03-15','05-15']], r: [['05-01','10-31']],
     sullaFila: '40', traLeFile: '— (una fila sul bordo)',
     scopo: "Aromatica per la fascia di bordo; i fiori attirano api e insetti utili.",
@@ -389,7 +390,7 @@ export const CATALOGO = [
       "Trapiantalo in primavera, al sole. Più il terreno è asciutto, più le foglie sono profumate.",
       "Per farlo seccare, taglia i rametti quando inizia la fioritura e appendili a testa in giù all'ombra.",
     ], problemi: [] },
-  { id: 'erbacipollina', nome: 'Erba cipollina', parole: ['erba cipollina', 'cipollina'], famiglia: 'Alliacee', tappa: 'P', esigenza: 'bassa',
+  { id: 'erbacipollina', sole: 4, nome: 'Erba cipollina', parole: ['erba cipollina', 'cipollina'], famiglia: 'Alliacee', tappa: 'P', esigenza: 'bassa',
     t: [['03-15','05-15']], r: [['03-01','10-31']],
     sullaFila: '25', traLeFile: '— (una fila sul bordo)',
     scopo: "Aromatica per la fascia di bordo: si tagliano le foglie quando servono, e ricrescono.",
@@ -397,7 +398,7 @@ export const CATALOGO = [
       "Taglia le foglie a 3–4 cm da terra: in poche settimane ricrescono.",
       "Ogni 3–4 anni dividi il cespo in più pezzi e ripiantali: si rinnova.",
     ], problemi: [] },
-  { id: 'menta', nome: 'Menta', parole: ['menta'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'media',
+  { id: 'menta', sole: 4, nome: 'Menta', parole: ['menta'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'media',
     t: [['03-15','05-15']], r: [['04-01','10-31']],
     sullaFila: '40', traLeFile: '— (una fila sola)',
     avviso: "Da coltivare solo in vaso: in piena terra si allarga con le radici e invade tutto.",
@@ -406,7 +407,7 @@ export const CATALOGO = [
       "Tienila in un vaso, anche interrato, così le radici non escono.",
       "Ama un po' d'ombra e la terra sempre umida.",
     ], problemi: [] },
-  { id: 'lavanda', nome: 'Lavanda', parole: ['lavand'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'bassa',
+  { id: 'lavanda', sole: 7, nome: 'Lavanda', parole: ['lavand'], famiglia: 'Lamiacee', tappa: 'P', esigenza: 'bassa',
     t: [['03-15','05-15']], r: [['06-01','07-31']], rLabel: 'Fioritura',
     sullaFila: '60', traLeFile: '— (una fila sul bordo)',
     scopo: "Pianta da bordura: in fioritura attira tantissime api e altri impollinatori, utili anche all'orto.",
@@ -416,7 +417,7 @@ export const CATALOGO = [
     ], problemi: [] },
 
   // ---- Fiori utili: richiamano insetti utili e impollinatori ----
-  { id: 'calendula', nome: 'Calendula', parole: ['calendul'], famiglia: 'Asteracee', tappa: 'F', esigenza: 'bassa',
+  { id: 'calendula', sole: 6, nome: 'Calendula', parole: ['calendul'], famiglia: 'Asteracee', tappa: 'F', esigenza: 'bassa',
     s: [['03-01','04-30'],['09-01','10-15']], r: [['05-01','10-31']], rLabel: 'Fioritura',
     sullaFila: '25', traLeFile: '— (agli angoli o sul bordo)', prof: '1 cm',
     scopo: "Fiore utile: un cespo a ogni angolo di aiuola richiama sirfidi e coccinelle, che mangiano gli {afidi:afidi}.",
@@ -424,7 +425,7 @@ export const CATALOGO = [
       "Seminala direttamente agli angoli delle aiuole, in primavera o a fine estate.",
       "Togli i fiori appassiti: ne fa di nuovi fino all'autunno. Lasciandone qualcuno, si risemina da sola.",
     ], problemi: [] },
-  { id: 'alisso', nome: 'Alisso', parole: ['aliss'], famiglia: 'Brassicacee', tappa: 'F', esigenza: 'bassa',
+  { id: 'alisso', sole: 6, nome: 'Alisso', parole: ['aliss'], famiglia: 'Brassicacee', tappa: 'F', esigenza: 'bassa',
     s: [['03-01','05-31']], r: [['05-01','10-31']], rLabel: 'Fioritura',
     sullaFila: '20', traLeFile: '— (agli angoli o sul bordo)', prof: 'in superficie',
     scopo: "Fiore utile basso e profumato: richiama sirfidi e piccoli insetti che tengono a bada gli {afidi:afidi}.",
@@ -432,7 +433,7 @@ export const CATALOGO = [
       "Seminalo in superficie, appena coperto, agli angoli delle aiuole o lungo i bordi.",
       "Fiorisce per mesi; a metà estate accorcialo di un terzo e rifiorisce.",
     ], problemi: [] },
-  { id: 'facelia', nome: 'Facelia', parole: ['facelia', 'phacelia'], famiglia: 'Boraginacee', tappa: 'F', esigenza: 'bassa',
+  { id: 'facelia', sole: 6, nome: 'Facelia', parole: ['facelia', 'phacelia'], famiglia: 'Boraginacee', tappa: 'F', esigenza: 'bassa',
     s: [['03-15','05-31'],['08-15','09-30']], r: [['06-01','09-30']], rLabel: 'Fioritura',
     sullaFila: 'fitta', traLeFile: '— (a spaglio)', fitta: true, prof: '1 cm',
     scopo: "Fiore utile per api e impollinatori; si usa anche come {sovescio:sovescio} nei vuoti estivi di 6–8 settimane.",
@@ -440,7 +441,7 @@ export const CATALOGO = [
       "Seminala a spaglio negli spazi liberi o sui bordi.",
       "Se la usi come sovescio, tagliala in fioritura, prima che faccia i semi, e lasciala sul terreno.",
     ], problemi: [] },
-  { id: 'borragine', nome: 'Borragine', parole: ['borragin'], famiglia: 'Boraginacee', tappa: 'F', esigenza: 'bassa',
+  { id: 'borragine', sole: 6, nome: 'Borragine', parole: ['borragin'], famiglia: 'Boraginacee', tappa: 'F', esigenza: 'bassa',
     s: [['03-15','05-31']], r: [['05-15','09-30']], rLabel: 'Fioritura',
     sullaFila: '40', traLeFile: '— (agli angoli o sul bordo)', prof: '1–2 cm',
     scopo: "Fiore utile: i fiori azzurri attirano moltissime api. Foglie e fiori sono commestibili.",
@@ -449,7 +450,7 @@ export const CATALOGO = [
     ], problemi: [] },
 
   // ---- Sovesci: il "piano B" per le aiuole che restano vuote ----
-  { id: 'favino', nome: 'Favino', parole: ['favino'], famiglia: 'Leguminose', tappa: 'V', esigenza: 'arricchisce',
+  { id: 'favino', sole: 6, nome: 'Favino', parole: ['favino'], famiglia: 'Leguminose', tappa: 'V', esigenza: 'arricchisce',
     s: [['09-20','10-20']], r: [['04-01','04-30']], rLabel: 'Taglio in fioritura',
     sullaFila: 'fitta', traLeFile: '— (a spaglio)', fitta: true, prof: '2–3 cm',
     scopo: "{sovescio:Sovescio}: si semina dove l'aiuola resta vuota fino ad aprile, di solito insieme a veccia e avena (15–20 g/m² di miscuglio). Lascia azoto nel terreno.",
@@ -457,7 +458,7 @@ export const CATALOGO = [
       "Semina tra fine settembre e il 20 ottobre e copri con 2–3 cm di terra.",
       "Ad aprile, in fioritura, taglia, sminuzza e lascia appassire una settimana; poi interra nei primi 10 cm o lascia in superficie. Trapianta dopo 2–3 settimane.",
     ], problemi: [] },
-  { id: 'veccia', nome: 'Veccia', parole: ['veccia'], famiglia: 'Leguminose', tappa: 'V', esigenza: 'arricchisce',
+  { id: 'veccia', sole: 6, nome: 'Veccia', parole: ['veccia'], famiglia: 'Leguminose', tappa: 'V', esigenza: 'arricchisce',
     s: [['09-20','10-20']], r: [['04-01','04-30']], rLabel: 'Taglio in fioritura',
     sullaFila: 'fitta', traLeFile: '— (a spaglio)', fitta: true, prof: '2 cm',
     scopo: "{sovescio:Sovescio} invernale, nel miscuglio con favino e avena: è una leguminosa rampicante che lascia azoto nel terreno.",
@@ -465,7 +466,7 @@ export const CATALOGO = [
       "Semina in miscuglio tra fine settembre e il 20 ottobre: l'avena le fa da sostegno.",
       "Taglia ad aprile, in fioritura, come il favino.",
     ], problemi: [] },
-  { id: 'avena', nome: 'Avena', parole: ['avena', 'orzo'], famiglia: 'Poacee', tappa: 'V', esigenza: 'bassa',
+  { id: 'avena', sole: 6, nome: 'Avena', parole: ['avena', 'orzo'], famiglia: 'Poacee', tappa: 'V', esigenza: 'bassa',
     s: [['09-20','10-20']], r: [['04-01','04-30']], rLabel: 'Taglio in fioritura',
     sullaFila: 'fitta', traLeFile: '— (a spaglio)', fitta: true, prof: '2–3 cm',
     scopo: "{sovescio:Sovescio} invernale, nel miscuglio con favino e veccia: le sue radici fitte rendono il terreno più soffice e lo proteggono dalla pioggia. Al posto dell'avena va bene anche l'orzo.",
@@ -473,7 +474,7 @@ export const CATALOGO = [
       "Semina in miscuglio tra fine settembre e il 20 ottobre.",
       "Taglia ad aprile, prima che faccia i semi.",
     ], problemi: [] },
-  { id: 'saraceno', nome: 'Grano saraceno', parole: ['saracen'], famiglia: 'Poligonacee', tappa: 'V', esigenza: 'bassa',
+  { id: 'saraceno', sole: 6, nome: 'Grano saraceno', parole: ['saracen'], famiglia: 'Poligonacee', tappa: 'V', esigenza: 'bassa',
     s: [['05-15','08-15']], r: [['07-01','09-30']], rLabel: 'Taglio in fioritura',
     sullaFila: 'fitta', traLeFile: '— (a spaglio)', fitta: true, prof: '2–3 cm',
     scopo: "{sovescio:Sovescio} estivo per i vuoti di 6–8 settimane: cresce in fretta, copre il terreno e soffoca le erbacce. I fiori attirano le api.",

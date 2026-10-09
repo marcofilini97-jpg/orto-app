@@ -42,6 +42,7 @@ orto-app/
 │   ├── arcade.js         ← Arcade: riempimento automatico secondo rotazione e preferenze, calcolo del raccolto
 │   ├── impara.js         ← Impara: guide brevi (testi e disegni) e lavori di ogni mese
 │   ├── geometria.js      ← forme delle aiuole (rettangolo, rotonda, a L, girate): dentro/fuori, metà, misure, posti dei disegnini
+│   ├── sole.js           ← posizione del sole a Bologna, ombra degli alberi, ore di sole delle aiuole, effetto sulla resa
 │   └── viste.js          ← disegna le schermate
 └── icone/                ← icona-192.png, icona-512.png
 ```
@@ -179,6 +180,10 @@ Un unico oggetto JSON, che è anche il formato del file di backup:
 - Disegni degli alberi più riconoscibili (`TIPI_ALBERO`, `svgAlbero`): chioma tonda (anche il fico, con i fichi a goccia), ovale (pero), larga (ciliegio, noce), leggera e argentata con tronco contorto e buco (olivo, con olive nere e verdi), a strati (conifera); frutti diversi (mele, pere, pesche, albicocche, ciliegie a coppie, susine, fichi, cachi col calice, noci, olive)
 - Sulla mappa, se gli alberi escono dal terreno, attorno si lascia spazio e la mappa si scorre con il dito (`.scorri-mappa`), partendo centrata sul terreno
 - Esposizione: mentre si gira la bussola la mappa sotto non si ridisegna (niente sfarfallio); arco del sole ed etichette si aggiornano lasciando la bussola
+- Ore di sole (`js/sole.js`): sole a Bologna (lat. 44,5°) il 21 di ogni mese, ogni mezz'ora, contando solo il sole alto almeno 10°. Ombra di un albero = striscia larga quanto la chioma (punte tonde) tra l'ombra della parte bassa della chioma (0,35 × altezza) e della cima (0,95 × altezza): col sole alto cade vicino al tronco, col sole basso lontano. Ore di sole di un'aiuola (o metà) = media su ~30 punti; con l'esposizione non indicata non si calcola
+- Catalogo: `sole` = ore di sole che servono (7 colture da frutto e aromatiche mediterranee, 6 cavoli, legumi, radici, bulbi, fiori, sovesci; 4 insalate, spinaci, bietole, prezzemolo, menta, sedano, radicchio, erba cipollina). `fattoreSoleAiuola`: mese per mese, se le ore sono meno del bisogno (al massimo quelle del cielo libero di quel mese) la resa cala in proporzione, non sotto il 30%
+- Usato in: riquadro "Dal catalogo" (resa con "… % in meno per l'ombra degli alberi"), avviso "Poco sole" nel modulo coltura (sempre), resa e raccolto di Arcade (`resaColtura(c, dati)`)
+- Pagina "L'orto" (`#/orto`): forma con misure e "Modifica orto", poi "Il terreno" (`#/orto/terreno`: terreno attuale e "Modifica il terreno" → `#/orto/terreno/modifica`) e "L'esposizione" (`#/orto/sole`: mappa con le aiuole colorate dal grigio all'arancio e le ore di sole del mese scelto, ombre degli alberi all'ora scelta col cursore, alberi semitrasparenti; tocco su un'aiuola → `#/orto/sole/<id>`: grafico dei 12 mesi, ore da aprile a settembre, "Ci stanno bene" / "Renderebbero meno")
 ## Prossimi passi (decisi, da costruire in quest'ordine)
 1. Catalogo delle colture in `js/catalogo.js`: conoscenza generale, uguale per tutti gli orti di Bologna (periodi in `MM-GG`, distanze, piante per aiuola da 1,2 × 1,8 m, resa in kg sempre "stima indicativa", famiglia, tappa della rotazione, consigli). Nel codice va solo conoscenza generale: mai il piano o dati personali di un orto. **Fatto**: esporta `CATALOGO` (53 colture, con `parole` per riconoscere il nome), `TAPPE`, `ESIGENZA`, `GLOSSARIO`, `AIUOLA`, `numero()`, `disposizione()`, `resa()`, `colturaDaNome()` (parola chiave a inizio parola, vince la più lunga). Nessuna schermata lo usa ancora
 2. Pianificatore

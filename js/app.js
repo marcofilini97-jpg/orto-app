@@ -6,7 +6,7 @@ import {
   mappa, schedaAiuola, storicoAiuola, infoAiuola, impostazioni, moduloColtura, schedaColtura, registro, nuovaVoce, schedaVoce,
   listaTask, moduloTask, schedaTask, paginaTest, paginaSimulazioni, ortoNelTempo, paginaArcade, paginaRaccolto,
   paginaImpara, paginaMese, paginaGuide, paginaGuida, paginaGlossario, paginaNuovaPassword, chiediSostituzione, paginaOrti, paginaPersone, paginaSolaLettura,
-  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaOrto, paginaTerrenoOrto, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
+  impostaNomiAiuole, paginaDisegna, puoDisegnare, paginaOrto, paginaTerrenoOrto, paginaTerrenoAttuale, paginaSole, paginaSoleAiuola, paginaCatalogo, schedaCatalogo, paginaTerreno, paginaProva, paginaAnalisi,
 } from './viste.js';
 
 const contenuto = document.getElementById('contenuto');
@@ -42,7 +42,14 @@ function schermata() {
   const dati = carica();
   impostaNomiAiuole(dati);
   if (pagina === 'disegna') return puoDisegnare() ? paginaDisegna(dati, { nuovo: id === 'nuovo' }) : paginaSolaLettura();
-  if (pagina === 'orto') return id === 'terreno' ? paginaTerrenoOrto(dati) : paginaOrto(dati);
+  if (pagina === 'orto') {
+    if (id === 'terreno') return sotto === 'modifica' ? paginaTerrenoOrto(dati) : paginaTerrenoAttuale();
+    if (id === 'sole') {
+      const a = dati.aiuole.find(x => x.id === sotto);
+      return a ? paginaSoleAiuola(dati, a) : paginaSole(dati);
+    }
+    return paginaOrto(dati);
+  }
   if (pagina === 'task') {
     if (id === 'nuovo') return moduloTask(dati);
     if (id === 'fatti') return listaTask(dati, true);

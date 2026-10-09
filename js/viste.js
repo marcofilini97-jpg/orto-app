@@ -16,6 +16,7 @@ import {
   spiegaEsito, consigliTerreno, avvisiTerrenoColtura,
 } from './terreno.js';
 import { GUIDE, LAVORI } from './impara.js';
+import { posizioneSole, ombraAlberoAlSole, oreDiSole, oreMedie, mesiTra, fattoreSoleAiuola, soleNoto } from './sole.js';
 import { area, misureLibere, RAGGIO_TRONCO, dentro as dentroForma, quadratoDentro, toccaRettangoli, ingombro, ingombroZona, posti, puntoEtichetta, tracciato, misure } from './geometria.js';
 import { pianoAutomatico, resaColtura, kgTra, inRaccolta, fineSovescio } from './arcade.js';
 
@@ -147,7 +148,7 @@ function inPercentuale(el, b, t) {
 
 // Disegno SVG della forma dell'aiuola, grande quanto il suo ingombro.
 // divisa: 'fondo-davanti' | 'sinistra-destra' | null (riga tratteggiata). scelta: null, 'intera' o una metà (terra arata)
-function sagomaAiuola(a, { divisa = null, scelta = null } = {}) {
+function sagomaAiuola(a, { divisa = null, scelta = null, tinta = null } = {}) {
   const b = ingombro(a);
   const n = ++numeroSvg;
   const giro = `translate(${a.x} ${a.y}) rotate(${a.rot ?? 0})`;
@@ -187,6 +188,7 @@ function sagomaAiuola(a, { divisa = null, scelta = null } = {}) {
       <clipPath id="forma-${n}">${forma.replace(/^<(rect|path) /, `<$1 transform="${giro}" `)}</clipPath>
     </defs>
     <g class="terra" transform="${giro}" fill="url(#solchi-${n})">${forma}</g>
+    ${tinta ? `<g transform="${giro}" fill="${tinta}" opacity=".82" class="tinta">${forma}</g>` : ''}
     ${sopra}
   </svg>`;
 }
@@ -667,9 +669,8 @@ export function paginaOrto(dati) {
     puoDisegnare()
       ? link(ortoDisegnato(dati) ? 'Modifica orto' : 'Disegna l\'orto', '#/disegna', 'pulsante')
       : elemento('p', 'Solo chi gestisce l\'orto può cambiarne la forma.', 'nota-terreno'),
-    elemento('h3', 'Il terreno dell\'orto'),
-    riepilogoTerreno(),
-    link('Modifica il terreno', '#/orto/terreno', 'pulsante secondario'),
+    link('Il terreno', '#/orto/terreno', 'pulsante secondario'),
+    link('L\'esposizione', '#/orto/sole', 'pulsante secondario'),
   );
   return sezione;
 }
@@ -677,7 +678,7 @@ export function paginaOrto(dati) {
 // Modifica del terreno: per tutto l'orto (una prova vale per tutte le aiuole) o per una sola aiuola
 export function paginaTerrenoOrto(dati) {
   const sezione = document.createElement('section');
-  sezione.append(link('← L\'orto', '#/orto', 'indietro'), elemento('h2', 'Modifica il terreno'));
+  sezione.append(link('← Il terreno', '#/orto/terreno', 'indietro'), elemento('h2', 'Modifica il terreno'));
   const prima = dati.aiuole[0];
   if (!prima) {
     sezione.append(elemento('p', 'Prima disegna almeno un\'aiuola.'));
@@ -1095,6 +1096,8 @@ function suggerimentiCatalogo(dati, modulo, colturaId) {
     const aiuoleScelte = aiuoleIds.map(id => dati.aiuole.find(a => a.id === id)).filter(Boolean);
     const avvisi = [
       ...avvisiTerrenoColtura(scheda, aiuoleScelte).map(([titolo, testo, ids]) => [titolo, `${testo} (${ids.join(', ')})`]),
+      ...soleColtura(dati, scheda, aiuoleIds, parti, inizio).filter(x => x.fattore < 0.85).map(x => ['Poco sole. ',
+        `In ${nomeId(x.id)} in quel periodo arrivano circa ${oreTesto(x.ore)} ore di sole al giorno, per l'ombra degli alberi; ${scheda.nome.toLowerCase()} ne vuole ${scheda.sole ?? 6} o più. La resa stimata scende di circa il ${Math.round((1 - x.fattore) * 100)}%.`]),
       ...(inizio && inizio > oggi() ? avvisiColtura(dati, { scheda, aiuoleIds, parti, inizio, metodo, colturaId }) : []),
     ];
     boxAvvisi.hidden = avvisi.length === 0;
@@ -1112,16 +1115,21 @@ function suggerimentiCatalogo(dati, modulo, colturaId) {
     righe.push(`${scheda.rLabel ?? 'Raccolta'}: ${scheda.r.map(periodoCatalogo).join(' · ')}`);
 
     // Piante e resa nelle aiuole (o metà) scelte
-    let piante = 0, min = 0, max = 0, conResa = true;
+    let piante = 0, min = 0, max = 0, conResa = true, pienoMin = 0, pienoMax = 0;
+    const sole = new Map(soleColtura(dati, scheda, aiuoleIds, parti, inizio).map(x => [x.id, x]));
     for (const id of aiuoleIds) {
       const m = misureParte(dati, id, parti[id]);
       const d = disposizione(scheda, m.L, m.W);
       piante += d.piante ?? 0;
-      const r = resa(scheda, d);
+      const r0 = resa(scheda, d);
+      const f = sole.get(id)?.fattore ?? 1;
+      if (r0) { pienoMin += r0[0]; pienoMax += r0[1]; }
+      const r = r0 && [r0[0] * f, r0[1] * f];
       if (r) { min += r[0]; max += r[1]; } else conResa = false;
     }
     if (piante) righe.push(piante === 1 ? 'Ci sta 1 pianta' : `Ci stanno circa ${piante} piante`);
-    if (conResa && max) righe.push(`Resa stimata: ${kgTesto(min)}–${kgTesto(max)} kg (indicativa)`);
+    if (conResa && max) righe.push(`Resa stimata: ${kgTesto(min)}–${kgTesto(max)} kg (indicativa)`
+      + (pienoMax > max * 1.03 ? `, ${Math.round((1 - max / pienoMax) * 100)}% in meno per l'ombra degli alberi` : ''));
 
     box.replaceChildren(elemento('strong', `Dal catalogo: ${scheda.nome}`), ...righe.map(r => elemento('span', r)));
     if (scheda.avviso) box.append(elemento('span', scheda.avviso.replace(/\{\w+:([^}]+)\}/g, '$1'), 'avviso-catalogo'));
@@ -2960,13 +2968,13 @@ function testoKg(n) {
 }
 
 function inRaccoltaIl(dati, c, g) {
-  const info = resaColtura(c, dati.aiuole, dati.alberi);
+  const info = resaColtura(c, dati);
   return !!info && inRaccolta(info, g);
 }
 
 // kg [min, max] di tutte le colture tra da (compreso) e a (escluso)
 function totaleRaccolto(dati, da, a) {
-  return dati.colture.map(c => resaColtura(c, dati.aiuole, dati.alberi)).filter(Boolean)
+  return dati.colture.map(c => resaColtura(c, dati)).filter(Boolean)
     .map(info => kgTra(info, da, a))
     .reduce((t, kg) => [t[0] + kg[0], t[1] + kg[1]], [0, 0]);
 }
@@ -3012,7 +3020,7 @@ export function paginaRaccolto(dati) {
 
 // Grafico dei 12 mesi (ottobre–settembre) e colture con raccolta nell'anno dell'orto y
 function annoDiRaccolto(dati, y, g, fino) {
-  const infos = dati.colture.map(c => resaColtura(c, dati.aiuole, dati.alberi)).filter(Boolean);
+  const infos = dati.colture.map(c => resaColtura(c, dati)).filter(Boolean);
   const mezzo = kg => (kg[0] + kg[1]) / 2;
   const mesi = MESI_ANNO_ORTO.map((_, i) => {
     const m = (i + 9) % 12 + 1;
@@ -4357,7 +4365,7 @@ export function paginaDisegna(originali, { nuovo = false } = {}) {
       bottone('Fai più tardi', 'pulsante secondario', () => { chiudiPasso(); location.hash = '#/'; }));
     apriPasso(5, 'Il terreno delle aiuole',
       elemento('p', 'Disegno salvato! Ultima cosa: com\'è il terreno? Tessitura, calcare, pH, drenaggio e lombrichi aiutano l\'app a darti consigli giusti. Bastano alcune prove semplici, con le mani, un po\' d\'aceto e un barattolo.'),
-      bottone('Sì, descrivo il terreno ora', 'pulsante', () => { chiudiPasso(); location.hash = '#/orto/terreno'; }),
+      bottone('Sì, descrivo il terreno ora', 'pulsante', () => { chiudiPasso(); location.hash = '#/orto/terreno/modifica'; }),
       riga);
   }
 
@@ -4611,4 +4619,155 @@ function alberiSulTerreno(box, dati) {
 // Il tronco (x, y) è su un'aiuola?
 function sullAiuola(dati, x, y) {
   return dati.aiuole.some(a => dentroForma(a, 'tutta', x, y));
+}
+
+// ---- L'orto: il terreno e l'esposizione (ore di sole) ----
+
+// Sole che arriva a una coltura nelle sue aiuole, nei mesi in cui sta nell'orto: [{ id, ore, fattore }].
+// Vuoto se l'esposizione non è indicata
+function soleColtura(dati, scheda, aiuoleIds, parti, inizio) {
+  if (!scheda || !inizio || !soleNoto(dati)) return [];
+  const mesi = mesiTra(inizio, fineSuggerita(scheda, inizio) ?? inizio);
+  return aiuoleIds.map(id => {
+    const a = dati.aiuole.find(x => x.id === id);
+    if (!a) return null;
+    const zona = parti?.[id] || 'tutta';
+    return { id, ore: oreMedie(dati, a, mesi, zona), fattore: fattoreSoleAiuola(dati, a, mesi, zona, scheda.sole ?? 6) };
+  }).filter(Boolean);
+}
+
+const oreTesto = n => String(Math.round(n * 2) / 2).replace('.', ',');
+
+// Pagina "Il terreno": il terreno attuale delle aiuole e "Modifica il terreno"
+export function paginaTerrenoAttuale() {
+  const sezione = document.createElement('section');
+  sezione.append(link('← L\'orto', '#/orto', 'indietro'), elemento('h2', 'Il terreno'),
+    riepilogoTerreno(), link('Modifica il terreno', '#/orto/terreno/modifica', 'pulsante'));
+  return sezione;
+}
+
+// Colore di un'aiuola secondo la parte di sole che riceve (0 = ombra, 1 = pieno sole)
+function coloreSole(f) {
+  const tappe = [[0, [93, 107, 122]], [0.35, [154, 166, 180]], [0.6, [233, 210, 122]], [0.8, [247, 201, 72]], [1, [242, 164, 0]]];
+  for (let i = 1; i < tappe.length; i++) {
+    if (f <= tappe[i][0]) {
+      const [f0, c0] = tappe[i - 1], [f1, c1] = tappe[i], k = (f - f0) / (f1 - f0);
+      return `rgb(${c0.map((v, q) => Math.round(v + (c1[q] - v) * k)).join(',')})`;
+    }
+  }
+  return 'rgb(242,164,0)';
+}
+
+let meseSole = Number(oggiVero().slice(5, 7));
+let oraSole = 10;
+
+// Pagina "L'esposizione": mappa con le ore di sole di ogni aiuola nel mese scelto e l'ombra degli alberi all'ora scelta
+export function paginaSole(dati) {
+  const sezione = document.createElement('section');
+  sezione.className = 'mappa pagina-sole';
+  const testa = elemento('div', '', 'testa-disegna');
+  testa.append(link('← L\'orto', '#/orto', 'indietro-tempo'), elemento('strong', 'L\'esposizione · ore di sole', 'titolo-tempo'));
+  sezione.append(testa);
+  if (!soleNoto(dati)) {
+    const riq = elemento('div', '', 'riquadro-sole');
+    riq.append(elemento('p', 'Per calcolare le ore di sole serve sapere verso dove guarda l\'orto.'),
+      link('Indica l\'esposizione (Modifica orto)', '#/disegna', 'pulsante'));
+    sezione.append(riq);
+    return sezione;
+  }
+  const t = dati.terreno[0];
+  const posto = elemento('div');
+  const mesi = elemento('div', '', 'mesi-sole');
+  MESI.forEach((nome, i) => {
+    const b = elemento('button', nome);
+    b.type = 'button';
+    b.addEventListener('click', () => { meseSole = i + 1; disegna(); });
+    mesi.append(b);
+  });
+  const cursore = elemento('input', '', 'cursore-sole');
+  Object.assign(cursore, { type: 'range', min: 5, max: 20, step: 0.5, value: oraSole });
+  cursore.setAttribute('aria-label', 'Ora del giorno');
+  cursore.addEventListener('input', () => { oraSole = Number(cursore.value); disegna(); });
+  const scritta = elemento('p', '', 'ora-sole-testo');
+  const legenda = elemento('div', '', 'legenda-sole');
+  legenda.append(elemento('span', 'poco sole'), elemento('span', '', 'scala-sole'), elemento('span', 'tanto sole'));
+  const aiuto = elemento('p', 'Il numero è la media delle ore di sole al giorno nel mese scelto, tolta l\'ombra degli alberi. Tocca un\'aiuola per vedere tutto l\'anno.', 'nota-sole');
+
+  function disegna() {
+    const sole = posizioneSole(meseSole, oraSole);
+    const box = terrenoOrto(dati, a => {
+      const { ore, possibili } = oreDiSole(dati, a, meseSole);
+      const el = link('', `#/orto/sole/${a.id}`, 'aiuola aiuola-forma');
+      el.innerHTML = sagomaAiuola(a, { tinta: coloreSole(possibili ? ore / possibili : 0) });
+      el.append(cartellino(a), elemento('span', `☀ ${oreTesto(ore)} h`, 'ore-aiuola'));
+      return el;
+    });
+    // Ombre degli alberi all'ora scelta, poi gli alberi
+    const ombre = dati.alberi.map(al => ombraAlberoAlSole(al, sole, t.esposizione)).filter(Boolean);
+    if (ombre.length) {
+      const svg = elemento('div', '', 'ombre-sole');
+      svg.innerHTML = `<svg viewBox="0 0 ${t.larghezza} ${t.lunghezza}" preserveAspectRatio="none" aria-hidden="true">${ombre.map(o =>
+        `<rect x="${-o.r}" y="${-o.r}" width="${o.lunghezza + 2 * o.r}" height="${2 * o.r}" rx="${o.r}" transform="translate(${o.x1} ${o.y1}) rotate(${o.angolo})"/>`).join('')}</svg>`;
+      box.append(svg);
+    }
+    for (const al of [...dati.alberi].sort((p, q) => p.y - q.y)) box.append(elementoAlbero(al, t));
+    box.append(bussola(t.esposizione));
+    posto.replaceChildren(etichetta(estremo(dati, 'Fondo')), box, etichetta(estremo(dati, 'Davanti')));
+    for (const [i, b] of [...mesi.children].entries()) b.setAttribute('aria-pressed', String(i + 1 === meseSole));
+    const hh = String(Math.floor(oraSole)).padStart(2, '0'), mm = oraSole % 1 ? '30' : '00';
+    scritta.textContent = sole.el > 0
+      ? `21 ${MESI_LUNGHI[meseSole - 1]}, ore ${hh}:${mm} (ora solare) · sole alto ${Math.round(sole.el)}°`
+      : `21 ${MESI_LUNGHI[meseSole - 1]}, ore ${hh}:${mm}: il sole è sotto l'orizzonte`;
+  }
+  const comandi = elemento('div', '', 'comandi-sole');
+  comandi.append(mesi, cursore, scritta, legenda, aiuto);
+  sezione.append(posto, comandi);
+  disegna();
+  return sezione;
+}
+
+// Scheda del sole di un'aiuola: le ore di ogni mese e cosa ci sta bene
+export function paginaSoleAiuola(dati, aiuola) {
+  const sezione = document.createElement('section');
+  sezione.append(link('← L\'esposizione', '#/orto/sole', 'indietro'), elemento('h2', `Aiuola ${nomeId(aiuola.id)} · sole`));
+  if (!soleNoto(dati)) {
+    sezione.append(elemento('p', 'Indica prima l\'esposizione dell\'orto (Modifica orto).'));
+    return sezione;
+  }
+  const anno = Array.from({ length: 12 }, (_, i) => oreDiSole(dati, aiuola, i + 1));
+  const massimo = Math.max(...anno.map(x => x.possibili));
+  const grafico = elemento('div', '', 'grafico-sole');
+  anno.forEach(({ ore, possibili }, i) => {
+    const colonna = elemento('div', '', 'colonna-sole');
+    colonna.style.height = `${possibili / massimo * 100}%`;
+    colonna.title = `${MESI_LUNGHI[i]}: ${oreTesto(ore)} ore di sole su ${oreTesto(possibili)}`;
+    const persa = elemento('span', '', 'ombra-sole');
+    persa.style.height = `${possibili ? (possibili - ore) / possibili * 100 : 0}%`;
+    colonna.append(persa);
+    grafico.append(colonna);
+  });
+  const lettere = elemento('div', '', 'mesi-raccolto');
+  for (const l of 'GFMAMGLASOND') lettere.append(elemento('span', l));
+  const estate = [4, 5, 6, 7, 8, 9];
+  const media = estate.reduce((s, m) => s + anno[m - 1].ore, 0) / 6;
+  const mediaPossibile = estate.reduce((s, m) => s + anno[m - 1].possibili, 0) / 6;
+  const giro = CATALOGO.filter(s => s.sole && ['L', 'C', 'A', 'S', 'J'].includes(s.tappa));
+  const bene = giro.filter(s => fattoreSoleAiuola(dati, aiuola, estate, 'tutta', s.sole) >= 0.9);
+  const meno = giro.filter(s => fattoreSoleAiuola(dati, aiuola, estate, 'tutta', s.sole) < 0.9);
+  const elenco = lista => {
+    const p = elemento('p', '', 'elenco-gruppo elenco-mese');
+    // Nomi fissi del catalogo
+    p.innerHTML = lista.map(c => `<a href="#/catalogo/${c.id}">${iconaSvg(c.nome, 2)}${c.nome}</a>`).join('');
+    return p;
+  };
+  sezione.append(grafico, lettere,
+    elemento('p', `Da aprile a settembre: circa ${oreTesto(media)} ore di sole al giorno (su ${oreTesto(mediaPossibile)} possibili senza alberi).`, 'nota-terreno'),
+    elemento('p', 'Giallo = ore di sole; grigio = ore perse per l\'ombra degli alberi.', 'nota-terreno'));
+  if (meno.length === 0) {
+    sezione.append(elemento('p', 'Pieno sole: qui va bene ogni coltura.', 'riquadro-ok'));
+  } else {
+    sezione.append(elemento('h3', 'Ci stanno bene'), bene.length ? elenco(bene) : elemento('p', 'Poche colture: è un\'aiuola molto in ombra.', 'nota-terreno'),
+      elemento('h3', 'Renderebbero meno'), elenco(meno));
+  }
+  return sezione;
 }
