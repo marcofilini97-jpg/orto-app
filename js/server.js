@@ -168,9 +168,12 @@ export async function togliPersona(ortoId, email) {
 
 // Email di invito a una persona dell'orto (la manda la funzione del server invita-persona, solo per il gestore)
 export async function invitaPersona(ortoId, email) {
-  return chiedi('/functions/v1/invita-persona', {
+  const r = await chiedi('/functions/v1/invita-persona', {
     method: 'POST', headers: await intestazioneAccesso(), body: JSON.stringify({ orto_id: ortoId, email }),
   });
+  // Vale solo la risposta della nostra funzione: un'altra risposta "positiva" (es. il codice di esempio) non manda email
+  if (r?.ok !== true) throw new Error('La funzione del server non ha mandato l\'email: controlla il suo codice su Supabase.');
+  return r;
 }
 
 // Elimina l'orto con tutti i suoi dati (solo il gestore)
